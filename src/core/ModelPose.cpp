@@ -1,4 +1,5 @@
 #include <algorithm>
+#include <numeric>
 #ifndef GLMMD_DO_NOT_USE_STD_EXECUTION
 #include <execution>
 #endif
@@ -195,8 +196,7 @@ void ModelPose::applyBoneTransformsToRenderData(RenderData &renderData) const
     if (m_modelData.vertices.size() > sz)
     {
         vertexIndices.resize(m_modelData.vertices.size());
-        for (uint32_t i = sz; i < vertexIndices.size(); ++i)
-            vertexIndices[i] = i;
+        std::iota(vertexIndices.begin() + sz, vertexIndices.end(), sz);
     }
 
     std::for_each(

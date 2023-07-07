@@ -1,5 +1,6 @@
 #include <algorithm>
 #include <queue>
+#include <numeric>
 
 #include <glmmd/core/ModelPoseSolver.h>
 
@@ -13,8 +14,7 @@ ModelPoseSolver::ModelPoseSolver(const ModelData &modelData)
     , m_boneDeformOrder(modelData.bones.size())
     , m_afterPhysicsStartIndex(static_cast<uint32_t>(modelData.bones.size()))
 {
-    for (uint32_t i = 0; i < m_boneDeformOrder.size(); ++i)
-        m_boneDeformOrder[i] = i;
+    std::iota(m_boneDeformOrder.begin(), m_boneDeformOrder.end(), 0);
 
     std::sort(m_boneDeformOrder.begin(), m_boneDeformOrder.end(),
               [&](uint32_t a, uint32_t b)

@@ -1,6 +1,12 @@
 #include <iostream>
 #include <fstream>
 
+#ifndef GLMMD_DO_NOT_USE_STD_EXECUTION
+#include <algorithm>
+#include <numeric>
+#include <execution>
+#endif
+
 #include <imgui.h>
 #include <imgui_impl_glfw.h>
 #include <imgui_impl_opengl3.h>
@@ -236,15 +242,26 @@ void Context::run()
                 .count();
 
         auto modelUpdateStart = std::chrono::high_resolution_clock::now();
-        for (auto &model : m_models)
-            model.update(currentTime);
 
+#ifndef GLMMD_DO_NOT_USE_STD_EXECUTION
+        std::vector<size_t> modelIndices(m_models.size());
+        std::iota(modelIndices.begin(), modelIndices.end(), 0);
+
+        std::for_each(std::execution::par, modelIndices.begin(),
+                      modelIndices.end(),
+                      [&](size_t i)
+#else
         for (size_t i = 0; i < m_models.size(); ++i)
-        {
-            m_modelRenderers[i]->renderData().init();
-            m_models[i].pose().applyToRenderData(
-                m_modelRenderers[i]->renderData());
-        }
+#endif
+                      {
+                          m_models[i].update(currentTime);
+                          m_modelRenderers[i]->renderData().init();
+                          m_models[i].pose().applyToRenderData(
+                              m_modelRenderers[i]->renderData());
+                      }
+#ifndef GLMMD_DO_NOT_USE_STD_EXECUTION
+        );
+#endif
         auto modelUpdateEnd = std::chrono::high_resolution_clock::now();
         auto modelUpdateDur =
             std::chrono::duration_cast<std::chrono::duration<float>>(
