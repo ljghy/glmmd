@@ -14,5 +14,6 @@ PRIVATE
 target_link_libraries(viewer
 PRIVATE
     glmmd
+    glfw
     imgui
 )

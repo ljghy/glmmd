@@ -21,19 +21,20 @@ PRIVATE
 
 find_package(Bullet REQUIRED)
 
+set(GLMMD_COMPILE_DEFINITIONS "")
+
 if (GLMMD_DO_NOT_USE_STD_EXECUTION)
-    target_compile_definitions(glmmd
-    PUBLIC
-        GLMMD_DO_NOT_USE_STD_EXECUTION
-    )
+    list(APPEND GLMMD_COMPILE_DEFINITIONS GLMMD_DO_NOT_USE_STD_EXECUTION)
 endif()
 
 if (GLMMD_DO_NOT_FORCE_UTF8)
-    target_compile_definitions(glmmd
-    PUBLIC
-        GLMMD_DO_NOT_FORCE_UTF8
-    )
+    list(APPEND GLMMD_COMPILE_DEFINITIONS GLMMD_DO_NOT_FORCE_UTF8)
 endif()
+
+target_compile_definitions(glmmd
+PUBLIC
+    ${GLMMD_COMPILE_DEFINITIONS}
+)
 
 target_include_directories(glmmd
 PUBLIC
