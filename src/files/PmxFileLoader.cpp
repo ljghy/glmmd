@@ -13,17 +13,16 @@ namespace glmmd
 
 PmxFileLoader::PmxFileLoader(const std::string &filename, bool utf8)
 {
+    std::filesystem::path path;
     if (utf8)
-    {
-        std::filesystem::path path(
-            reinterpret_cast<const char8_t *>(filename.data()));
-        m_fin.open(path, std::ios::binary);
-    }
+        path = reinterpret_cast<const char8_t *>(filename.data());
     else
-        m_fin.open(filename, std::ios::binary);
+        path = filename;
+
+    m_fin.open(path, std::ios::binary);
     if (!m_fin)
         throw std::runtime_error("Failed to open file \"" + filename + "\".");
-    m_modelDir = std::filesystem::path(filename).make_preferred().parent_path();
+    m_modelDir = path.make_preferred().parent_path();
 }
 
 void PmxFileLoader::load(ModelData &data)
