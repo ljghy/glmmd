@@ -114,7 +114,7 @@ void ModelRenderer::render(const Camera &camera, const Lighting &lighting)
 void ModelRenderer::renderMesh(const Camera &camera, const Lighting &lighting)
 {
     glEnable(GL_DEPTH_TEST);
-    glDepthFunc(GL_LESS);
+    glDepthFunc(GL_LEQUAL);
     glEnable(GL_BLEND);
     glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ONE,
                         GL_ONE_MINUS_SRC_ALPHA);
@@ -141,6 +141,9 @@ void ModelRenderer::renderMesh(const Camera &camera, const Lighting &lighting)
         const auto &mat    = m_renderData.materials[i];
         const auto &matAdd = m_renderData.materialAdd[i];
         const auto &matMul = m_renderData.materialMul[i];
+
+        if (mat.diffuse.a == 0.f)
+            continue;
 
         m_modelData.materials[i].doubleSided() ? glDisable(GL_CULL_FACE)
                                                : glEnable(GL_CULL_FACE);
@@ -214,7 +217,7 @@ void ModelRenderer::renderEdge(const Camera &camera)
     glEnable(GL_CULL_FACE);
     glCullFace(GL_FRONT);
     glEnable(GL_DEPTH_TEST);
-    glDepthFunc(GL_LESS);
+    glDepthFunc(GL_LEQUAL);
     glEnable(GL_BLEND);
     glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ONE,
                         GL_ONE_MINUS_SRC_ALPHA);

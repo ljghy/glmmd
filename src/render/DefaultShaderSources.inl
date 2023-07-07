@@ -66,6 +66,7 @@ const char *defaultFragShaderSrc =
     "    vec4 color = vec4(phong, u_mat.diffuse.a);\n"
     "    if (u_mat.hasTexture == 1) {\n"
     "        color *= texture(u_mat.texture, uv);\n"
+    "        if (color.a == 0.0) discard;\n"
     "        color = applyMul(color, u_mat.textureMul);\n"
     "        color = applyAdd(color, u_mat.textureAdd);\n"
     "    }\n"
