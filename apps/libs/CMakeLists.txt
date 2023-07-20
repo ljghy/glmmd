@@ -1,4 +1,5 @@
 add_subdirectory(imgui)
+add_subdirectory(nlohmann_json)
 
 set(GLFW_BUILD_DOCS OFF CACHE BOOL "" FORCE)
 set(GLFW_BUILD_TESTS OFF CACHE BOOL "" FORCE)

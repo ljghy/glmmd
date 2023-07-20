@@ -39,9 +39,6 @@ PUBLIC
 target_include_directories(glmmd
 PUBLIC
     ${BULLET_INCLUDE_DIR}
-    ${PROJECT_SOURCE_DIR}/libs/stb/include
-    ${PROJECT_SOURCE_DIR}/libs/glad/include
-    ${PROJECT_SOURCE_DIR}/libs/opengl_framework/include
     ${PROJECT_SOURCE_DIR}/include
 )
 
@@ -52,4 +49,5 @@ PUBLIC
     glfw
     ${BULLET_LIBRARIES}
     opengl_framework
+    stb_image
 )
