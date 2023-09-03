@@ -1,5 +1,11 @@
 add_library(glmmd STATIC)
 
+if(MSVC)
+    add_compile_options(/W4)
+else()
+    add_compile_options(-Wall -Wextra)
+endif()
+
 target_sources(glmmd
 PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/core/PhysicsWorld.cpp

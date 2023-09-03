@@ -35,7 +35,7 @@ float FixedMotionClip::evalCurve(const InterpolationCurve &curve, float x)
     return 3 * s * t * (s * y1 + t * y2) + t2 * t;
 }
 
-void FixedMotionClip::getPoseLocal(float time, ModelPose &pose) const
+void FixedMotionClip::getLocalPose(float time, ModelPose &pose) const
 {
     constexpr glm::quat identityRot(1.f, 0.f, 0.f, 0.f);
 

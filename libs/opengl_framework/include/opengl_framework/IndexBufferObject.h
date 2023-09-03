@@ -5,10 +5,6 @@
 
 class IndexBufferObject
 {
-private:
-    unsigned int m_id;
-    unsigned int m_count;
-
 public:
     IndexBufferObject();
     ~IndexBufferObject();
@@ -24,5 +20,9 @@ public:
 
     void bind() const;
     void unbind() const;
+
+private:
+    unsigned int m_id;
+    unsigned int m_count;
 };
 #endif

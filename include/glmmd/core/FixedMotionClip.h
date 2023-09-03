@@ -5,12 +5,12 @@
 #include <map>
 #include <limits>
 
-#include <glmmd/core/MotionClip.h>
+#include <glmmd/core/Motion.h>
 
 namespace glmmd
 {
 
-class FixedMotionClip : public MotionClip
+class FixedMotionClip : public Motion
 {
     friend class VmdFileLoader;
 
@@ -42,7 +42,7 @@ public:
                       : m_frameCount * m_frameRate;
     }
 
-    virtual void getPoseLocal(float time, ModelPose &pose) const override;
+    virtual void getLocalPose(float time, ModelPose &pose) const override;
 
 public:
     static float evalCurve(const InterpolationCurve &curve, float x);

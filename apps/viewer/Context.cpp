@@ -90,23 +90,25 @@ void Context::loadResources()
 {
     for (const auto &modelNode : m_initData["models"])
     {
-        std::unique_ptr<glmmd::ModelData> modelData(new glmmd::ModelData);
+        m_modelData.emplace_back(std::make_unique<glmmd::ModelData>());
+        auto &modelData = *m_modelData.back();
+
         try
         {
             auto filename = modelNode["filename"].get<std::string>();
             glmmd::PmxFileLoader loader(filename, true);
-            loader.load(*modelData);
+            loader.load(modelData);
 
             std::cout << "Model loaded from: " << filename << '\n';
-            std::cout << "Name: " << modelData->info.modelName << '\n';
-            std::cout << "Comment: " << modelData->info.comment << '\n';
+            std::cout << "Name: " << modelData.info.modelName << '\n';
+            std::cout << "Comment: " << modelData.info.comment << '\n';
             std::cout << std::endl;
         }
         catch (const std::exception &e)
         {
             std::cerr << e.what() << '\n';
         }
-        addModel(std::move(modelData));
+        addModel(modelData);
     }
 
     for (const auto &motionNode : m_initData["motions"])
@@ -120,7 +122,7 @@ void Context::loadResources()
             auto clip       = std::make_unique<glmmd::FixedMotionClip>(loop);
             auto modelIndex = motionNode["model"].get<size_t>();
             auto filename   = motionNode["filename"].get<std::string>();
-            glmmd::VmdFileLoader loader(filename, m_models[modelIndex].data(),
+            glmmd::VmdFileLoader loader(filename, *m_modelData[modelIndex],
                                         true);
             loader.load(*clip);
 
@@ -129,7 +131,7 @@ void Context::loadResources()
             std::cout << std::endl;
 
             auto animator = std::make_unique<glmmd::Animator>();
-            animator->registerMotionClip(std::move(clip));
+            animator->registerMotion(std::move(clip));
             m_models[modelIndex].addAnimator(std::move(animator));
         }
         catch (const std::exception &e)
@@ -147,11 +149,10 @@ float Context::getCurrentTime()
         .count();
 }
 
-void Context::addModel(std::unique_ptr<glmmd::ModelData> &&data)
+void Context::addModel(const glmmd::ModelData &data)
 {
-    m_models.emplace_back(std::move(data));
-    m_modelRenderers.emplace_back(
-        std::make_unique<glmmd::ModelRenderer>(m_models.back().data()));
+    m_models.emplace_back(data);
+    m_modelRenderers.emplace_back(data);
 }
 
 void Context::updateCamera(float deltaTime)
@@ -246,7 +247,6 @@ void Context::run()
 #ifndef GLMMD_DO_NOT_USE_STD_EXECUTION
         std::vector<size_t> modelIndices(m_models.size());
         std::iota(modelIndices.begin(), modelIndices.end(), 0);
-
         std::for_each(std::execution::par, modelIndices.begin(),
                       modelIndices.end(),
                       [&](size_t i)
@@ -255,13 +255,14 @@ void Context::run()
 #endif
                       {
                           m_models[i].update(currentTime);
-                          m_modelRenderers[i]->renderData().init();
+                          m_modelRenderers[i].renderData().init();
                           m_models[i].pose().applyToRenderData(
-                              m_modelRenderers[i]->renderData());
+                              m_modelRenderers[i].renderData());
                       }
 #ifndef GLMMD_DO_NOT_USE_STD_EXECUTION
         );
 #endif
+
         auto modelUpdateEnd = std::chrono::high_resolution_clock::now();
         auto modelUpdateDur =
             std::chrono::duration_cast<std::chrono::duration<float>>(
@@ -270,8 +271,8 @@ void Context::run()
 
         auto renderStart = std::chrono::high_resolution_clock::now();
         updateCamera(deltaTime);
-        for (const auto &renderer : m_modelRenderers)
-            renderer->render(m_camera, m_lighting);
+        for (auto &renderer : m_modelRenderers)
+            renderer.render(m_camera, m_lighting);
         auto renderEnd = std::chrono::high_resolution_clock::now();
         auto renderDur =
             std::chrono::duration_cast<std::chrono::duration<float>>(
@@ -301,9 +302,9 @@ void Context::run()
         {
             for (auto &renderer : m_modelRenderers)
                 if (renderEdge)
-                    renderer->renderFlag() |= glmmd::MODEL_RENDER_FLAG_EDGE;
+                    renderer.renderFlag() |= glmmd::MODEL_RENDER_FLAG_EDGE;
                 else
-                    renderer->renderFlag() &= ~glmmd::MODEL_RENDER_FLAG_EDGE;
+                    renderer.renderFlag() &= ~glmmd::MODEL_RENDER_FLAG_EDGE;
         }
 
         ImGui::Render();

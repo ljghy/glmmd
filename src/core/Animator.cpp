@@ -8,9 +8,9 @@ Animator::Animator(const AnimatorState &initialState)
 {
 }
 
-void Animator::registerMotionClip(std::unique_ptr<MotionClip> &&clip)
+void Animator::registerMotion(std::unique_ptr<Motion> &&motion)
 {
-    m_states.emplace_back(std::move(clip));
+    m_states.emplace_back(std::move(motion));
     m_transitionTable.emplace_back();
 }
 
@@ -18,7 +18,7 @@ void Animator::registerTransition(const MotionTransition &transition)
 {
     m_transitions.emplace_back(transition);
     m_transitionTable[transition.fromStateIndex].emplace_back(
-        m_transitions.size() - 1);
+        static_cast<int32_t>(m_transitions.size() - 1));
 }
 
 void Animator::update(float currentTime)
@@ -56,7 +56,7 @@ void Animator::update(float currentTime)
     }
 }
 
-void Animator::getPoseLocal(float currentTime, ModelPose &pose) const
+void Animator::getLocalPose(float currentTime, ModelPose &pose) const
 {
     if (m_states.empty())
         return;
@@ -64,13 +64,13 @@ void Animator::getPoseLocal(float currentTime, ModelPose &pose) const
     int32_t i = m_currentState.index;
     if (m_currentState.onTransition)
     {
-        m_states[m_transitions[i].fromStateIndex]->getPoseLocal(
+        m_states[m_transitions[i].fromStateIndex]->getLocalPose(
             currentTime - m_currentState.motionStartTime, pose);
         float transitionTime = currentTime - m_currentState.stateStartTime;
         if (transitionTime != 0.f)
         {
             ModelPose other(pose);
-            m_states[m_transitions[i].toStateIndex]->getPoseLocal(
+            m_states[m_transitions[i].toStateIndex]->getLocalPose(
                 transitionTime, other);
 
             float t = m_transitions[i].transitionCurve(
@@ -81,7 +81,7 @@ void Animator::getPoseLocal(float currentTime, ModelPose &pose) const
     }
     else
     {
-        m_states[i]->getPoseLocal(currentTime - m_currentState.motionStartTime,
+        m_states[i]->getLocalPose(currentTime - m_currentState.motionStartTime,
                                   pose);
     }
 }

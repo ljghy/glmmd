@@ -2,7 +2,7 @@
 
 namespace glmmd
 {
-
+    
 void Model::update(float currentTime)
 {
     resetLocalPose();
@@ -21,11 +21,11 @@ void Model::updateAnimators(float currentTime)
     {
         animator->update(currentTime);
         if (i++ == 0)
-            animator->getPoseLocal(currentTime, m_pose);
+            animator->getLocalPose(currentTime, m_pose);
         else
         {
             ModelPose pose(m_pose);
-            animator->getPoseLocal(currentTime, pose);
+            animator->getLocalPose(currentTime, pose);
             m_pose += pose;
         }
     }

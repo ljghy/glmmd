@@ -23,9 +23,6 @@ struct Texture2DCreateInfo
 
 class Texture2D
 {
-private:
-    unsigned int        m_id;
-    Texture2DCreateInfo m_info;
 
 public:
     Texture2D();
@@ -44,7 +41,11 @@ public:
     int width() const { return m_info.width; }
     int height() const { return m_info.height; }
 
-    inline unsigned int id() const { return m_id; }
+    unsigned int id() const { return m_id; }
+
+private:
+    unsigned int        m_id;
+    Texture2DCreateInfo m_info;
 };
 
 #endif

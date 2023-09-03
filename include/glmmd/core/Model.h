@@ -15,16 +15,19 @@ namespace glmmd
 class Model
 {
 public:
-    Model(std::unique_ptr<ModelData> &&data)
-        : m_data(std::move(data))
-        , m_physics{}
-        , m_pose(*m_data)
-        , m_poseSolver(*m_data)
+    Model(const ModelData &data)
+        : m_data(data)
+        , m_pose(m_data)
+        , m_poseSolver(m_data)
     {
     }
 
-    ModelData       &data() { return *m_data; }
-    const ModelData &data() const { return *m_data; }
+    Model(const Model &other)            = delete;
+    Model &operator=(const Model &other) = delete;
+
+    Model(Model &&other) = default;
+
+    const ModelData &data() const { return m_data; }
 
     ModelPose       &pose() { return m_pose; }
     const ModelPose &pose() const { return m_pose; }
@@ -43,10 +46,11 @@ public:
     void updateAnimators(float currentTime);
 
 private:
-    std::unique_ptr<ModelData>             m_data;
-    ModelPhysics                           m_physics;
-    ModelPose                              m_pose;
-    ModelPoseSolver                        m_poseSolver;
+    const ModelData &m_data;
+    ModelPhysics     m_physics;
+    ModelPose        m_pose;
+    ModelPoseSolver  m_poseSolver;
+
     std::vector<std::unique_ptr<Animator>> m_animators;
 };
 

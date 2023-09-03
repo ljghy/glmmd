@@ -32,7 +32,7 @@ private:
 
     float getCurrentTime();
 
-    void addModel(std::unique_ptr<glmmd::ModelData> &&data);
+    void addModel(const glmmd::ModelData &data);
 
     void updateCamera(float deltaTime);
 
@@ -45,8 +45,10 @@ private:
 
     std::chrono::time_point<std::chrono::high_resolution_clock> m_startTime;
 
-    std::vector<glmmd::Model>                          m_models;
-    std::vector<std::unique_ptr<glmmd::ModelRenderer>> m_modelRenderers;
+    std::vector<std::unique_ptr<glmmd::ModelData>> m_modelData;
+
+    std::vector<glmmd::Model>         m_models;
+    std::vector<glmmd::ModelRenderer> m_modelRenderers;
 
     glmmd::Camera   m_camera;
     glmmd::Lighting m_lighting;

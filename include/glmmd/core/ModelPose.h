@@ -1,10 +1,6 @@
 #ifndef GLMMD_CORE_MODEL_POSE_H_
 #define GLMMD_CORE_MODEL_POSE_H_
 
-#define GLM_FORCE_RADIANS
-#include <glm/glm.hpp>
-#include <glm/gtc/quaternion.hpp>
-
 #include <glmmd/core/ModelData.h>
 #include <glmmd/core/RenderData.h>
 
@@ -41,11 +37,6 @@ public:
     const glm::vec3 &getLocalBoneTranslation(uint32_t boneIndex) const;
     const glm::quat &getLocalBoneRotation(uint32_t boneIndex) const;
     float            getMorphRatio(uint32_t morphIndex) const;
-
-#ifndef GLMMD_DO_NOT_USE_STD_EXECUTION
-private:
-    static std::vector<uint32_t> vertexIndices;
-#endif
 
 private:
     const ModelData &m_modelData;

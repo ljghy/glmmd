@@ -327,7 +327,7 @@ void PmxFileLoader::loadMorphs(ModelData &data)
         int32_t dataCount;
         readInt(dataCount);
         morph.data.reserve(dataCount);
-        for (int32_t i = 0; i < dataCount; ++i)
+        for (int32_t j = 0; j < dataCount; ++j)
         {
             switch (morph.type)
             {

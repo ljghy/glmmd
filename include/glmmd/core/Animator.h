@@ -5,7 +5,7 @@
 #include <memory>
 #include <functional>
 
-#include <glmmd/core/MotionClip.h>
+#include <glmmd/core/Motion.h>
 
 namespace glmmd
 {
@@ -18,9 +18,9 @@ struct MotionTransition
 
     std::function<float(float)> transitionCurve = [](float t)
     { return t; }; // [0, 1] -> [0, 1], f(0) = 0, f(1) = 1
-    std::function<bool(const MotionClip &, float)> transitionCondition =
-        [](const MotionClip &clip, float motionTime)
-    { return motionTime > clip.duration(); };
+    std::function<bool(const Motion &, float)> transitionCondition =
+        [](const Motion &motion, float motionTime)
+    { return motionTime > motion.duration(); };
 };
 
 struct AnimatorState
@@ -37,18 +37,18 @@ class Animator
 public:
     Animator(const AnimatorState &initialState = {});
 
-    void registerMotionClip(std::unique_ptr<MotionClip> &&clip);
+    void registerMotion(std::unique_ptr<Motion> &&motion);
     void registerTransition(const MotionTransition &transition);
 
     void update(float currentTime);
-    void getPoseLocal(float currentTime, ModelPose &pose) const;
+    void getLocalPose(float currentTime, ModelPose &pose) const;
 
 private:
     AnimatorState m_currentState;
 
-    std::vector<std::unique_ptr<MotionClip>> m_states;
-    std::vector<MotionTransition>            m_transitions;
-    std::vector<std::vector<int32_t>>        m_transitionTable;
+    std::vector<std::unique_ptr<Motion>> m_states;
+    std::vector<MotionTransition>        m_transitions;
+    std::vector<std::vector<int32_t>>    m_transitionTable;
 };
 
 } // namespace glmmd

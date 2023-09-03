@@ -11,13 +11,6 @@
 
 class VertexBufferLayout
 {
-private:
-    std::vector<std::pair<unsigned int, unsigned int>>
-                              m_elements; // {type, count}
-    std::vector<unsigned int> m_strides;
-    std::vector<unsigned int> m_offsets;
-    bool                      m_useSubData;
-
 public:
     static unsigned int getSize(unsigned int ty)
     {
@@ -70,19 +63,25 @@ public:
             m_offsets.push_back(m_offsets.back() + getSize(ty) * count);
         }
     }
+
+private:
+    std::vector<std::pair<unsigned int, unsigned int>>
+                              m_elements; // {type, count}
+    std::vector<unsigned int> m_strides;
+    std::vector<unsigned int> m_offsets;
+    bool                      m_useSubData;
 };
 
 class VertexArrayObject
 {
-private:
-    unsigned int m_id;
-
 public:
     VertexArrayObject();
     ~VertexArrayObject();
 
     VertexArrayObject(const VertexArrayObject &)            = delete;
     VertexArrayObject &operator=(const VertexArrayObject &) = delete;
+
+    VertexArrayObject(VertexArrayObject &&other);
 
     void create();
     void addBuffer(const VertexBufferObject &vbo,
@@ -91,6 +90,9 @@ public:
 
     void bind() const;
     void unbind() const;
+
+private:
+    unsigned int m_id;
 };
 
 #endif

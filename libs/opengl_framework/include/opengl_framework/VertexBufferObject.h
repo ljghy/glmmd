@@ -5,9 +5,6 @@
 
 class VertexBufferObject
 {
-private:
-    unsigned int m_id;
-
 public:
     VertexBufferObject();
     ~VertexBufferObject();
@@ -22,6 +19,9 @@ public:
 
     void bind() const;
     void unbind() const;
+
+private:
+    unsigned int m_id;
 };
 
 #endif

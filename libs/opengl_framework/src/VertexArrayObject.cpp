@@ -4,6 +4,13 @@ VertexArrayObject::VertexArrayObject()
     : m_id(0)
 {
 }
+
+VertexArrayObject::VertexArrayObject(VertexArrayObject &&other)
+    : m_id(other.m_id)
+{
+    other.m_id = 0;
+}
+
 VertexArrayObject::~VertexArrayObject() { destroy(); }
 
 void VertexArrayObject::create()

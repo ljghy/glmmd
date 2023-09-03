@@ -2,6 +2,7 @@
 #include <numeric>
 #ifndef GLMMD_DO_NOT_USE_STD_EXECUTION
 #include <execution>
+#include <mutex>
 #endif
 
 #define GLM_ENABLE_EXPERIMENTAL
@@ -181,7 +182,8 @@ void ModelPose::applyMorphsToRenderData(RenderData &renderData) const
 }
 
 #ifndef GLMMD_DO_NOT_USE_STD_EXECUTION
-std::vector<uint32_t> ModelPose::vertexIndices;
+static std::vector<uint32_t> vertexIndices;
+static std::mutex            vertexIndicesMutex;
 #endif
 
 void ModelPose::applyBoneTransformsToRenderData(RenderData &renderData) const
@@ -192,11 +194,14 @@ void ModelPose::applyBoneTransformsToRenderData(RenderData &renderData) const
                                                 -m_modelData.bones[i].position);
 
 #ifndef GLMMD_DO_NOT_USE_STD_EXECUTION
-    uint32_t sz = static_cast<uint32_t>(vertexIndices.size());
-    if (m_modelData.vertices.size() > sz)
     {
-        vertexIndices.resize(m_modelData.vertices.size());
-        std::iota(vertexIndices.begin() + sz, vertexIndices.end(), sz);
+        std::lock_guard<std::mutex> lock(vertexIndicesMutex);
+        uint32_t sz = static_cast<uint32_t>(vertexIndices.size());
+        if (m_modelData.vertices.size() > sz)
+        {
+            vertexIndices.resize(m_modelData.vertices.size());
+            std::iota(vertexIndices.begin() + sz, vertexIndices.end(), sz);
+        }
     }
 
     std::for_each(
