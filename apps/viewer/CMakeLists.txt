@@ -1,3 +1,5 @@
+project(glmmd_viewer)
+
 add_executable(viewer)
 
 target_sources(viewer
