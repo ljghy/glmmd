@@ -65,7 +65,6 @@ void PmxFileLoader::loadInfo(ModelData &data)
     readTextBuffer(info.modelNameEN);
     readTextBuffer(info.comment);
     readTextBuffer(info.commentEN);
-
 #ifndef GLMMD_DO_NOT_FORCE_UTF8
     if (info.encodingMethod == 0)
     {

@@ -7,6 +7,7 @@ PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/main.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/ChatSession.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/Context.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/VisemeMotion.cpp
 )
 
 find_package(Python3 COMPONENTS Interpreter Development REQUIRED)

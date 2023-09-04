@@ -5,17 +5,18 @@
 //
 #include <GLFW/glfw3.h>
 
-#include <chrono>
 #include <memory>
+#include <list>
 
 #include <json.hpp>
 
 #include <al.h>
 #include <alc.h>
+#include <alext.h>
 
 #include <glmmd/core/Model.h>
-#include <glmmd/core/Animator.h>
 #include <glmmd/core/PhysicsWorld.h>
+#include <glmmd/core/Animator.h>
 #include <glmmd/render/ModelRenderer.h>
 
 #include "ChatSession.h"
@@ -36,10 +37,9 @@ private:
     void initOpenAL();
     void loadResources();
 
-    float getCurrentTime();
+    void chatControl();
 
-    void addModel(const glmmd::ModelData &data);
-
+    void updateModel();
     void updateCamera(float deltaTime);
 
 private:
@@ -52,12 +52,14 @@ private:
     ALCdevice  *m_openALDevice;
     ALCcontext *m_openALContext;
 
-    std::chrono::time_point<std::chrono::high_resolution_clock> m_startTime;
+    ALuint m_audioBuffer;
+    ALuint m_audioSource;
 
-    std::vector<std::unique_ptr<glmmd::ModelData>> m_modelData;
+    std::shared_ptr<glmmd::ModelData>     m_modelData;
+    std::unique_ptr<glmmd::Model>         m_model;
+    std::unique_ptr<glmmd::ModelRenderer> m_modelRenderer;
 
-    std::vector<glmmd::Model>         m_models;
-    std::vector<glmmd::ModelRenderer> m_modelRenderers;
+    std::list<std::unique_ptr<glmmd::Animator>> m_animators;
 
     glmmd::Camera   m_camera;
     glmmd::Lighting m_lighting;
@@ -65,6 +67,7 @@ private:
     glmmd::PhysicsWorld m_physicsWorld;
 
     std::unique_ptr<ChatSession> m_chatSession;
+
 };
 
 #endif

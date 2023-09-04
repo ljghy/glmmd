@@ -16,7 +16,7 @@ int main()
     std::unique_ptr<Context> context;
     try
     {
-        context = std::make_unique<Context>("init.json");
+        context = std::make_unique<Context>("chat_init.json");
     }
     catch (const std::exception &e)
     {

@@ -15,51 +15,51 @@ void ModelRenderer::releaseSharedToonTextures()
         texture.destroy();
 }
 
-ModelRenderer::ModelRenderer(const ModelData           &data,
+ModelRenderer::ModelRenderer(const std::shared_ptr<const ModelData> &data,
                              ModelRendererShaderSources shaderSources)
     : m_modelData(data)
     , m_renderData(data)
 {
     m_VBO.create(nullptr,
                  static_cast<unsigned int>((3 + 3 + 2) * sizeof(float) *
-                                           data.vertices.size()),
+                                           data->vertices.size()),
                  GL_DYNAMIC_DRAW);
     m_VBO.bind();
 
     VertexBufferLayout layout(true);
     layout.push(GL_FLOAT, 3,
-                static_cast<unsigned int>(data.vertices.size() * 3));
+                static_cast<unsigned int>(data->vertices.size() * 3));
     layout.push(GL_FLOAT, 3,
-                static_cast<unsigned int>(data.vertices.size() * 3));
+                static_cast<unsigned int>(data->vertices.size() * 3));
     layout.push(GL_FLOAT, 2,
-                static_cast<unsigned int>(data.vertices.size() * 2));
+                static_cast<unsigned int>(data->vertices.size() * 2));
 
     m_VAO.create();
     m_VAO.bind();
     m_VAO.addBuffer(m_VBO, layout);
 
-    m_IBOs.resize(data.materials.size());
+    m_IBOs.resize(data->materials.size());
     size_t indexOffset = 0;
     for (size_t i = 0; i < m_IBOs.size(); ++i)
     {
-        m_IBOs[i].create(&data.indices[indexOffset],
-                         sizeof(uint32_t) * data.materials[i].indicesCount);
-        indexOffset += data.materials[i].indicesCount;
+        m_IBOs[i].create(&data->indices[indexOffset],
+                         sizeof(uint32_t) * data->materials[i].indicesCount);
+        indexOffset += data->materials[i].indicesCount;
     }
 
     m_shader.create(shaderSources.vertShaderSrc, shaderSources.fragShaderSrc);
     m_edgeShader.create(shaderSources.edgeVertShaderSrc,
                         shaderSources.edgeFragShaderSrc);
 
-    m_textures.resize(data.textures.size());
-    for (size_t i = 0; i < data.textures.size(); ++i)
+    m_textures.resize(data->textures.size());
+    for (size_t i = 0; i < data->textures.size(); ++i)
     {
-        if (!data.textures[i].exists)
+        if (!data->textures[i].exists)
             continue;
 
-        Texture2DCreateInfo info{.width  = data.textures[i].width,
-                                 .height = data.textures[i].height,
-                                 .data   = data.textures[i].pixels.data()};
+        Texture2DCreateInfo info{.width  = data->textures[i].width,
+                                 .height = data->textures[i].height,
+                                 .data   = data->textures[i].pixels.data()};
         m_textures[i].create(info);
     }
 
@@ -145,15 +145,15 @@ void ModelRenderer::renderMesh(const Camera &camera, const Lighting &lighting)
         if (mat.diffuse.a == 0.f)
             continue;
 
-        m_modelData.materials[i].doubleSided() ? glDisable(GL_CULL_FACE)
-                                               : glEnable(GL_CULL_FACE);
+        m_modelData->materials[i].doubleSided() ? glDisable(GL_CULL_FACE)
+                                                : glEnable(GL_CULL_FACE);
 
         m_shader.setUniform4fv("u_mat.diffuse", &mat.diffuse[0]);
         m_shader.setUniform3fv("u_mat.specular", &mat.specular[0]);
         m_shader.setUniform1f("u_mat.specularPower", mat.specularPower);
         m_shader.setUniform3fv("u_mat.ambient", &mat.ambient[0]);
 
-        int32_t textureIndex = m_modelData.materials[i].textureIndex;
+        int32_t textureIndex = m_modelData->materials[i].textureIndex;
         if (textureIndex >= 0 && m_textures[textureIndex].id() != 0)
         {
             m_textures[textureIndex].bind(0);
@@ -168,14 +168,14 @@ void ModelRenderer::renderMesh(const Camera &camera, const Lighting &lighting)
         }
 
         int32_t sphereTextureIndex =
-            m_modelData.materials[i].sphereTextureIndex;
+            m_modelData->materials[i].sphereTextureIndex;
         if (sphereTextureIndex >= 0 &&
-            m_modelData.materials[i].sphereMode != 0 &&
+            m_modelData->materials[i].sphereMode != 0 &&
             m_textures[sphereTextureIndex].id() != 0)
         {
             m_textures[sphereTextureIndex].bind(1);
             m_shader.setUniform1i("u_mat.sphereTextureMode",
-                                  m_modelData.materials[i].sphereMode);
+                                  m_modelData->materials[i].sphereMode);
             m_shader.setUniform4fv("u_mat.sphereTextureAdd",
                                    &matAdd.sphereTexture[0]);
             m_shader.setUniform4fv("u_mat.sphereTextureMul",
@@ -187,11 +187,12 @@ void ModelRenderer::renderMesh(const Camera &camera, const Lighting &lighting)
             m_shader.setUniform1i("u_mat.sphereTextureMode", 0);
         }
 
-        int32_t toonTextureIndex = m_modelData.materials[i].toonTextureIndex;
-        if (toonTextureIndex >= 0 && (m_modelData.materials[i].sharedToonFlag ||
-                                      m_textures[toonTextureIndex].id() != 0))
+        int32_t toonTextureIndex = m_modelData->materials[i].toonTextureIndex;
+        if (toonTextureIndex >= 0 &&
+            (m_modelData->materials[i].sharedToonFlag ||
+             m_textures[toonTextureIndex].id() != 0))
         {
-            (m_modelData.materials[i].sharedToonFlag
+            (m_modelData->materials[i].sharedToonFlag
                  ? sharedToonTextures[toonTextureIndex]
                  : m_textures[toonTextureIndex])
                 .bind(2);
@@ -241,7 +242,7 @@ void ModelRenderer::renderEdge(const Camera &camera)
     {
         const auto &mat = m_renderData.materials[i];
 
-        if (!m_modelData.materials[i].renderEdge() || mat.edgeSize == 0.f ||
+        if (!m_modelData->materials[i].renderEdge() || mat.edgeSize == 0.f ||
             mat.edgeColor.a == 0.f)
             continue;
 

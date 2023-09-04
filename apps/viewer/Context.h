@@ -5,13 +5,12 @@
 //
 #include <GLFW/glfw3.h>
 
-#include <chrono>
 #include <memory>
 
 #include <json.hpp>
 
 #include <glmmd/core/Model.h>
-#include <glmmd/core/Animator.h>
+#include <glmmd/core/SimpleAnimator.h>
 #include <glmmd/core/PhysicsWorld.h>
 #include <glmmd/render/ModelRenderer.h>
 
@@ -30,9 +29,7 @@ private:
     void initImGui();
     void loadResources();
 
-    float getCurrentTime();
-
-    void addModel(const glmmd::ModelData &data);
+    void updateModelPose(size_t i);
 
     void updateCamera(float deltaTime);
 
@@ -43,12 +40,12 @@ private:
     int         m_windowWidth;
     int         m_windowHeight;
 
-    std::chrono::time_point<std::chrono::high_resolution_clock> m_startTime;
-
-    std::vector<std::unique_ptr<glmmd::ModelData>> m_modelData;
+    std::vector<std::shared_ptr<glmmd::ModelData>> m_modelData;
 
     std::vector<glmmd::Model>         m_models;
     std::vector<glmmd::ModelRenderer> m_modelRenderers;
+
+    std::vector<std::vector<glmmd::SimpleAnimator>> m_animators;
 
     glmmd::Camera   m_camera;
     glmmd::Lighting m_lighting;

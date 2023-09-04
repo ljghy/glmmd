@@ -1,18 +1,13 @@
 #include <iostream>
 #include <fstream>
 
-#ifndef GLMMD_DO_NOT_USE_STD_EXECUTION
-#include <algorithm>
-#include <numeric>
-#include <execution>
-#endif
-
 #include <imgui.h>
 #include <imgui_impl_glfw.h>
 #include <imgui_impl_opengl3.h>
 
 #include <json.hpp>
 
+#include <glmmd/core/SimpleAnimator.h>
 #include <glmmd/files/PmxFileLoader.h>
 #include <glmmd/files/VmdFileLoader.h>
 #include "Context.h"
@@ -32,7 +27,6 @@ Context::Context(const std::string &initFile)
     loadResources();
 
     m_chatSession = std::make_unique<ChatSession>();
-    m_chatSession->synthesizeSpeech("Hello, world!");
 
     m_camera.projType       = glmmd::CameraProjectionType::Perspective;
     m_camera.position       = glm::vec3(0.0f, 14.0f, -24.0f);
@@ -105,71 +99,24 @@ void Context::initOpenAL()
 
 void Context::loadResources()
 {
-    for (const auto &modelNode : m_initData["models"])
+    try
     {
-        m_modelData.emplace_back(std::make_unique<glmmd::ModelData>());
-        auto &modelData = *m_modelData.back();
+        m_modelData = std::make_shared<glmmd::ModelData>();
+        glmmd::PmxFileLoader loader(m_initData["model"], true);
+        loader.load(*m_modelData);
 
-        try
-        {
-            auto filename = modelNode["filename"].get<std::string>();
-            glmmd::PmxFileLoader loader(filename, true);
-            loader.load(modelData);
+        std::cout << "Model loaded from: " << m_initData["model"] << '\n';
+        std::cout << "Name: " << m_modelData->info.modelName << '\n';
+        std::cout << "Comment: " << m_modelData->info.comment << '\n';
+        std::cout << std::endl;
 
-            std::cout << "Model loaded from: " << filename << '\n';
-            std::cout << "Name: " << modelData.info.modelName << '\n';
-            std::cout << "Comment: " << modelData.info.comment << '\n';
-            std::cout << std::endl;
-        }
-        catch (const std::exception &e)
-        {
-            std::cerr << e.what() << '\n';
-        }
-        addModel(modelData);
+        m_model         = std::make_unique<glmmd::Model>(m_modelData);
+        m_modelRenderer = std::make_unique<glmmd::ModelRenderer>(m_modelData);
     }
-
-    for (const auto &motionNode : m_initData["motions"])
+    catch (const std::exception &e)
     {
-        try
-        {
-            bool loop = false;
-            if (motionNode.find("loop") != motionNode.end())
-                loop = motionNode["loop"].get<bool>();
-
-            auto clip       = std::make_unique<glmmd::FixedMotionClip>(loop);
-            auto modelIndex = motionNode["model"].get<size_t>();
-            auto filename   = motionNode["filename"].get<std::string>();
-            glmmd::VmdFileLoader loader(filename, *m_modelData[modelIndex],
-                                        true);
-            loader.load(*clip);
-
-            std::cout << "Motion data loaded from: " << filename << '\n';
-            std::cout << "Created for: " << loader.modelName() << '\n';
-            std::cout << std::endl;
-
-            auto animator = std::make_unique<glmmd::Animator>();
-            animator->registerMotion(std::move(clip));
-            m_models[modelIndex].addAnimator(std::move(animator));
-        }
-        catch (const std::exception &e)
-        {
-            std::cerr << e.what() << '\n';
-        }
+        std::cerr << e.what() << '\n';
     }
-}
-
-float Context::getCurrentTime()
-{
-    auto now = std::chrono::high_resolution_clock::now();
-    return std::chrono::duration_cast<std::chrono::duration<float>>(now -
-                                                                    m_startTime)
-        .count();
-}
-
-void Context::addModel(const glmmd::ModelData &data)
-{
-    m_models.emplace_back(data);
-    m_modelRenderers.emplace_back(data);
 }
 
 void Context::updateCamera(float deltaTime)
@@ -222,18 +169,82 @@ void Context::updateCamera(float deltaTime)
     }
 }
 
+void Context::chatControl()
+{
+    if (m_chatSession->getState() == ChatSessionState::Idle)
+    {
+        static char text[256] = "";
+        ImGui::InputText("##Text", text, 256);
+        ImGui::SameLine();
+        if (ImGui::Button("Send"))
+        {
+            m_chatSession->sendText(text);
+            text[0] = '\0';
+        }
+    }
+    else if (m_chatSession->getState() == ChatSessionState::Ready)
+    {
+        m_chatSession->setState(ChatSessionState::Playing);
+
+        std::cout << m_chatSession->response() << std::endl;
+
+        m_animators.emplace_back(std::make_unique<glmmd::SimpleAnimator>(
+            std::make_shared<VisemeMotion>(*m_modelData,
+                                           m_chatSession->visemes())));
+
+        const auto &audioFile = m_chatSession->audioFile();
+        alGenBuffers(1, &m_audioBuffer);
+        alBufferData(
+            m_audioBuffer, AL_FORMAT_MONO_FLOAT32, audioFile.samples[0].data(),
+            static_cast<ALsizei>(audioFile.samples[0].size() * sizeof(float)),
+            audioFile.getSampleRate());
+
+        alGenSources(1, &m_audioSource);
+        alSourcei(m_audioSource, AL_BUFFER, m_audioBuffer);
+        alSourcef(m_audioSource, AL_SEC_OFFSET, 0.f);
+
+        std::thread audioThread(
+            [this]()
+            {
+                alSourcef(m_audioSource, AL_GAIN, 12.5f);
+                alSourcePlay(m_audioSource);
+                ALint state = AL_PLAYING;
+                while (state == AL_PLAYING)
+                {
+                    alGetSourcei(m_audioSource, AL_SOURCE_STATE, &state);
+                    std::this_thread::sleep_for(std::chrono::milliseconds(10));
+                }
+
+                alDeleteSources(1, &m_audioSource);
+                alDeleteBuffers(1, &m_audioBuffer);
+                m_chatSession->setState(ChatSessionState::Idle);
+            });
+        audioThread.detach();
+    }
+}
+
+void Context::updateModel()
+{
+    m_animators.remove_if([](const auto &animator)
+                          { return animator->isFinished(); });
+
+    m_model->resetLocalPose();
+    for (const auto &animator : m_animators)
+    {
+        glmmd::ModelPose pose(m_modelData);
+        animator->getLocalPose(pose);
+        m_model->pose() += pose;
+    }
+    m_model->solvePose();
+}
+
 void Context::run()
 {
-    for (auto &model : m_models)
-    {
-        model.update(0.f);
-        m_physicsWorld.setupModelPhysics(model, true);
-    }
+    m_physicsWorld.setupModelPhysics(*m_model, true);
 
-    m_startTime = std::chrono::high_resolution_clock::now();
-    auto &io    = ImGui::GetIO();
+    auto &io = ImGui::GetIO();
 
-    ImVec4 clearColor = ImVec4(0.2f, 0.2f, 0.2f, 1.0f);
+    ImVec4 clearColor = ImVec4(0.f, 0.f, 0.f, 0.f);
     while (!glfwWindowShouldClose(m_window))
     {
         glfwPollEvents();
@@ -248,8 +259,7 @@ void Context::run()
 
         glfwGetWindowSize(m_window, &m_windowWidth, &m_windowHeight);
 
-        float currentTime = getCurrentTime();
-        float deltaTime   = io.DeltaTime;
+        float deltaTime = io.DeltaTime;
 
         auto physicsStart = std::chrono::high_resolution_clock::now();
         m_physicsWorld.update(deltaTime, 1, 1.f / 120.f);
@@ -261,24 +271,9 @@ void Context::run()
 
         auto modelUpdateStart = std::chrono::high_resolution_clock::now();
 
-#ifndef GLMMD_DO_NOT_USE_STD_EXECUTION
-        std::vector<size_t> modelIndices(m_models.size());
-        std::iota(modelIndices.begin(), modelIndices.end(), 0);
-        std::for_each(std::execution::par, modelIndices.begin(),
-                      modelIndices.end(),
-                      [&](size_t i)
-#else
-        for (size_t i = 0; i < m_models.size(); ++i)
-#endif
-                      {
-                          m_models[i].update(currentTime);
-                          m_modelRenderers[i].renderData().init();
-                          m_models[i].pose().applyToRenderData(
-                              m_modelRenderers[i].renderData());
-                      }
-#ifndef GLMMD_DO_NOT_USE_STD_EXECUTION
-        );
-#endif
+        updateModel();
+        m_modelRenderer->renderData().init();
+        m_model->pose().applyToRenderData(m_modelRenderer->renderData());
 
         auto modelUpdateEnd = std::chrono::high_resolution_clock::now();
         auto modelUpdateDur =
@@ -288,8 +283,7 @@ void Context::run()
 
         auto renderStart = std::chrono::high_resolution_clock::now();
         updateCamera(deltaTime);
-        for (auto &renderer : m_modelRenderers)
-            renderer.render(m_camera, m_lighting);
+        m_modelRenderer->render(m_camera, m_lighting);
         auto renderEnd = std::chrono::high_resolution_clock::now();
         auto renderDur =
             std::chrono::duration_cast<std::chrono::duration<float>>(
@@ -314,15 +308,7 @@ void Context::run()
                                     ? glmmd::CameraProjectionType::Orthographic
                                     : glmmd::CameraProjectionType::Perspective;
 
-        static bool renderEdge = true;
-        if (ImGui::Checkbox("Render edge", &renderEdge))
-        {
-            for (auto &renderer : m_modelRenderers)
-                if (renderEdge)
-                    renderer.renderFlag() |= glmmd::MODEL_RENDER_FLAG_EDGE;
-                else
-                    renderer.renderFlag() &= ~glmmd::MODEL_RENDER_FLAG_EDGE;
-        }
+        chatControl();
 
         ImGui::Render();
         ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());

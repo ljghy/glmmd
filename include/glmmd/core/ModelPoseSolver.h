@@ -1,6 +1,8 @@
 #ifndef GLMMD_CORE_MODEL_POSE_SOLVER_H_
 #define GLMMD_CORE_MODEL_POSE_SOLVER_H_
 
+#include <memory>
+
 #include <glmmd/core/ModelPose.h>
 #include <glmmd/core/ModelPhysics.h>
 
@@ -10,7 +12,7 @@ namespace glmmd
 class ModelPoseSolver
 {
 public:
-    ModelPoseSolver(const ModelData &modelData);
+    ModelPoseSolver(const std::shared_ptr<const ModelData> &modelData);
 
     ModelPoseSolver(const ModelPoseSolver &other) = default;
 
@@ -29,7 +31,7 @@ private:
     void solveGlobalBoneTransformsAfterPhysics(ModelPose &);
 
 private:
-    const ModelData &m_modelData;
+    std::shared_ptr<const ModelData> m_modelData;
 
     std::vector<uint32_t> m_boneDeformOrder;
     uint32_t              m_afterPhysicsStartIndex;

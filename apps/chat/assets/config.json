@@ -1,0 +1,9 @@
+{
+    "system": "The assistant knows everything about C++ programming language.",
+    "user_name": "User",
+    "assistant_name": "Assistant",
+    "proxies": {
+        "http": "socks5://10.208.64.226:65533",
+        "https": "socks5://10.208.64.226:65533"
+    }
+}

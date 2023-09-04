@@ -90,25 +90,28 @@ void Context::loadResources()
 {
     for (const auto &modelNode : m_initData["models"])
     {
-        m_modelData.emplace_back(std::make_unique<glmmd::ModelData>());
-        auto &modelData = *m_modelData.back();
+        auto &modelData =
+            m_modelData.emplace_back(std::make_shared<glmmd::ModelData>());
 
         try
         {
             auto filename = modelNode["filename"].get<std::string>();
             glmmd::PmxFileLoader loader(filename, true);
-            loader.load(modelData);
+            loader.load(*modelData);
 
             std::cout << "Model loaded from: " << filename << '\n';
-            std::cout << "Name: " << modelData.info.modelName << '\n';
-            std::cout << "Comment: " << modelData.info.comment << '\n';
+            std::cout << "Name: " << modelData->info.modelName << '\n';
+            std::cout << "Comment: " << modelData->info.comment << '\n';
             std::cout << std::endl;
         }
         catch (const std::exception &e)
         {
             std::cerr << e.what() << '\n';
         }
-        addModel(modelData);
+
+        m_models.emplace_back(modelData);
+        m_modelRenderers.emplace_back(modelData);
+        m_animators.emplace_back();
     }
 
     for (const auto &motionNode : m_initData["motions"])
@@ -119,7 +122,7 @@ void Context::loadResources()
             if (motionNode.find("loop") != motionNode.end())
                 loop = motionNode["loop"].get<bool>();
 
-            auto clip       = std::make_unique<glmmd::FixedMotionClip>(loop);
+            auto clip       = std::make_shared<glmmd::FixedMotionClip>(loop);
             auto modelIndex = motionNode["model"].get<size_t>();
             auto filename   = motionNode["filename"].get<std::string>();
             glmmd::VmdFileLoader loader(filename, *m_modelData[modelIndex],
@@ -130,29 +133,13 @@ void Context::loadResources()
             std::cout << "Created for: " << loader.modelName() << '\n';
             std::cout << std::endl;
 
-            auto animator = std::make_unique<glmmd::Animator>();
-            animator->registerMotion(std::move(clip));
-            m_models[modelIndex].addAnimator(std::move(animator));
+            auto &animator = m_animators[modelIndex].emplace_back(clip);
         }
         catch (const std::exception &e)
         {
             std::cerr << e.what() << '\n';
         }
     }
-}
-
-float Context::getCurrentTime()
-{
-    auto now = std::chrono::high_resolution_clock::now();
-    return std::chrono::duration_cast<std::chrono::duration<float>>(now -
-                                                                    m_startTime)
-        .count();
-}
-
-void Context::addModel(const glmmd::ModelData &data)
-{
-    m_models.emplace_back(data);
-    m_modelRenderers.emplace_back(data);
 }
 
 void Context::updateCamera(float deltaTime)
@@ -205,16 +192,33 @@ void Context::updateCamera(float deltaTime)
     }
 }
 
+void Context::updateModelPose(size_t i)
+{
+    auto &model = m_models[i];
+    model.resetLocalPose();
+    for (const auto &animator : m_animators[i])
+    {
+        glmmd::ModelPose pose(m_modelData[i]);
+        animator.getLocalPose(pose);
+        model.pose() += pose;
+    }
+    model.solvePose();
+}
+
 void Context::run()
 {
+    size_t modelIndex = 0;
     for (auto &model : m_models)
     {
-        model.update(0.f);
+        for (auto &animator : m_animators[modelIndex])
+            animator.reset();
+        updateModelPose(modelIndex);
+
         m_physicsWorld.setupModelPhysics(model, true);
+        ++modelIndex;
     }
 
-    m_startTime = std::chrono::high_resolution_clock::now();
-    auto &io    = ImGui::GetIO();
+    auto &io = ImGui::GetIO();
 
     ImVec4 clearColor = ImVec4(0.2f, 0.2f, 0.2f, 1.0f);
     while (!glfwWindowShouldClose(m_window))
@@ -231,8 +235,7 @@ void Context::run()
 
         glfwGetWindowSize(m_window, &m_windowWidth, &m_windowHeight);
 
-        float currentTime = getCurrentTime();
-        float deltaTime   = io.DeltaTime;
+        float deltaTime = io.DeltaTime;
 
         auto physicsStart = std::chrono::high_resolution_clock::now();
         m_physicsWorld.update(deltaTime, 1, 1.f / 120.f);
@@ -254,7 +257,7 @@ void Context::run()
         for (size_t i = 0; i < m_models.size(); ++i)
 #endif
                       {
-                          m_models[i].update(currentTime);
+                          updateModelPose(i);
                           m_modelRenderers[i].renderData().init();
                           m_models[i].pose().applyToRenderData(
                               m_modelRenderers[i].renderData());

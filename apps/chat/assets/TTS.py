@@ -10,10 +10,10 @@ class TTS:
     def init(self, ssml_filename) -> bool:
         try:
             self.speech_config = speechsdk.SpeechConfig(
-                subscription=os.environ['SPEECH_KEY'],
-                region=os.environ['SPEECH_REGION'])
+                subscription=os.environ["SPEECH_KEY"],
+                region=os.environ["SPEECH_REGION"])
 
-            with open(ssml_filename, 'r') as f:
+            with open(ssml_filename, "r") as f:
                 self.ssml_string = f.read()
 
         except FileNotFoundError:
@@ -32,9 +32,9 @@ class TTS:
         self.viseme_key_frames.append(json.loads(evt.animation))
 
     def _preprocess(self, text: str) -> str:
-        text = re.sub(r'[\n\r]', '', text)
+        text = re.sub(r"[\n\r]+", " <break />", text)
         text = re.sub(
-            r"\(.*?\)|\{.*?\}|\[.*?\]|```.*?```|\*.*?\*", "<break />", text)
+            r"\(.*?\)|\{.*?\}|\[.*?\]|```.*?```|\*.*?\*", " <break />", text)
         text = re.sub("(?i)nya+n*~*",
                       "<phoneme alphabet=\"ipa\" ph=\"njan\"></phoneme>", text)
         return text
@@ -46,12 +46,12 @@ class TTS:
         result = self.speech_synthesizer.speak_ssml_async(ssml_string).get()
         stream = speechsdk.AudioDataStream(result)
 
-        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-        wav_filename = f'tts_{timestamp}.wav'
-        viseme_filename = f'viseme_{timestamp}.json'
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        wav_filename = f"tts_{timestamp}.wav"
+        viseme_filename = f"viseme_{timestamp}.json"
 
         stream.save_to_wav_file(wav_filename)
-        with open(viseme_filename, 'w') as f:
+        with open(viseme_filename, "w") as f:
             json.dump(self.viseme_key_frames, f)
 
         if result.reason == speechsdk.ResultReason.SynthesizingAudioCompleted:

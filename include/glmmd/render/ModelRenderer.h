@@ -1,6 +1,8 @@
 #ifndef GLMMD_VIEWER_MODEL_RENDERER_H_
 #define GLMMD_VIEWER_MODEL_RENDERER_H_
 
+#include <memory>
+
 #include <opengl_framework/Common.h>
 
 #include <glmmd/core/ModelData.h>
@@ -34,8 +36,8 @@ enum ModelRenderFlag : uint32_t
 class ModelRenderer
 {
 public:
-    ModelRenderer(const ModelData           &data,
-                  ModelRendererShaderSources shaderSources = {});
+    ModelRenderer(const std::shared_ptr<const ModelData> &data,
+                  ModelRendererShaderSources              shaderSources = {});
 
     void render(const Camera &camera, const Lighting &lighting);
 
@@ -51,7 +53,7 @@ private:
     void renderEdge(const Camera &camera);
 
 private:
-    const ModelData &m_modelData;
+    std::shared_ptr<const ModelData> m_modelData;
 
     RenderData m_renderData;
 

@@ -17,13 +17,13 @@
 namespace glmmd
 {
 
-ModelPose::ModelPose(const ModelData &modelData)
+ModelPose::ModelPose(const std::shared_ptr<const ModelData> &modelData)
     : m_modelData(modelData)
-    , m_localBoneTranslations(modelData.bones.size(), glm::vec3(0.f))
-    , m_localBoneRotations(modelData.bones.size(),
+    , m_localBoneTranslations(modelData->bones.size(), glm::vec3(0.f))
+    , m_localBoneRotations(modelData->bones.size(),
                            glm::quat(1.f, 0.f, 0.f, 0.f))
-    , m_morphRatios(modelData.morphs.size(), 0.f)
-    , m_globalBoneTransforms(modelData.bones.size(), glm::mat4(1.f))
+    , m_morphRatios(modelData->morphs.size(), 0.f)
+    , m_globalBoneTransforms(modelData->bones.size(), glm::mat4(1.f))
 {
 }
 
@@ -94,7 +94,7 @@ void ModelPose::applyMorphsToRenderData(RenderData &renderData) const
 {
     for (size_t i = 0; i < m_morphRatios.size(); ++i)
     {
-        const auto &morph = m_modelData.morphs[i];
+        const auto &morph = m_modelData->morphs[i];
         float       ratio = m_morphRatios[i];
         if (ratio == 0.f)
             continue;
@@ -190,29 +190,29 @@ void ModelPose::applyBoneTransformsToRenderData(RenderData &renderData) const
 {
     std::vector<glm::mat4> finalBoneTransforms(m_globalBoneTransforms.size());
     for (size_t i = 0; i < finalBoneTransforms.size(); ++i)
-        finalBoneTransforms[i] = glm::translate(m_globalBoneTransforms[i],
-                                                -m_modelData.bones[i].position);
+        finalBoneTransforms[i] = glm::translate(
+            m_globalBoneTransforms[i], -m_modelData->bones[i].position);
 
 #ifndef GLMMD_DO_NOT_USE_STD_EXECUTION
     {
         std::lock_guard<std::mutex> lock(vertexIndicesMutex);
         uint32_t sz = static_cast<uint32_t>(vertexIndices.size());
-        if (m_modelData.vertices.size() > sz)
+        if (m_modelData->vertices.size() > sz)
         {
-            vertexIndices.resize(m_modelData.vertices.size());
+            vertexIndices.resize(m_modelData->vertices.size());
             std::iota(vertexIndices.begin() + sz, vertexIndices.end(), sz);
         }
     }
 
     std::for_each(
         std::execution::par, vertexIndices.begin(),
-        vertexIndices.begin() + m_modelData.vertices.size(),
+        vertexIndices.begin() + m_modelData->vertices.size(),
         [&](uint32_t i)
 #else
     for (uint32_t i = 0; i < m_modelData.vertices.size(); ++i)
 #endif
         {
-            const auto &vert = m_modelData.vertices[i];
+            const auto &vert = m_modelData->vertices[i];
             auto       &pos  = renderData.positions[i];
             auto       &norm = renderData.normals[i];
 

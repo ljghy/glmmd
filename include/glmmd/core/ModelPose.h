@@ -1,6 +1,8 @@
 #ifndef GLMMD_CORE_MODEL_POSE_H_
 #define GLMMD_CORE_MODEL_POSE_H_
 
+#include <memory>
+
 #include <glmmd/core/ModelData.h>
 #include <glmmd/core/RenderData.h>
 
@@ -12,7 +14,7 @@ class ModelPose
     friend class ModelPoseSolver;
 
 public:
-    ModelPose(const ModelData &modelData);
+    ModelPose(const std::shared_ptr<const ModelData> &modelData);
     ModelPose(const ModelPose &other) = default;
 
     void resetLocal();
@@ -39,7 +41,7 @@ public:
     float            getMorphRatio(uint32_t morphIndex) const;
 
 private:
-    const ModelData &m_modelData;
+    std::shared_ptr<const ModelData> m_modelData;
 
     std::vector<glm::vec3> m_localBoneTranslations;
     std::vector<glm::quat> m_localBoneRotations;

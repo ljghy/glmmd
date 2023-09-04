@@ -9,11 +9,9 @@ endif()
 target_sources(glmmd
 PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/core/PhysicsWorld.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/core/Model.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/core/ModelPose.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/core/ModelPoseSolver.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/core/FixedMotionClip.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/core/Animator.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/core/RenderData.cpp
 
     ${CMAKE_CURRENT_SOURCE_DIR}/files/CodeConverter.cpp

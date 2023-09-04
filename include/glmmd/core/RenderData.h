@@ -1,6 +1,7 @@
 #ifndef GLMMD_CORE_RENDER_DATA_H_
 #define GLMMD_CORE_RENDER_DATA_H_
 
+#include <memory>
 #include <vector>
 
 #include <glmmd/core/ModelData.h>
@@ -33,7 +34,7 @@ struct MaterialRenderData
 
 struct RenderData
 {
-    RenderData(const ModelData &data);
+    RenderData(const std::shared_ptr<const ModelData> &data);
 
     void init();
 
@@ -48,7 +49,8 @@ struct RenderData
     std::vector<MaterialRenderData> materials;
 
 private:
-    const ModelData       &m_data;
+    std::shared_ptr<const ModelData> m_data;
+
     std::vector<glm::vec3> m_initialPositions;
     std::vector<glm::vec3> m_initialNormals;
     std::vector<glm::vec2> m_initialUVs;

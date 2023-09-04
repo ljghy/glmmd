@@ -6,7 +6,10 @@
 
 using json = nlohmann::json;
 
+const std::string assetsDir = "apps/chat/assets";
+
 ChatSession::ChatSession()
+    : m_state(ChatSessionState::Idle)
 {
     Py_Initialize();
     if (!Py_IsInitialized())
@@ -14,11 +17,46 @@ ChatSession::ChatSession()
         throw std::runtime_error("Failed to initialize Python interpreter");
     }
 
-    std::string assetsDir = "apps/chat/assets";
-
     PyRun_SimpleString("import sys");
     PyRun_SimpleString(("sys.path.append('" + assetsDir + "')").c_str());
 
+    initLLM();
+    initTTS();
+}
+
+void ChatSession::initLLM()
+{
+    auto llmModule = PyImport_ImportModule("LLM");
+    if (!llmModule)
+    {
+        throw std::runtime_error("Failed to import LLM module");
+    }
+
+    auto llmClass = PyObject_GetAttrString(llmModule, "LLM");
+    if (!llmClass)
+    {
+        throw std::runtime_error("Failed to get LLM class");
+    }
+
+    m_llmInstance = PyObject_CallObject(llmClass, nullptr);
+    if (!m_llmInstance)
+    {
+        throw std::runtime_error("Failed to create LLM instance");
+    }
+
+    auto ret = PyObject_CallMethod(m_llmInstance, "init", "s",
+                                   (assetsDir + "/config.json").c_str());
+    if (!ret || !PyObject_IsTrue(ret))
+    {
+        throw std::runtime_error("Failed to initialize LLM instance");
+    }
+
+    Py_DECREF(llmClass);
+    Py_DECREF(llmModule);
+}
+
+void ChatSession::initTTS()
+{
     auto ttsModule = PyImport_ImportModule("TTS");
     if (!ttsModule)
     {
@@ -48,6 +86,22 @@ ChatSession::ChatSession()
     Py_DECREF(ttsModule);
 }
 
+bool ChatSession::getResponse(const std::string &text)
+{
+    auto ret =
+        PyObject_CallMethod(m_llmInstance, "get_response", "s", text.c_str());
+
+    bool success = ret && PyObject_IsTrue(PyTuple_GetItem(ret, 0));
+    if (success)
+    {
+        m_response = PyUnicode_AsUTF8(PyTuple_GetItem(ret, 1));
+        m_usage    = PyLong_AsSize_t(PyTuple_GetItem(ret, 2));
+    }
+
+    Py_DECREF(ret);
+    return success;
+}
+
 bool ChatSession::synthesizeSpeech(const std::string &text)
 {
     auto ret =
@@ -65,6 +119,24 @@ bool ChatSession::synthesizeSpeech(const std::string &text)
 
     Py_DECREF(ret);
     return success;
+}
+
+void ChatSession::sendText(const std::string &text)
+{
+    std::thread t(
+        [this](const std::string &text)
+        {
+            m_state = ChatSessionState::Waiting;
+
+            bool success = getResponse(text);
+            if (success)
+                success = synthesizeSpeech(m_response);
+
+            m_state =
+                success ? ChatSessionState::Ready : ChatSessionState::Idle;
+        },
+        text);
+    t.detach();
 }
 
 void ChatSession::loadAudio(const std::string &filename)
@@ -94,6 +166,7 @@ void ChatSession::loadVisemes(const std::string &filename)
 
 ChatSession::~ChatSession()
 {
+    Py_DECREF(m_llmInstance);
     Py_DECREF(m_ttsInstance);
 
     Py_Finalize();
