@@ -6,7 +6,8 @@
 
 using json = nlohmann::json;
 
-const std::string assetsDir = "apps/chat/assets";
+const std::string assetsDir      = "apps/chat/assets/";
+const std::string configFilename = "config_local.json";
 
 ChatSession::ChatSession()
     : m_state(ChatSessionState::Idle)
@@ -26,7 +27,7 @@ ChatSession::ChatSession()
 
 void ChatSession::initLLM()
 {
-    auto llmModule = PyImport_ImportModule("LLM");
+    auto llmModule = PyImport_ImportModule("LLM_local");
     if (!llmModule)
     {
         throw std::runtime_error("Failed to import LLM module");
@@ -45,7 +46,7 @@ void ChatSession::initLLM()
     }
 
     auto ret = PyObject_CallMethod(m_llmInstance, "init", "s",
-                                   (assetsDir + "/config.json").c_str());
+                                   (assetsDir + configFilename).c_str());
     if (!ret || !PyObject_IsTrue(ret))
     {
         throw std::runtime_error("Failed to initialize LLM instance");

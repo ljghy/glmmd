@@ -50,6 +50,8 @@ class LLM:
         return response
 
     def get_response(self, text: str) -> tuple[bool, str, int]:
+        text = text.strip()
+
         system_prompt = [{
             "role": "system",
             "content": self.config["system"]
