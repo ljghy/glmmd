@@ -1,118 +1,127 @@
 const char *defaultVertShaderSrc =
-    "#version 330 core\n"
-    "layout(location = 0) in vec3 aPos;\n"
-    "layout(location = 1) in vec3 aNormal;\n"
-    "layout(location = 2) in vec2 aUV;\n"
-    "uniform mat4 u_model;\n"
-    "uniform mat4 u_MVP;\n"
-    "out vec3 normal;\n"
-    "out vec2 uv;\n"
-    "void main() {\n"
-    "    normal = normalize(mat3(transpose(inverse(u_model))) * aNormal);\n"
-    "    uv = aUV;\n"
-    "    gl_Position = u_MVP * vec4(aPos, 1.0);\n"
-    "}\n";
+    R"(
+    #version 330 core
+    layout(location = 0) in vec3 aPos;
+    layout(location = 1) in vec3 aNormal;
+    layout(location = 2) in vec2 aUV;
+    uniform mat4 u_model;
+    uniform mat4 u_MVP;
+    out vec3 normal;
+    out vec2 uv;
+    void main() {
+        normal = normalize(mat3(transpose(inverse(u_model))) * aNormal);
+        uv = aUV;
+        gl_Position = u_MVP * vec4(aPos, 1.0);
+    }
+    )";
 
 const char *defaultFragShaderSrc =
-    "#version 330 core\n"
-    "in vec3 normal;\n"
-    "in vec2 uv;\n"
-    "struct Material {\n"
-    "    vec4 diffuse;\n"
-    "    vec3 specular;\n"
-    "    float specularPower;\n"
-    "    vec3 ambient;\n"
-    "    vec4 edgeColor;\n"
-    "    float edgeSize;\n"
-    "    int hasTexture;\n"
-    "    vec4 textureAdd;\n"
-    "    vec4 textureMul;\n"
-    "    sampler2D texture;\n"
-    "    int sphereTextureMode;\n"
-    "    vec4 sphereTextureAdd;\n"
-    "    vec4 sphereTextureMul;\n"
-    "    sampler2D sphereTexture;\n"
-    "    int hasToonTexture;\n"
-    "    vec4 toonTextureAdd;\n"
-    "    vec4 toonTextureMul;\n"
-    "    sampler2D toonTexture;\n"
-    "};\n"
-    "uniform Material u_mat;\n"
-    "uniform vec3 u_viewDir;\n"
-    "uniform vec3 u_lightDir;\n"
-    "uniform vec3 u_lightColor;\n"
-    "uniform vec3 u_ambientColor;\n"
-    "out vec4 FragColor;\n"
-    "vec4 applyMul(vec4 color, vec4 factor) {\n"
-    "    vec3 k = mix(vec3(1.0, 1.0, 1.0), factor.rgb, factor.a);\n"
-    "    return vec4(color.rgb * k, color.a);\n"
-    "}\n"
-    "vec4 applyAdd(vec4 color, vec4 factor) {\n"
-    "    return vec4(color.rgb + factor.rgb * factor.a, color.a);\n"
-    "}\n"
-    "void main() {\n"
-    "    vec3 norm = normalize(normal);\n"
-    "    vec3 viewDir = -normalize(u_viewDir);\n"
-    "    vec3 lightDir = -normalize(u_lightDir);\n"
-    "    vec3 phong = u_mat.diffuse.rgb * u_lightColor;\n"
-    "    vec3 halfVec = normalize(viewDir + lightDir);\n"
-    "    if (u_mat.specularPower > 0.0) {\n"
-    "        float spec = pow(max(dot(norm, halfVec), 0.0),\n"
-    "                         u_mat.specularPower);\n"
-    "        phong += u_mat.specular * spec;\n"
-    "    }\n"
-    "    phong += u_mat.ambient * u_ambientColor;\n"
-    "    phong = clamp(phong, 0.0, 1.0);\n"
-    "    vec4 color = vec4(phong, u_mat.diffuse.a);\n"
-    "    if (u_mat.hasTexture == 1) {\n"
-    "        color *= texture(u_mat.texture, uv);\n"
-    "        if (color.a == 0.0) discard;\n"
-    "        color = applyMul(color, u_mat.textureMul);\n"
-    "        color = applyAdd(color, u_mat.textureAdd);\n"
-    "    }\n"
-    "    if (u_mat.sphereTextureMode == 1 || u_mat.sphereTextureMode == 2) {\n"
-    "        vec3 t = normalize(cross(vec3(0.0, 1.0, 0.0), viewDir));\n"
-    "        vec3 b = cross(viewDir, t);\n"
-    "        vec2 spUV = vec2(dot(norm, t), -dot(norm, b));\n"
-    "        spUV = 0.5 + 0.5 * spUV;\n"
-    "        vec4 spColor = texture(u_mat.sphereTexture, spUV);\n"
-    "        spColor = applyMul(spColor, u_mat.sphereTextureMul);\n"
-    "        spColor = applyAdd(spColor, u_mat.sphereTextureAdd);\n"
-    "        if (u_mat.sphereTextureMode == 1)\n"
-    "            color *= spColor;\n"
-    "        else\n"
-    "            color = vec4(spColor.rgb + color.rgb, color.a);\n"
-    "    }\n"
-    "    float visibility = 0.5 * dot(norm, lightDir) + 0.5;"
-    "    if (u_mat.hasToonTexture == 1) {\n"
-    "        vec2 toonUV = vec2(0.5, clamp(1.0 - visibility, 0.0, 1.0));\n"
-    "        vec4 toonColor = texture(u_mat.toonTexture, toonUV);\n"
-    "        toonColor = applyMul(toonColor, u_mat.toonTextureMul);\n"
-    "        toonColor = applyAdd(toonColor, u_mat.toonTextureAdd);\n"
-    "        color *= toonColor;\n"
-    "    }\n"
-    "    FragColor = color;\n"
-    "}\n";
+    R"(
+    #version 330 core
+    in vec3 normal;
+    in vec2 uv;
+    struct Material {
+        vec4 diffuse;
+        vec3 specular;
+        float specularPower;
+        vec3 ambient;
+        vec4 edgeColor;
+        float edgeSize;
+        int hasTexture;
+        vec4 textureAdd;
+        vec4 textureMul;
+        sampler2D texture;
+        int sphereTextureMode;
+        vec4 sphereTextureAdd;
+        vec4 sphereTextureMul;
+        sampler2D sphereTexture;
+        int hasToonTexture;
+        vec4 toonTextureAdd;
+        vec4 toonTextureMul;
+        sampler2D toonTexture;
+    };
+    uniform Material u_mat;
+    uniform vec3 u_viewDir;
+    uniform vec3 u_lightDir;
+    uniform vec3 u_lightColor;
+    uniform vec3 u_ambientColor;
+    out vec4 FragColor;
+    vec4 applyMul(vec4 color, vec4 factor) {
+        vec3 k = mix(vec3(1.0, 1.0, 1.0), factor.rgb, factor.a);
+        return vec4(color.rgb * k, color.a);
+    }
+    vec4 applyAdd(vec4 color, vec4 factor) {
+        return vec4(color.rgb + factor.rgb * factor.a, color.a);
+    }
+    void main() {
+        vec3 norm = normalize(normal);
+        vec3 viewDir = -normalize(u_viewDir);
+        vec3 lightDir = -normalize(u_lightDir);
+        vec3 phong = u_mat.diffuse.rgb * u_lightColor;
+        vec3 halfVec = normalize(viewDir + lightDir);
+        if (u_mat.specularPower > 0.0) {
+            float spec = pow(max(dot(norm, halfVec), 0.0),
+                             u_mat.specularPower);
+            phong += u_mat.specular * spec;
+        }
+        phong += u_mat.ambient * u_ambientColor;
+        phong = clamp(phong, 0.0, 1.0);
+        vec4 color = vec4(phong, u_mat.diffuse.a);
+        if (u_mat.hasTexture == 1) {
+            color *= texture(u_mat.texture, uv);
+            if (color.a == 0.0) discard;
+            color = applyMul(color, u_mat.textureMul);
+            color = applyAdd(color, u_mat.textureAdd);
+        }
+        if (u_mat.sphereTextureMode == 1 || u_mat.sphereTextureMode == 2) {
+            vec3 t = normalize(cross(vec3(0.0, 1.0, 0.0), viewDir));
+            vec3 b = cross(viewDir, t);
+            vec2 spUV = vec2(dot(norm, t), -dot(norm, b));
+            spUV = 0.5 + 0.5 * spUV;
+            vec4 spColor = texture(u_mat.sphereTexture, spUV);
+            spColor = applyMul(spColor, u_mat.sphereTextureMul);
+            spColor = applyAdd(spColor, u_mat.sphereTextureAdd);
+            if (u_mat.sphereTextureMode == 1)
+                color *= spColor;
+            else
+                color = vec4(spColor.rgb + color.rgb, color.a);
+        }
+        float visibility = 0.5 * dot(norm, lightDir) + 0.5;
+        if (u_mat.hasToonTexture == 1) {
+            vec2 toonUV = vec2(0.5, clamp(1.0 - visibility, 0.0, 1.0));
+            vec4 toonColor = texture(u_mat.toonTexture, toonUV);
+            toonColor = applyMul(toonColor, u_mat.toonTextureMul);
+            toonColor = applyAdd(toonColor, u_mat.toonTextureAdd);
+            color *= toonColor;
+        }
+        FragColor = color;
+    }
+    )";
 
 const char *defaultEdgeVertShaderSrc =
-    "#version 330 core\n"
-    "layout(location = 0) in vec3 aPos;\n"
-    "layout(location = 1) in vec3 aNormal;\n"
-    "uniform mat4 u_MV;\n"
-    "uniform mat4 u_MVP;\n"
-    "uniform vec2 u_viewportSize;\n"
-    "uniform float u_edgeSize;\n"
-    "void main() {\n"
-    "    vec3 norm = normalize(transpose(inverse(mat3(u_MV))) * aNormal);\n"
-    "    vec4 pos = u_MVP * vec4(aPos, 1.0);\n"
-    "    vec2 screenNorm = normalize(norm.xy);\n"
-    "    pos.xy += screenNorm * 2 / u_viewportSize * u_edgeSize * 2 * pos.w;\n"
-    "    gl_Position = pos;\n"
-    "}\n";
+    R"(
+    #version 330 core
+    layout(location = 0) in vec3 aPos;
+    layout(location = 1) in vec3 aNormal;
+    uniform mat4 u_MV;
+    uniform mat4 u_MVP;
+    uniform vec2 u_viewportSize;
+    uniform float u_edgeSize;
+    void main() {
+        vec3 norm = normalize(transpose(inverse(mat3(u_MV))) * aNormal);
+        vec4 pos = u_MVP * vec4(aPos, 1.0);
+        vec2 screenNorm = normalize(norm.xy);
+        pos.xy += screenNorm * 2 / u_viewportSize * u_edgeSize * 2 * pos.w;
+        gl_Position = pos;
+    }
+    )";
 
-const char *defaultEdgeFragShaderSrc = "#version 330 core\n"
-                                       "uniform vec4 u_edgeColor;\n"
-                                       "out vec4 FragColor;\n"
-                                       "void main() {\n"
-                                       "    FragColor = u_edgeColor;\n"
-                                       "}\n";
+const char *defaultEdgeFragShaderSrc =
+    R"(
+    #version 330 core
+    uniform vec4 u_edgeColor;
+    out vec4 FragColor;
+    void main() {
+        FragColor = u_edgeColor;
+    }
+    )";
