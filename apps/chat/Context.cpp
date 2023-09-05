@@ -11,6 +11,7 @@
 #include <glmmd/core/SimpleAnimator.h>
 #include <glmmd/files/PmxFileLoader.h>
 #include <glmmd/files/VmdFileLoader.h>
+
 #include "Context.h"
 
 inline void framebufferSizeCallback(GLFWwindow *, int width, int height)
@@ -25,12 +26,13 @@ Context::Context(const std::string &initFile)
     initWindow();
     initImGui();
     initOpenAL();
-    loadResources();
 
     m_chatSession = std::make_unique<ChatSession>();
 
+    loadResources();
+
     m_camera.projType       = glmmd::CameraProjectionType::Perspective;
-    m_camera.position       = glm::vec3(0.0f, 14.0f, -24.0f);
+    m_camera.position       = glm::vec3(0.0f, 16.0f, -16.0f);
     m_lighting.direction    = glm::normalize(glm::vec3(-1.f, -2.f, 1.f));
     m_lighting.color        = glm::vec3(0.6f);
     m_lighting.ambientColor = glm::vec3(1.f);
@@ -113,6 +115,27 @@ void Context::loadResources()
 
         m_model         = std::make_unique<glmmd::Model>(m_modelData);
         m_modelRenderer = std::make_unique<glmmd::ModelRenderer>(m_modelData);
+
+        glmmd::VmdFileLoader vmdLoader(
+            m_initData["motions"]["idle_base"].get<std::string>(), *m_modelData,
+            true);
+
+        auto baseIdleMotion = std::make_shared<glmmd::FixedMotionClip>(true);
+        vmdLoader.load(*baseIdleMotion);
+
+        std::vector<std::shared_ptr<const glmmd::Motion>> idleMotions;
+        for (const auto &idleMotionPath : m_initData["motions"]["idle_rand"])
+        {
+            glmmd::VmdFileLoader vmdLoader(idleMotionPath.get<std::string>(),
+                                           *m_modelData, true);
+
+            auto motion = std::make_shared<glmmd::FixedMotionClip>(false);
+            vmdLoader.load(*motion);
+            idleMotions.emplace_back(motion);
+        }
+
+        m_animators.emplace_back(std::make_unique<IdleAnimator>(
+            m_modelData, baseIdleMotion, idleMotions, 10.f, 0.5f));
     }
     catch (const std::exception &e)
     {
@@ -172,6 +195,8 @@ void Context::updateCamera(float deltaTime)
 
 void Context::chatControl()
 {
+    ImGui::Begin("Chat");
+
     if (m_chatSession->getState() == ChatSessionState::Idle)
     {
         static char text[256] = "";
@@ -222,6 +247,8 @@ void Context::chatControl()
             });
         audioThread.detach();
     }
+
+    ImGui::End();
 }
 
 void Context::updateModel()
@@ -241,6 +268,11 @@ void Context::updateModel()
 
 void Context::run()
 {
+    for (auto &animator : m_animators)
+        animator->reset();
+
+    updateModel();
+
     m_physicsWorld.setupModelPhysics(*m_model, true);
 
     auto &io = ImGui::GetIO();
@@ -297,17 +329,6 @@ void Context::run()
         ImGui::Text("Render: %.3f ms", renderDur * 1000.f);
         ImGui::Text("Total: %.3f ms",
                     (physicsDur + modelUpdateDur + renderDur) * 1000.f);
-
-        static glm::vec3 gravity = glm::vec3(0.f, -9.8f, 0.f);
-        if (ImGui::SliderFloat3("Gravity", &gravity.x, -10.f, 10.f))
-            m_physicsWorld.setGravity(gravity);
-        ImGui::ColorEdit4("Clear Color", &clearColor.x);
-        static bool ortho =
-            m_camera.projType == glmmd::CameraProjectionType::Orthographic;
-        if (ImGui::Checkbox("Ortho", &ortho))
-            m_camera.projType = ortho
-                                    ? glmmd::CameraProjectionType::Orthographic
-                                    : glmmd::CameraProjectionType::Perspective;
 
         chatControl();
 

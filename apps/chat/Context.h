@@ -1,5 +1,5 @@
-#ifndef VIEWER_CONTEXT_H_
-#define VIEWER_CONTEXT_H_
+#ifndef CHAT_CONTEXT_H_
+#define CHAT_CONTEXT_H_
 
 #include <glad/glad.h>
 //
@@ -20,6 +20,7 @@
 #include <glmmd/render/ModelRenderer.h>
 
 #include "ChatSession.h"
+#include "IdleAnimator.h"
 
 using json = nlohmann::json;
 

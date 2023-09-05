@@ -39,7 +39,7 @@ public:
     virtual float duration() const override
     {
         return m_loop ? std::numeric_limits<float>::max()
-                      : m_frameCount * m_frameRate;
+                      : m_frameCount / m_frameRate;
     }
 
     virtual void getLocalPose(float time, ModelPose &pose) const override;
