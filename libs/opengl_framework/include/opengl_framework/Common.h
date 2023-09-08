@@ -6,5 +6,7 @@
 #include <opengl_framework/IndexBufferObject.h>
 #include <opengl_framework/Shader.h>
 #include <opengl_framework/Texture2D.h>
+#include <opengl_framework/FrameBufferObject.h>
+#include <opengl_framework/RenderBufferObject.h>
 
 #endif

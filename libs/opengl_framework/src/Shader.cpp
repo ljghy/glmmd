@@ -93,7 +93,7 @@ void         Shader::destroy()
 }
 Shader::~Shader() { destroy(); }
 
-int Shader::getUniformLocation(const std::string &name)
+int Shader::getUniformLocation(const std::string &name) const
 {
     auto iter = m_uniformLocationCache.find(name);
     if (iter == m_uniformLocationCache.end())
@@ -106,33 +106,33 @@ int Shader::getUniformLocation(const std::string &name)
         return iter->second;
 }
 
-void Shader::setUniform1i(const std::string &name, int n)
+void Shader::setUniform1i(const std::string &name, int n) const
 {
     glUniform1i(getUniformLocation(name), n);
 }
 
-void Shader::setUniform2fv(const std::string &name, const float *v)
+void Shader::setUniform2fv(const std::string &name, const float *v) const
 {
     glUniform2fv(getUniformLocation(name), 1, v);
 }
 
-void Shader::setUniform3fv(const std::string &name, const float *v)
+void Shader::setUniform3fv(const std::string &name, const float *v) const
 {
     glUniform3fv(getUniformLocation(name), 1, v);
 }
 
-void Shader::setUniform1f(const std::string &name, float f)
+void Shader::setUniform1f(const std::string &name, float f) const
 {
     glUniform1f(getUniformLocation(name), f);
 }
 
-void Shader::setUniform4fv(const std::string &name, const float *v)
+void Shader::setUniform4fv(const std::string &name, const float *v) const
 {
     glUniform4fv(getUniformLocation(name), 1, v);
 }
 
 void Shader::setUniformMatrix4fv(const std::string &name, const float *ptr,
-                                 bool transpose, unsigned int count)
+                                 bool transpose, unsigned int count) const
 {
     glUniformMatrix4fv(getUniformLocation(name), count, transpose, ptr);
 }

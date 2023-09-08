@@ -29,6 +29,7 @@ Context::Context(const std::string &initFile)
 
     initWindow();
     initImGui();
+    initFBO();
     loadResources();
 
     m_camera.projType       = glmmd::CameraProjectionType::Perspective;
@@ -84,6 +85,39 @@ void Context::initImGui()
 
     ImGui_ImplGlfw_InitForOpenGL(m_window, true);
     ImGui_ImplOpenGL3_Init(glsl_version);
+}
+
+void Context::initFBO()
+{
+    m_viewportWidth  = 1600;
+    m_viewportHeight = 900;
+    int samples      = m_initData.find("MSAA") != m_initData.end()
+                           ? m_initData["MSAA"].get<int>()
+                           : 1;
+
+    m_FBO.create();
+    Texture2DCreateInfo texInfo;
+    texInfo.width       = m_viewportWidth;
+    texInfo.height      = m_viewportHeight;
+    texInfo.samples     = samples;
+    texInfo.internalFmt = GL_RGB;
+    texInfo.dataFmt     = GL_RGB;
+    m_FBO.attachColorTexture(std::make_unique<Texture2D>(texInfo));
+
+    RenderBufferObjectCreateInfo rboInfo;
+    rboInfo.width       = m_viewportWidth;
+    rboInfo.height      = m_viewportHeight;
+    rboInfo.samples     = samples;
+    rboInfo.internalFmt = GL_DEPTH24_STENCIL8;
+    m_FBO.attachDepthRenderBuffer(
+        std::make_unique<RenderBufferObject>(rboInfo));
+
+    if (!m_FBO.isComplete())
+        throw std::runtime_error("Failed to create FBO.");
+
+    m_intermediateFBO.create();
+    texInfo.samples = 1;
+    m_intermediateFBO.attachColorTexture(std::make_unique<Texture2D>(texInfo));
 }
 
 void Context::loadResources()
@@ -146,9 +180,9 @@ void Context::updateCamera(float deltaTime)
 {
     auto &io = ImGui::GetIO();
 
-    m_camera.resize(m_windowWidth, m_windowHeight);
+    m_camera.resize(m_viewportWidth, m_viewportHeight);
 
-    if (!io.WantCaptureMouse)
+    if (io.WantCaptureMouse)
     {
         ImVec2          mouseDelta  = io.MouseDelta;
         constexpr float sensitivity = glm::radians(0.1f);
@@ -178,7 +212,7 @@ void Context::updateCamera(float deltaTime)
         }
     }
 
-    if (!io.WantCaptureKeyboard)
+    if (io.WantCaptureKeyboard)
     {
         constexpr float vel = 25.f;
         if (io.KeysDown[GLFW_KEY_W])
@@ -229,11 +263,8 @@ void Context::run()
         ImGui_ImplGlfw_NewFrame();
         ImGui::NewFrame();
 
-        glClearColor(clearColor.x * clearColor.w, clearColor.y * clearColor.w,
-                     clearColor.z * clearColor.w, clearColor.w);
+        glClearColor(0.f, 0.f, 0.f, 1.f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-        glfwGetWindowSize(m_window, &m_windowWidth, &m_windowHeight);
 
         float deltaTime = io.DeltaTime;
 
@@ -273,9 +304,47 @@ void Context::run()
                 .count();
 
         auto renderStart = std::chrono::high_resolution_clock::now();
+
+        ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0, 0));
+        ImGui::Begin("Viewport", nullptr,
+                     ImGuiWindowFlags_NoScrollbar |
+                         ImGuiWindowFlags_NoScrollWithMouse);
+
+        m_FBO.bind();
+
+        if (m_viewportWidth != ImGui::GetWindowWidth() ||
+            m_viewportHeight != ImGui::GetWindowHeight())
+        {
+            m_viewportWidth  = ImGui::GetWindowWidth();
+            m_viewportHeight = ImGui::GetWindowHeight();
+            m_FBO.resize(m_viewportWidth, m_viewportHeight);
+            m_intermediateFBO.resize(m_viewportWidth, m_viewportHeight);
+        }
+
+        glClearColor(clearColor.x * clearColor.w, clearColor.y * clearColor.w,
+                     clearColor.z * clearColor.w, clearColor.w);
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+        glViewport(0, 0, m_viewportWidth, m_viewportHeight);
+
         updateCamera(deltaTime);
         for (auto &renderer : m_modelRenderers)
             renderer.render(m_camera, m_lighting);
+        m_FBO.unbind();
+
+        m_FBO.bindRead();
+        m_intermediateFBO.bindDraw();
+        glBlitFramebuffer(0, 0, m_viewportWidth, m_viewportHeight, 0, 0,
+                          m_viewportWidth, m_viewportHeight,
+                          GL_COLOR_BUFFER_BIT, GL_NEAREST);
+        m_intermediateFBO.unbind();
+
+        ImGui::Image(
+            (void *)(uintptr_t)m_intermediateFBO.colorTextureAttachment()->id(),
+            ImVec2(m_viewportWidth, m_viewportHeight), ImVec2(0, 1),
+            ImVec2(1, 0));
+        ImGui::End();
+        ImGui::PopStyleVar();
+
         auto renderEnd = std::chrono::high_resolution_clock::now();
         auto renderDur =
             std::chrono::duration_cast<std::chrono::duration<float>>(

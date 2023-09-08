@@ -7,6 +7,8 @@ PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/src/VertexBufferObject.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/IndexBufferObject.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/Texture2D.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/FrameBufferObject.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/RenderBufferObject.cpp
 )
 
 target_include_directories(opengl_framework

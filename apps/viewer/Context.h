@@ -27,6 +27,7 @@ public:
 private:
     void initWindow();
     void initImGui();
+    void initFBO();
     void loadResources();
 
     void updateModelPose(size_t i);
@@ -37,8 +38,9 @@ private:
     json m_initData;
 
     GLFWwindow *m_window;
-    int         m_windowWidth;
-    int         m_windowHeight;
+
+    int m_viewportWidth;
+    int m_viewportHeight;
 
     std::vector<std::shared_ptr<glmmd::ModelData>> m_modelData;
 
@@ -51,6 +53,9 @@ private:
     glmmd::Lighting m_lighting;
 
     glmmd::PhysicsWorld m_physicsWorld;
+
+    FrameBufferObject m_FBO;
+    FrameBufferObject m_intermediateFBO;
 };
 
 #endif

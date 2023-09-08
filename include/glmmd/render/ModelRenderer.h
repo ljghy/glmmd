@@ -39,9 +39,10 @@ public:
     ModelRenderer(const std::shared_ptr<const ModelData> &data,
                   ModelRendererShaderSources              shaderSources = {});
 
-    void render(const Camera &camera, const Lighting &lighting);
+    void render(const Camera &camera, const Lighting &lighting) const;
 
-    RenderData &renderData() { return m_renderData; }
+    RenderData       &renderData() { return m_renderData; }
+    const RenderData &renderData() const { return m_renderData; }
 
     static void releaseSharedToonTextures();
 
@@ -49,8 +50,8 @@ public:
 
 private:
     void fillBuffers() const;
-    void renderMesh(const Camera &camera, const Lighting &lighting);
-    void renderEdge(const Camera &camera);
+    void renderMesh(const Camera &camera, const Lighting &lighting) const;
+    void renderEdge(const Camera &camera) const;
 
 private:
     std::shared_ptr<const ModelData> m_modelData;

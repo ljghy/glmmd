@@ -95,7 +95,7 @@ void ModelRenderer::fillBuffers() const
                     m_renderData.UVs.data());
 }
 
-void ModelRenderer::render(const Camera &camera, const Lighting &lighting)
+void ModelRenderer::render(const Camera &camera, const Lighting &lighting) const
 {
     if (m_renderFlag == MODEL_RENDER_FLAG_NONE)
         return;
@@ -111,7 +111,8 @@ void ModelRenderer::render(const Camera &camera, const Lighting &lighting)
         renderEdge(camera);
 }
 
-void ModelRenderer::renderMesh(const Camera &camera, const Lighting &lighting)
+void ModelRenderer::renderMesh(const Camera   &camera,
+                               const Lighting &lighting) const
 {
     glEnable(GL_DEPTH_TEST);
     glDepthFunc(GL_LEQUAL);
@@ -213,7 +214,7 @@ void ModelRenderer::renderMesh(const Camera &camera, const Lighting &lighting)
     }
 }
 
-void ModelRenderer::renderEdge(const Camera &camera)
+void ModelRenderer::renderEdge(const Camera &camera) const
 {
     glEnable(GL_CULL_FACE);
     glCullFace(GL_FRONT);

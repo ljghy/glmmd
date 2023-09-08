@@ -7,18 +7,15 @@ struct Texture2DCreateInfo
 {
     int width;
     int height;
+    int samples = 1;
 
     const unsigned char *data = nullptr;
 
     GLenum internalFmt = GL_RGBA;
     GLenum dataFmt     = GL_RGBA;
     GLenum dataType    = GL_UNSIGNED_BYTE;
-
-    int  mipmapLevel = 0;
-    bool genMipmap   = false;
-
-    GLenum wrapMode   = GL_REPEAT;
-    GLenum filterMode = GL_LINEAR;
+    GLenum wrapMode    = GL_REPEAT;
+    GLenum filterMode  = GL_LINEAR;
 };
 
 class Texture2D
@@ -26,6 +23,8 @@ class Texture2D
 
 public:
     Texture2D();
+    Texture2D(const Texture2DCreateInfo &info);
+
     ~Texture2D();
 
     Texture2D(const Texture2D &)            = delete;
@@ -38,13 +37,19 @@ public:
     void bind(unsigned int unit = 0) const;
     void unbind() const;
 
-    int width() const { return m_info.width; }
-    int height() const { return m_info.height; }
+    int          width() const { return m_info.width; }
+    int          height() const { return m_info.height; }
+    int          samples() const { return m_info.samples; }
+    unsigned int target() const { return m_target; }
 
     unsigned int id() const { return m_id; }
 
+    void resize(int width, int height);
+
 private:
-    unsigned int        m_id;
+    unsigned int m_id;
+    unsigned int m_target;
+
     Texture2DCreateInfo m_info;
 };
 
