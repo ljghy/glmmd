@@ -1,10 +1,10 @@
 #include <iostream>
 
-#include "Context.h"
-
 #ifdef _WIN32
 #include <Windows.h>
 #endif
+
+#include "Context.h"
 
 int main()
 {

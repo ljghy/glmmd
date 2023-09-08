@@ -57,9 +57,10 @@ ModelRenderer::ModelRenderer(const std::shared_ptr<const ModelData> &data,
         if (!data->textures[i].exists)
             continue;
 
-        Texture2DCreateInfo info{.width  = data->textures[i].width,
-                                 .height = data->textures[i].height,
-                                 .data   = data->textures[i].pixels.data()};
+        Texture2DCreateInfo info;
+        info.width  = data->textures[i].width;
+        info.height = data->textures[i].height;
+        info.data   = data->textures[i].pixels.data();
         m_textures[i].create(info);
     }
 
@@ -67,11 +68,12 @@ ModelRenderer::ModelRenderer(const std::shared_ptr<const ModelData> &data,
     {
         for (size_t i = 0; i < sharedToonTextures.size(); ++i)
         {
-            Texture2DCreateInfo info{.width  = 32,
-                                     .height = 32,
-                                     .data = reinterpret_cast<unsigned char *>(
-                                         sharedToonTextureData[i].data()),
-                                     .dataFmt = GL_RGB};
+            Texture2DCreateInfo info;
+            info.width  = 32;
+            info.height = 32;
+            info.data   = reinterpret_cast<unsigned char *>(
+                sharedToonTextureData[i].data());
+            info.dataFmt = GL_RGB;
             sharedToonTextures[i].create(info);
         }
         sharedToonTexturesLoaded = true;

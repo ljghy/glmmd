@@ -23,13 +23,13 @@ glm::mat4 Camera::proj() const
 {
     if (projType == CameraProjectionType::Perspective)
     {
-        return glm::perspective(fovy, aspect, near, far);
+        return glm::perspective(fovy, aspect, nearZ, farZ);
     }
     else
     {
         float height = width / aspect;
         return glm::ortho(-width * 0.5f, width * 0.5f, -height * 0.5f,
-                          height * 0.5f, near, far);
+                          height * 0.5f, nearZ, farZ);
     }
 }
 

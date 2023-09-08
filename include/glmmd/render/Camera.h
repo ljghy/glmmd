@@ -38,8 +38,8 @@ public:
     glm::vec3 right;
 
     float fovy  = glm::radians(45.f);
-    float near  = 0.1f;
-    float far   = 1000.f;
+    float nearZ = 0.1f;
+    float farZ  = 1000.f;
     float width = 40.f;
 
     float yaw   = glm::radians(90.f);

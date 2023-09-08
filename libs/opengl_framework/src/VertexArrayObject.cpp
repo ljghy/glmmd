@@ -22,7 +22,6 @@ void VertexArrayObject::create()
 void VertexArrayObject::addBuffer(const VertexBufferObject &vbo,
                                   const VertexBufferLayout &layout)
 {
-    assert(m_id != 0);
     bind();
     vbo.bind();
 
@@ -44,10 +43,6 @@ void VertexArrayObject::destroy()
     }
 }
 
-void VertexArrayObject::bind() const
-{
-    assert(m_id != 0);
-    glBindVertexArray(m_id);
-}
+void VertexArrayObject::bind() const { glBindVertexArray(m_id); }
 
 void VertexArrayObject::unbind() const { glBindVertexArray(0); }
