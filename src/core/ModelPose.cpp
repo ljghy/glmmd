@@ -209,7 +209,7 @@ void ModelPose::applyBoneTransformsToRenderData(RenderData &renderData) const
         vertexIndices.begin() + m_modelData->vertices.size(),
         [&](uint32_t i)
 #else
-    for (uint32_t i = 0; i < m_modelData.vertices.size(); ++i)
+    for (uint32_t i = 0; i < m_modelData->vertices.size(); ++i)
 #endif
         {
             const auto &vert = m_modelData->vertices[i];
