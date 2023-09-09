@@ -1,6 +1,9 @@
 #ifndef OPENGL_RENDER_BUFFER_OBJECT_H_
 #define OPENGL_RENDER_BUFFER_OBJECT_H_
 
+namespace ogl
+{
+
 struct RenderBufferObjectCreateInfo
 {
     int width;
@@ -39,5 +42,7 @@ private:
 
     RenderBufferObjectCreateInfo m_info;
 };
+
+} // namespace ogl
 
 #endif

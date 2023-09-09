@@ -3,6 +3,9 @@
 
 #include <glad/glad.h>
 
+namespace ogl
+{
+
 class VertexBufferObject
 {
 public:
@@ -23,5 +26,7 @@ public:
 private:
     unsigned int m_id;
 };
+
+} // namespace ogl
 
 #endif

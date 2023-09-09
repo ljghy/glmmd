@@ -1,6 +1,9 @@
 #include <glad/glad.h>
 #include <opengl_framework/FrameBufferObject.h>
 
+namespace ogl
+{
+
 FrameBufferObject::FrameBufferObject()
     : m_id(0)
 {
@@ -104,3 +107,5 @@ void FrameBufferObject::resize(int width, int height)
         m_depthRenderBufferAttachment->resize(width, height);
     }
 }
+
+} // namespace ogl

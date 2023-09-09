@@ -4,6 +4,9 @@
 
 #include <opengl_framework/IndexBufferObject.h>
 
+namespace ogl
+{
+
 IndexBufferObject::IndexBufferObject()
     : m_id(0)
 {
@@ -46,3 +49,5 @@ void IndexBufferObject::unbind() const
 {
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
 }
+
+} // namespace ogl

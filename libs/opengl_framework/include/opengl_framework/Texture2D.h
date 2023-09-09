@@ -3,6 +3,9 @@
 
 #include <glad/glad.h>
 
+namespace ogl
+{
+
 struct Texture2DCreateInfo
 {
     int width;
@@ -52,5 +55,7 @@ private:
 
     Texture2DCreateInfo m_info;
 };
+
+} // namespace ogl
 
 #endif

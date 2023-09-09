@@ -57,9 +57,9 @@ private:
 
     glmmd::PhysicsWorld m_physicsWorld;
 
-    FrameBufferObject m_FBO;
-    FrameBufferObject m_intermediateFBO;
-    FrameBufferObject m_shadowMapFBO;
+    ogl::FrameBufferObject m_FBO;
+    ogl::FrameBufferObject m_intermediateFBO;
+    ogl::FrameBufferObject m_shadowMapFBO;
 };
 
 #endif

@@ -3,6 +3,9 @@
 
 #include <glad/glad.h>
 
+namespace ogl
+{
+
 class IndexBufferObject
 {
 public:
@@ -25,4 +28,7 @@ private:
     unsigned int m_id;
     unsigned int m_count;
 };
+
+} // namespace ogl
+
 #endif

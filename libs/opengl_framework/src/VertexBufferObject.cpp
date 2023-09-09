@@ -3,6 +3,9 @@
 
 #include <cassert>
 
+namespace ogl
+{
+
 VertexBufferObject::VertexBufferObject()
     : m_id(0)
 {
@@ -39,3 +42,5 @@ void VertexBufferObject::bind() const
 }
 
 void VertexBufferObject::unbind() const { glBindBuffer(GL_ARRAY_BUFFER, 0); }
+
+} // namespace ogl

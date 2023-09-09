@@ -2,8 +2,12 @@
 
 #include <string>
 #include <stdexcept>
+#include <fstream>
 
 #include <opengl_framework/Shader.h>
+
+namespace ogl
+{
 
 Shader::Shader()
     : m_id(0)
@@ -17,7 +21,7 @@ Shader::Shader(Shader &&other)
 }
 
 void Shader::create(const char *vertSrc, const char *fragSrc,
-                    const char *geometrySrc)
+                    const char *geomSrc)
 {
     destroy();
 
@@ -47,10 +51,10 @@ void Shader::create(const char *vertSrc, const char *fragSrc,
             std::string("Fragment shader compile error: ") + infoLog);
     };
 
-    if (geometrySrc)
+    if (geomSrc)
     {
         geometry = glCreateShader(GL_GEOMETRY_SHADER);
-        glShaderSource(geometry, 1, &geometrySrc, NULL);
+        glShaderSource(geometry, 1, &geomSrc, NULL);
         glCompileShader(geometry);
         glGetShaderiv(geometry, GL_COMPILE_STATUS, &success);
         if (!success)
@@ -64,7 +68,7 @@ void Shader::create(const char *vertSrc, const char *fragSrc,
     m_id = glCreateProgram();
     glAttachShader(m_id, vert);
     glAttachShader(m_id, frag);
-    if (geometrySrc)
+    if (geomSrc)
         glAttachShader(m_id, geometry);
     glLinkProgram(m_id);
 
@@ -77,8 +81,43 @@ void Shader::create(const char *vertSrc, const char *fragSrc,
 
     glDeleteShader(vert);
     glDeleteShader(frag);
-    if (geometrySrc)
+    if (geomSrc)
         glDeleteShader(geometry);
+}
+
+void Shader::createFromFile(const char *vertPath, const char *fragPath,
+                            const char *geomPath)
+{
+    std::ifstream vertFin(vertPath);
+    if (!vertFin.is_open())
+        throw std::runtime_error(
+            std::string("Failed to load vertex shader from ") + vertPath);
+
+    std::string vertSrc((std::istreambuf_iterator<char>(vertFin)),
+                        std::istreambuf_iterator<char>());
+
+    std::ifstream fragFin(fragPath);
+    if (!fragFin.is_open())
+        throw std::runtime_error(
+            std::string("Failed to load fragment shader from ") + fragPath);
+
+    std::string fragSrc((std::istreambuf_iterator<char>(fragFin)),
+                        std::istreambuf_iterator<char>());
+
+    if (geomPath == nullptr)
+        create(vertSrc.c_str(), fragSrc.c_str());
+    else
+    {
+        std::ifstream geomFin(geomPath);
+        if (!geomFin.is_open())
+            throw std::runtime_error(
+                std::string("Failed to load geometry shader from ") + geomPath);
+
+        std::string geomSrc((std::istreambuf_iterator<char>(geomFin)),
+                            std::istreambuf_iterator<char>());
+
+        create(vertSrc.c_str(), fragSrc.c_str(), geomSrc.c_str());
+    }
 }
 
 void         Shader::use() const { glUseProgram(m_id); }
@@ -136,3 +175,5 @@ void Shader::setUniformMatrix4fv(const std::string &name, const float *ptr,
 {
     glUniformMatrix4fv(getUniformLocation(name), count, transpose, ptr);
 }
+
+} // namespace ogl

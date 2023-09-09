@@ -6,6 +6,9 @@
 #include <opengl_framework/Texture2D.h>
 #include <opengl_framework/RenderBufferObject.h>
 
+namespace ogl
+{
+
 class FrameBufferObject
 {
 public:
@@ -57,5 +60,7 @@ private:
     std::unique_ptr<Texture2D>          m_depthTextureAttachment      = nullptr;
     std::unique_ptr<RenderBufferObject> m_depthRenderBufferAttachment = nullptr;
 };
+
+} // namespace ogl
 
 #endif

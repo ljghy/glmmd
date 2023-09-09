@@ -1,5 +1,8 @@
 #include <opengl_framework/VertexArrayObject.h>
 
+namespace ogl
+{
+
 VertexArrayObject::VertexArrayObject()
     : m_id(0)
 {
@@ -46,3 +49,5 @@ void VertexArrayObject::destroy()
 void VertexArrayObject::bind() const { glBindVertexArray(m_id); }
 
 void VertexArrayObject::unbind() const { glBindVertexArray(0); }
+
+} // namespace ogl

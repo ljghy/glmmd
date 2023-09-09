@@ -4,6 +4,9 @@
 #include <string>
 #include <unordered_map>
 
+namespace ogl
+{
+
 class Shader
 {
 public:
@@ -11,7 +14,10 @@ public:
     ~Shader();
 
     void create(const char *vertSrc, const char *fragSrc,
-                const char *geometrySrc = nullptr);
+                const char *geomSrc = nullptr);
+
+    void createFromFile(const char *vertPath, const char *fragPath,
+                        const char *geomPath = nullptr);
 
     Shader(const Shader &)            = delete;
     Shader &operator=(const Shader &) = delete;
@@ -39,5 +45,7 @@ private:
 
     mutable std::unordered_map<std::string, int> m_uniformLocationCache;
 };
+
+} // namespace ogl
 
 #endif

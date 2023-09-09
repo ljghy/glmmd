@@ -45,7 +45,7 @@ public:
 
     void renderShadowMap(const Lighting &lighting) const;
     void render(const Camera &camera, const Lighting &lighting,
-                const Texture2D *shadowMap = nullptr) const;
+                const ogl::Texture2D *shadowMap = nullptr) const;
 
     RenderData       &renderData() { return m_renderData; }
     const RenderData &renderData() const { return m_renderData; }
@@ -61,7 +61,7 @@ private:
 
     void fillBuffers() const;
     void renderMesh(const Camera &camera, const Lighting &lighting,
-    const Texture2D* shadowMap) const;
+                    const ogl::Texture2D *shadowMap) const;
     void renderEdge(const Camera &camera) const;
 
 private:
@@ -69,18 +69,18 @@ private:
 
     RenderData m_renderData;
 
-    VertexBufferObject             m_VBO;
-    VertexArrayObject              m_VAO;
-    std::vector<IndexBufferObject> m_IBOs;
+    ogl::VertexBufferObject             m_VBO;
+    ogl::VertexArrayObject              m_VAO;
+    std::vector<ogl::IndexBufferObject> m_IBOs;
 
-    Shader m_shader;
-    Shader m_edgeShader;
-    Shader m_shadowMapShader;
+    ogl::Shader m_shader;
+    ogl::Shader m_edgeShader;
+    ogl::Shader m_shadowMapShader;
 
-    std::vector<Texture2D> m_textures;
+    std::vector<ogl::Texture2D> m_textures;
 
-    static bool                      sharedToonTexturesLoaded;
-    static std::array<Texture2D, 10> sharedToonTextures;
+    static bool                           sharedToonTexturesLoaded;
+    static std::array<ogl::Texture2D, 10> sharedToonTextures;
 
     uint32_t m_renderFlag = MODEL_RENDER_FLAG_MESH | MODEL_RENDER_FLAG_EDGE;
 };

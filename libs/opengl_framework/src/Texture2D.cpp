@@ -1,5 +1,8 @@
 #include <opengl_framework/Texture2D.h>
 
+namespace ogl
+{
+
 Texture2D::Texture2D()
     : m_id(0)
     , m_target(GL_TEXTURE_2D)
@@ -93,3 +96,5 @@ void Texture2D::resize(int width, int height)
 
     glBindTexture(m_target, 0);
 }
+
+} // namespace ogl

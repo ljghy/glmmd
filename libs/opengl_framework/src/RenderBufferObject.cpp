@@ -1,6 +1,9 @@
 #include <glad/glad.h>
 #include <opengl_framework/RenderBufferObject.h>
 
+namespace ogl
+{
+
 RenderBufferObject::RenderBufferObject()
     : m_id(0)
 {
@@ -84,3 +87,5 @@ void RenderBufferObject::resize(int width, int height)
 
     glBindRenderbuffer(GL_RENDERBUFFER, 0);
 }
+
+} // namespace ogl

@@ -6,8 +6,8 @@ namespace glmmd
 #include "DefaultShaderSources.inl"
 #include "SharedToonTextures.inl"
 
-bool                      ModelRenderer::sharedToonTexturesLoaded = false;
-std::array<Texture2D, 10> ModelRenderer::sharedToonTextures;
+bool                           ModelRenderer::sharedToonTexturesLoaded = false;
+std::array<ogl::Texture2D, 10> ModelRenderer::sharedToonTextures;
 
 void ModelRenderer::releaseSharedToonTextures()
 {
@@ -39,7 +39,7 @@ void ModelRenderer::initBuffers()
                  GL_DYNAMIC_DRAW);
     m_VBO.bind();
 
-    VertexBufferLayout layout(true);
+    ogl::VertexBufferLayout layout(true);
     layout.push(GL_FLOAT, 3,
                 static_cast<unsigned int>(m_modelData->vertices.size() * 3));
     layout.push(GL_FLOAT, 3,
@@ -70,7 +70,7 @@ void ModelRenderer::initTextures()
         if (!m_modelData->textures[i].exists)
             continue;
 
-        Texture2DCreateInfo info;
+        ogl::Texture2DCreateInfo info;
         info.width    = m_modelData->textures[i].width;
         info.height   = m_modelData->textures[i].height;
         info.data     = m_modelData->textures[i].pixels.data();
@@ -85,7 +85,7 @@ void ModelRenderer::initSharedToonTextures()
     {
         for (size_t i = 0; i < sharedToonTextures.size(); ++i)
         {
-            Texture2DCreateInfo info;
+            ogl::Texture2DCreateInfo info;
             info.width  = 32;
             info.height = 32;
             info.data   = reinterpret_cast<unsigned char *>(
@@ -116,7 +116,7 @@ void ModelRenderer::fillBuffers() const
 }
 
 void ModelRenderer::render(const Camera &camera, const Lighting &lighting,
-                           const Texture2D *shadowMap) const
+                           const ogl::Texture2D *shadowMap) const
 {
     if (m_renderFlag == MODEL_RENDER_FLAG_NONE)
         return;
@@ -133,7 +133,7 @@ void ModelRenderer::render(const Camera &camera, const Lighting &lighting,
 }
 
 void ModelRenderer::renderMesh(const Camera &camera, const Lighting &lighting,
-                               const Texture2D *shadowMap) const
+                               const ogl::Texture2D *shadowMap) const
 {
     glEnable(GL_DEPTH_TEST);
     glDepthFunc(GL_LEQUAL);

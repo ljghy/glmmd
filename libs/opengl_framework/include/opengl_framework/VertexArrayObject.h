@@ -9,6 +9,9 @@
 
 #include <opengl_framework/VertexBufferObject.h>
 
+namespace ogl
+{
+
 class VertexBufferLayout
 {
 public:
@@ -94,5 +97,7 @@ public:
 private:
     unsigned int m_id;
 };
+
+} // namespace ogl
 
 #endif

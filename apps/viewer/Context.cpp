@@ -96,34 +96,35 @@ void Context::initFBO()
                            : 1;
 
     m_FBO.create();
-    Texture2DCreateInfo texInfo;
+    ogl::Texture2DCreateInfo texInfo;
     texInfo.width       = m_viewportWidth;
     texInfo.height      = m_viewportHeight;
     texInfo.samples     = samples;
     texInfo.internalFmt = GL_RGB;
     texInfo.dataFmt     = GL_RGB;
-    m_FBO.attachColorTexture(std::make_unique<Texture2D>(texInfo));
+    m_FBO.attachColorTexture(std::make_unique<ogl::Texture2D>(texInfo));
 
-    RenderBufferObjectCreateInfo rboInfo;
+    ogl::RenderBufferObjectCreateInfo rboInfo;
     rboInfo.width       = m_viewportWidth;
     rboInfo.height      = m_viewportHeight;
     rboInfo.samples     = samples;
     rboInfo.internalFmt = GL_DEPTH24_STENCIL8;
     m_FBO.attachDepthRenderBuffer(
-        std::make_unique<RenderBufferObject>(rboInfo));
+        std::make_unique<ogl::RenderBufferObject>(rboInfo));
 
     if (!m_FBO.isComplete())
         throw std::runtime_error("Failed to create FBO.");
 
     m_intermediateFBO.create();
     texInfo.samples = 1;
-    m_intermediateFBO.attachColorTexture(std::make_unique<Texture2D>(texInfo));
+    m_intermediateFBO.attachColorTexture(
+        std::make_unique<ogl::Texture2D>(texInfo));
 
     if (!m_intermediateFBO.isComplete())
         throw std::runtime_error("Failed to create intermediate FBO.");
 
     m_shadowMapFBO.create();
-    Texture2DCreateInfo shadowMapTexInfo;
+    ogl::Texture2DCreateInfo shadowMapTexInfo;
     shadowMapTexInfo.width       = m_shadowMapWidth;
     shadowMapTexInfo.height      = m_shadowMapHeight;
     shadowMapTexInfo.internalFmt = GL_DEPTH_COMPONENT;
@@ -131,7 +132,7 @@ void Context::initFBO()
     shadowMapTexInfo.dataType    = GL_FLOAT;
     shadowMapTexInfo.wrapMode    = GL_CLAMP_TO_BORDER;
     m_shadowMapFBO.attachDepthTexture(
-        std::make_unique<Texture2D>(shadowMapTexInfo));
+        std::make_unique<ogl::Texture2D>(shadowMapTexInfo));
 
     if (!m_shadowMapFBO.isComplete())
         throw std::runtime_error("Failed to create shadow map FBO.");
