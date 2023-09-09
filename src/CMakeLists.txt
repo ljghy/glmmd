@@ -19,6 +19,7 @@ PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/files/VmdFileLoader.cpp
 
     ${CMAKE_CURRENT_SOURCE_DIR}/render/Camera.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/render/Lighting.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/render/ModelRenderer.cpp
     
 )

@@ -20,50 +20,67 @@ ModelRenderer::ModelRenderer(const std::shared_ptr<const ModelData> &data,
     : m_modelData(data)
     , m_renderData(data)
 {
+    initBuffers();
+    initTextures();
+    initSharedToonTextures();
+
+    m_shader.create(shaderSources.vertShaderSrc, shaderSources.fragShaderSrc);
+    m_edgeShader.create(shaderSources.edgeVertShaderSrc,
+                        shaderSources.edgeFragShaderSrc);
+    m_shadowMapShader.create(shaderSources.shadowMapVertShaderSrc,
+                             shaderSources.shadowMapFragShaderSrc);
+}
+
+void ModelRenderer::initBuffers()
+{
     m_VBO.create(nullptr,
                  static_cast<unsigned int>((3 + 3 + 2) * sizeof(float) *
-                                           data->vertices.size()),
+                                           m_modelData->vertices.size()),
                  GL_DYNAMIC_DRAW);
     m_VBO.bind();
 
     VertexBufferLayout layout(true);
     layout.push(GL_FLOAT, 3,
-                static_cast<unsigned int>(data->vertices.size() * 3));
+                static_cast<unsigned int>(m_modelData->vertices.size() * 3));
     layout.push(GL_FLOAT, 3,
-                static_cast<unsigned int>(data->vertices.size() * 3));
+                static_cast<unsigned int>(m_modelData->vertices.size() * 3));
     layout.push(GL_FLOAT, 2,
-                static_cast<unsigned int>(data->vertices.size() * 2));
+                static_cast<unsigned int>(m_modelData->vertices.size() * 2));
 
     m_VAO.create();
     m_VAO.bind();
     m_VAO.addBuffer(m_VBO, layout);
 
-    m_IBOs.resize(data->materials.size());
+    m_IBOs.resize(m_modelData->materials.size());
     size_t indexOffset = 0;
     for (size_t i = 0; i < m_IBOs.size(); ++i)
     {
-        m_IBOs[i].create(&data->indices[indexOffset],
-                         sizeof(uint32_t) * data->materials[i].indicesCount);
-        indexOffset += data->materials[i].indicesCount;
+        m_IBOs[i].create(&m_modelData->indices[indexOffset],
+                         sizeof(uint32_t) *
+                             m_modelData->materials[i].indicesCount);
+        indexOffset += m_modelData->materials[i].indicesCount;
     }
+}
 
-    m_shader.create(shaderSources.vertShaderSrc, shaderSources.fragShaderSrc);
-    m_edgeShader.create(shaderSources.edgeVertShaderSrc,
-                        shaderSources.edgeFragShaderSrc);
-
-    m_textures.resize(data->textures.size());
-    for (size_t i = 0; i < data->textures.size(); ++i)
+void ModelRenderer::initTextures()
+{
+    m_textures.resize(m_modelData->textures.size());
+    for (size_t i = 0; i < m_modelData->textures.size(); ++i)
     {
-        if (!data->textures[i].exists)
+        if (!m_modelData->textures[i].exists)
             continue;
 
         Texture2DCreateInfo info;
-        info.width  = data->textures[i].width;
-        info.height = data->textures[i].height;
-        info.data   = data->textures[i].pixels.data();
+        info.width    = m_modelData->textures[i].width;
+        info.height   = m_modelData->textures[i].height;
+        info.data     = m_modelData->textures[i].pixels.data();
+        info.wrapMode = GL_CLAMP_TO_EDGE;
         m_textures[i].create(info);
     }
+}
 
+void ModelRenderer::initSharedToonTextures()
+{
     if (!sharedToonTexturesLoaded)
     {
         for (size_t i = 0; i < sharedToonTextures.size(); ++i)
@@ -73,7 +90,8 @@ ModelRenderer::ModelRenderer(const std::shared_ptr<const ModelData> &data,
             info.height = 32;
             info.data   = reinterpret_cast<unsigned char *>(
                 sharedToonTextureData[i].data());
-            info.dataFmt = GL_RGB;
+            info.dataFmt  = GL_RGB;
+            info.wrapMode = GL_CLAMP_TO_EDGE;
             sharedToonTextures[i].create(info);
         }
         sharedToonTexturesLoaded = true;
@@ -97,7 +115,8 @@ void ModelRenderer::fillBuffers() const
                     m_renderData.UVs.data());
 }
 
-void ModelRenderer::render(const Camera &camera, const Lighting &lighting) const
+void ModelRenderer::render(const Camera &camera, const Lighting &lighting,
+                           const Texture2D *shadowMap) const
 {
     if (m_renderFlag == MODEL_RENDER_FLAG_NONE)
         return;
@@ -107,14 +126,14 @@ void ModelRenderer::render(const Camera &camera, const Lighting &lighting) const
     fillBuffers();
 
     if (m_renderFlag & MODEL_RENDER_FLAG_MESH)
-        renderMesh(camera, lighting);
+        renderMesh(camera, lighting, shadowMap);
 
     if (m_renderFlag & MODEL_RENDER_FLAG_EDGE)
         renderEdge(camera);
 }
 
-void ModelRenderer::renderMesh(const Camera   &camera,
-                               const Lighting &lighting) const
+void ModelRenderer::renderMesh(const Camera &camera, const Lighting &lighting,
+                               const Texture2D *shadowMap) const
 {
     glEnable(GL_DEPTH_TEST);
     glDepthFunc(GL_LEQUAL);
@@ -138,6 +157,16 @@ void ModelRenderer::renderMesh(const Camera   &camera,
     m_shader.setUniform3fv("u_lightDir", &lighting.direction[0]);
     m_shader.setUniform3fv("u_lightColor", &lighting.color[0]);
     m_shader.setUniform3fv("u_ambientColor", &lighting.ambientColor[0]);
+
+    m_shader.setUniformMatrix4fv("u_lightVP",
+                                 &(lighting.proj() * lighting.view())[0][0]);
+
+    m_shader.setUniform1i("u_hasShadowMap", shadowMap != nullptr);
+    if (shadowMap != nullptr)
+    {
+        shadowMap->bind(3);
+        m_shader.setUniform1i("u_shadowMap", 3);
+    }
 
     for (size_t i = 0; i < m_IBOs.size(); ++i)
     {
@@ -210,6 +239,10 @@ void ModelRenderer::renderMesh(const Camera   &camera,
         {
             m_shader.setUniform1i("u_mat.hasToonTexture", 0);
         }
+
+        m_shader.setUniform1i("u_receiveShadow",
+                              m_modelData->materials[i].receiveShadow());
+
         m_IBOs[i].bind();
         glDrawElements(GL_TRIANGLES, m_IBOs[i].getCount(), GL_UNSIGNED_INT,
                        nullptr);
@@ -251,6 +284,41 @@ void ModelRenderer::renderEdge(const Camera &camera) const
 
         m_edgeShader.setUniform1f("u_edgeSize", mat.edgeSize);
         m_edgeShader.setUniform4fv("u_edgeColor", &mat.edgeColor[0]);
+        m_IBOs[i].bind();
+        glDrawElements(GL_TRIANGLES, m_IBOs[i].getCount(), GL_UNSIGNED_INT,
+                       nullptr);
+    }
+}
+
+void ModelRenderer::renderShadowMap(const Lighting &lighting) const
+{
+    m_VBO.bind();
+    m_VAO.bind();
+    fillBuffers();
+
+    glEnable(GL_DEPTH_TEST);
+
+    m_shadowMapShader.use();
+    m_shadowMapShader.setUniformMatrix4fv(
+        "u_lightVP", &(lighting.proj() * lighting.view())[0][0]);
+    glm::mat4 model = glm::mat4(1.f);
+    m_shadowMapShader.setUniformMatrix4fv("u_model", &model[0][0]);
+
+    for (size_t i = 0; i < m_IBOs.size(); ++i)
+    {
+        const auto &mat = m_modelData->materials[i];
+
+        if (m_renderData.materials[i].diffuse.a == 0.f || !mat.castShadow())
+            continue;
+
+        if (mat.doubleSided())
+            glDisable(GL_CULL_FACE);
+        else
+        {
+            glEnable(GL_CULL_FACE);
+            glCullFace(GL_BACK);
+        }
+
         m_IBOs[i].bind();
         glDrawElements(GL_TRIANGLES, m_IBOs[i].getCount(), GL_UNSIGNED_INT,
                        nullptr);

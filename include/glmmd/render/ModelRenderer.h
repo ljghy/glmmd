@@ -17,13 +17,17 @@ extern const char *defaultVertShaderSrc;
 extern const char *defaultFragShaderSrc;
 extern const char *defaultEdgeVertShaderSrc;
 extern const char *defaultEdgeFragShaderSrc;
+extern const char *defaultShadowMapVertShaderSrc;
+extern const char *defaultShadowMapFragShaderSrc;
 
 struct ModelRendererShaderSources
 {
-    const char *vertShaderSrc     = defaultVertShaderSrc;
-    const char *fragShaderSrc     = defaultFragShaderSrc;
-    const char *edgeVertShaderSrc = defaultEdgeVertShaderSrc;
-    const char *edgeFragShaderSrc = defaultEdgeFragShaderSrc;
+    const char *vertShaderSrc          = defaultVertShaderSrc;
+    const char *fragShaderSrc          = defaultFragShaderSrc;
+    const char *edgeVertShaderSrc      = defaultEdgeVertShaderSrc;
+    const char *edgeFragShaderSrc      = defaultEdgeFragShaderSrc;
+    const char *shadowMapVertShaderSrc = defaultShadowMapVertShaderSrc;
+    const char *shadowMapFragShaderSrc = defaultShadowMapFragShaderSrc;
 };
 
 enum ModelRenderFlag : uint32_t
@@ -39,7 +43,9 @@ public:
     ModelRenderer(const std::shared_ptr<const ModelData> &data,
                   ModelRendererShaderSources              shaderSources = {});
 
-    void render(const Camera &camera, const Lighting &lighting) const;
+    void renderShadowMap(const Lighting &lighting) const;
+    void render(const Camera &camera, const Lighting &lighting,
+                const Texture2D *shadowMap = nullptr) const;
 
     RenderData       &renderData() { return m_renderData; }
     const RenderData &renderData() const { return m_renderData; }
@@ -49,8 +55,13 @@ public:
     uint32_t &renderFlag() { return m_renderFlag; }
 
 private:
+    void initBuffers();
+    void initTextures();
+    void initSharedToonTextures();
+
     void fillBuffers() const;
-    void renderMesh(const Camera &camera, const Lighting &lighting) const;
+    void renderMesh(const Camera &camera, const Lighting &lighting,
+    const Texture2D* shadowMap) const;
     void renderEdge(const Camera &camera) const;
 
 private:
@@ -61,9 +72,12 @@ private:
     VertexBufferObject             m_VBO;
     VertexArrayObject              m_VAO;
     std::vector<IndexBufferObject> m_IBOs;
-    Shader                         m_shader;
-    Shader                         m_edgeShader;
-    std::vector<Texture2D>         m_textures;
+
+    Shader m_shader;
+    Shader m_edgeShader;
+    Shader m_shadowMapShader;
+
+    std::vector<Texture2D> m_textures;
 
     static bool                      sharedToonTexturesLoaded;
     static std::array<Texture2D, 10> sharedToonTextures;

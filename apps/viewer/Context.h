@@ -42,6 +42,9 @@ private:
     int m_viewportWidth;
     int m_viewportHeight;
 
+    int m_shadowMapWidth  = 1024;
+    int m_shadowMapHeight = 1024;
+
     std::vector<std::shared_ptr<glmmd::ModelData>> m_modelData;
 
     std::vector<glmmd::Model>         m_models;
@@ -56,6 +59,7 @@ private:
 
     FrameBufferObject m_FBO;
     FrameBufferObject m_intermediateFBO;
+    FrameBufferObject m_shadowMapFBO;
 };
 
 #endif

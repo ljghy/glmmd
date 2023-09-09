@@ -118,6 +118,23 @@ void Context::initFBO()
     m_intermediateFBO.create();
     texInfo.samples = 1;
     m_intermediateFBO.attachColorTexture(std::make_unique<Texture2D>(texInfo));
+
+    if (!m_intermediateFBO.isComplete())
+        throw std::runtime_error("Failed to create intermediate FBO.");
+
+    m_shadowMapFBO.create();
+    Texture2DCreateInfo shadowMapTexInfo;
+    shadowMapTexInfo.width       = m_shadowMapWidth;
+    shadowMapTexInfo.height      = m_shadowMapHeight;
+    shadowMapTexInfo.internalFmt = GL_DEPTH_COMPONENT;
+    shadowMapTexInfo.dataFmt     = GL_DEPTH_COMPONENT;
+    shadowMapTexInfo.dataType    = GL_FLOAT;
+    shadowMapTexInfo.wrapMode    = GL_CLAMP_TO_BORDER;
+    m_shadowMapFBO.attachDepthTexture(
+        std::make_unique<Texture2D>(shadowMapTexInfo));
+
+    if (!m_shadowMapFBO.isComplete())
+        throw std::runtime_error("Failed to create shadow map FBO.");
 }
 
 void Context::loadResources()
@@ -305,6 +322,22 @@ void Context::run()
 
         auto renderStart = std::chrono::high_resolution_clock::now();
 
+        // Render shadow map
+
+        static bool renderShadow = true;
+
+        if (renderShadow)
+        {
+            m_shadowMapFBO.bind();
+            glViewport(0, 0, m_shadowMapWidth, m_shadowMapHeight);
+            glClear(GL_DEPTH_BUFFER_BIT);
+            for (const auto &renderer : m_modelRenderers)
+                renderer.renderShadowMap(m_lighting);
+            m_shadowMapFBO.unbind();
+        }
+
+        // Render models
+
         ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0, 0));
         ImGui::Begin("Viewport", nullptr,
                      ImGuiWindowFlags_NoScrollbar |
@@ -327,8 +360,11 @@ void Context::run()
         glViewport(0, 0, m_viewportWidth, m_viewportHeight);
 
         updateCamera(deltaTime);
-        for (auto &renderer : m_modelRenderers)
-            renderer.render(m_camera, m_lighting);
+        for (const auto &renderer : m_modelRenderers)
+            renderer.render(m_camera, m_lighting,
+                            renderShadow
+                                ? m_shadowMapFBO.depthTextureAttachment()
+                                : nullptr);
         m_FBO.unbind();
 
         m_FBO.bindRead();
@@ -378,6 +414,11 @@ void Context::run()
                 else
                     renderer.renderFlag() &= ~glmmd::MODEL_RENDER_FLAG_EDGE;
         }
+
+        ImGui::Checkbox("Render shadow", &renderShadow);
+        if (ImGui::SliderFloat3("Light direction", &m_lighting.direction.x,
+                                -1.f, 1.f))
+            m_lighting.direction = glm::normalize(m_lighting.direction);
 
         ImGui::Render();
         ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
