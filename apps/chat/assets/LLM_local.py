@@ -66,4 +66,8 @@ class LLM:
         response_text = response["choices"][0]["text"].strip()
         usage = response["usage"]["total_tokens"]
 
+        msg.append({"role": self.config["assistant_name"],
+                    "content": response_text})
+        self.messages = msg
+
         return True, response_text, usage
