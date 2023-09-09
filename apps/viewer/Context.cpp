@@ -131,8 +131,12 @@ void Context::initFBO()
     shadowMapTexInfo.dataFmt     = GL_DEPTH_COMPONENT;
     shadowMapTexInfo.dataType    = GL_FLOAT;
     shadowMapTexInfo.wrapMode    = GL_CLAMP_TO_BORDER;
-    m_shadowMapFBO.attachDepthTexture(
-        std::make_unique<ogl::Texture2D>(shadowMapTexInfo));
+    std::unique_ptr<ogl::Texture2D> shadowMapTex =
+        std::make_unique<ogl::Texture2D>(shadowMapTexInfo);
+    shadowMapTex->bind();
+    float borderColor[] = {1.f, 1.f, 1.f, 1.f};
+    glTexParameterfv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, borderColor);
+    m_shadowMapFBO.attachDepthTexture(std::move(shadowMapTex));
 
     if (!m_shadowMapFBO.isComplete())
         throw std::runtime_error("Failed to create shadow map FBO.");
