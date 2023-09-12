@@ -15,7 +15,15 @@ PmxFileLoader::PmxFileLoader(const std::string &filename, bool utf8)
 {
     std::filesystem::path path;
     if (utf8)
-        path = reinterpret_cast<const char8_t *>(filename.data());
+
+    {
+        path =
+#if __cplusplus <= 201703L
+            std::filesystem::u8path(filename);
+#else
+            reinterpret_cast<const char8_t *>(filename.data());
+#endif
+    }
     else
         path = filename;
 
@@ -159,7 +167,11 @@ void PmxFileLoader::loadTextures(ModelData &data)
         std::replace(texture.path.begin(), texture.path.end(), '\\', '/');
 #endif
         std::filesystem::path path =
+#if __cplusplus <= 201703L
+            std::filesystem::u8path(texture.path);
+#else
             reinterpret_cast<const char8_t *>(texture.path.c_str());
+#endif
         path = m_modelDir / path.make_preferred();
 
         stbi_uc *pixels =

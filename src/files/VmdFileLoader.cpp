@@ -13,8 +13,13 @@ VmdFileLoader::VmdFileLoader(const std::string &filename,
 {
     if (utf8)
     {
-        std::filesystem::path path(
-            reinterpret_cast<const char8_t *>(filename.data()));
+        std::filesystem::path path =
+#if __cplusplus <= 201703L
+            std::filesystem::u8path(filename);
+#else
+            reinterpret_cast<const char8_t *>(filename.data());
+#endif
+
         m_fin.open(path, std::ios::binary);
     }
     else
