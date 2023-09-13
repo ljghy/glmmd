@@ -177,8 +177,10 @@ void Context::loadResources()
 
         m_models.emplace_back(modelData);
         m_modelRenderers.emplace_back(modelData);
-        m_animators.emplace_back();
     }
+
+    std::vector<std::vector<std::shared_ptr<glmmd::Motion>>> motions(
+        m_models.size());
 
     for (const auto &motionNode : m_initData["motions"])
     {
@@ -199,13 +201,16 @@ void Context::loadResources()
             std::cout << "Created for: " << loader.modelName() << '\n';
             std::cout << std::endl;
 
-            auto &animator = m_animators[modelIndex].emplace_back(clip);
+            motions[modelIndex].emplace_back(clip);
         }
         catch (const std::exception &e)
         {
             std::cerr << e.what() << '\n';
         }
     }
+
+    for (const auto &m : motions)
+        m_animators.emplace_back(std::make_unique<SimpleAnimator>(m));
 }
 
 void Context::updateCamera(float deltaTime)
@@ -262,26 +267,17 @@ void Context::updateModelPose(size_t i)
 {
     auto &model = m_models[i];
     model.resetLocalPose();
-    for (const auto &animator : m_animators[i])
-    {
-        glmmd::ModelPose pose(m_modelData[i]);
-        animator.getLocalPose(pose);
-        model.pose() += pose;
-    }
+    m_animators[i]->getLocalPose(model.pose());
     model.solvePose();
 }
 
 void Context::run()
 {
-    size_t modelIndex = 0;
-    for (auto &model : m_models)
+    for (size_t i = 0; i < m_models.size(); ++i)
     {
-        for (auto &animator : m_animators[modelIndex])
-            animator.reset();
-        updateModelPose(modelIndex);
-
-        m_physicsWorld.setupModelPhysics(model, true);
-        ++modelIndex;
+        m_animators[i]->reset();
+        updateModelPose(i);
+        m_physicsWorld.setupModelPhysics(m_models[i], true);
     }
 
     auto &io = ImGui::GetIO();
@@ -360,11 +356,16 @@ void Context::run()
 
         m_FBO.bind();
 
-        if (m_viewportWidth != ImGui::GetWindowWidth() ||
-            m_viewportHeight != ImGui::GetWindowHeight())
+        int currentViewportWidth =
+            static_cast<int>(std::round(ImGui::GetWindowWidth()));
+        int currentViewportHeight =
+            static_cast<int>(std::round(ImGui::GetWindowHeight()));
+        if (currentViewportWidth > 0 && currentViewportHeight > 0 &&
+            (m_viewportWidth != currentViewportWidth ||
+             m_viewportHeight != currentViewportHeight))
         {
-            m_viewportWidth  = ImGui::GetWindowWidth();
-            m_viewportHeight = ImGui::GetWindowHeight();
+            m_viewportWidth  = currentViewportWidth;
+            m_viewportHeight = currentViewportHeight;
             m_FBO.resize(m_viewportWidth, m_viewportHeight);
             m_intermediateFBO.resize(m_viewportWidth, m_viewportHeight);
         }
@@ -391,8 +392,9 @@ void Context::run()
 
         ImGui::Image(
             (void *)(uintptr_t)m_intermediateFBO.colorTextureAttachment()->id(),
-            ImVec2(m_viewportWidth, m_viewportHeight), ImVec2(0, 1),
-            ImVec2(1, 0));
+            ImVec2(static_cast<float>(m_viewportWidth),
+                   static_cast<float>(m_viewportHeight)),
+            ImVec2(0, 1), ImVec2(1, 0));
         ImGui::End();
         ImGui::PopStyleVar();
 

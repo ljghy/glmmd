@@ -10,9 +10,10 @@
 #include <json.hpp>
 
 #include <glmmd/core/Model.h>
-#include <glmmd/core/SimpleAnimator.h>
 #include <glmmd/core/PhysicsWorld.h>
 #include <glmmd/render/ModelRenderer.h>
+
+#include "SimpleAnimator.h"
 
 using json = nlohmann::json;
 
@@ -50,7 +51,7 @@ private:
     std::vector<glmmd::Model>         m_models;
     std::vector<glmmd::ModelRenderer> m_modelRenderers;
 
-    std::vector<std::vector<glmmd::SimpleAnimator>> m_animators;
+    std::vector<std::unique_ptr<SimpleAnimator>> m_animators;
 
     glmmd::Camera   m_camera;
     glmmd::Lighting m_lighting;
