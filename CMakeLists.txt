@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.12)
+cmake_minimum_required(VERSION 3.14)
 
 project(glmmd)
 
@@ -12,16 +12,19 @@ if(MSVC)
     ADD_DEFINITIONS(/MP)
 endif()
 
+option(GLMMD_USE_SYSTEM_GLM "Use system GLM" ON)
+option(GLMMD_DO_NOT_USE_STD_EXECUTION "Do not use std::execution" OFF)
+option(GLMMD_DO_NOT_FORCE_UTF8 "Do not convert names to UTF-8" OFF)
+
 option(GLMMD_BUILD_APPS "Build glmmd apps" ON)
+option(GLMMD_APPS_USE_SYSTEM_GLFW "Use system glfw library" ON)
 
 set(GLMMD_BULLET_ROOT "" CACHE PATH "Bullet physics root directory")
-
 if(NOT "${GLMMD_BULLET_ROOT}" STREQUAL "")
     set(BULLET_ROOT "${GLMMD_BULLET_ROOT}")
 endif()
 
-option(GLMMD_DO_NOT_USE_STD_EXECUTION "Don't use std::execution" OFF)
-option(GLMMD_DO_NOT_FORCE_UTF8 "Don't convert names to UTF-8" OFF)
+set(GLMMD_GLM_ROOT "" CACHE PATH "GLM root directory")
 
 add_subdirectory(libs)
 add_subdirectory(src)

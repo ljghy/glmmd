@@ -26,6 +26,25 @@ PRIVATE
 
 find_package(Bullet REQUIRED)
 
+if (GLMMD_USE_SYSTEM_GLM)
+    if (GLMMD_GLM_ROOT)
+        find_package(glm
+                    PATHS "${GLMMD_GLM_ROOT}" "${GLMMD_GLM_ROOT}/cmake")
+    else()
+        find_package(glm)
+    endif()
+endif()
+
+if (NOT GLMMD_USE_SYSTEM_GLM OR NOT glm_FOUND)
+    include(FetchContent)
+    set(FETCHCONTENT_QUIET OFF)
+    FetchContent_Declare(glm
+        GIT_REPOSITORY https://github.com/g-truc/glm.git
+        GIT_TAG        0.9.9.8
+    )
+    FetchContent_MakeAvailable(glm)
+endif()
+
 set(GLMMD_COMPILE_DEFINITIONS "")
 
 if (GLMMD_DO_NOT_USE_STD_EXECUTION)
@@ -51,7 +70,6 @@ target_link_libraries(glmmd
 PUBLIC
     glm::glm
     glad
-    glfw
     ${BULLET_LIBRARIES}
     opengl_framework
     stb_image
