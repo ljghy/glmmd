@@ -1,3 +1,5 @@
+#include <mutex>
+
 #include <glmmd/render/ModelRenderer.h>
 
 namespace glmmd
@@ -79,8 +81,11 @@ void ModelRenderer::initTextures()
     }
 }
 
+std::mutex sharedToonTexturesInitMutex;
+
 void ModelRenderer::initSharedToonTextures()
 {
+    std::lock_guard<std::mutex> lock(sharedToonTexturesInitMutex);
     if (!sharedToonTexturesLoaded)
     {
         for (size_t i = 0; i < sharedToonTextures.size(); ++i)
