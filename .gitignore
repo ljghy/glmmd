@@ -2,7 +2,7 @@
 !CMakeLists.txt
 !.gitignore
 !.gitattributes
-!libs/
+!lib/
 !include/
 !src/
 !apps/
