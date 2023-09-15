@@ -11,10 +11,9 @@
 #include <imgui_impl_glfw.h>
 #include <imgui_impl_opengl3.h>
 
-#include <json.hpp>
-
 #include <glmmd/files/PmxFileLoader.h>
 #include <glmmd/files/VmdFileLoader.h>
+
 #include "Context.h"
 
 inline void framebufferSizeCallback(GLFWwindow *, int width, int height)

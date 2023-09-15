@@ -44,5 +44,4 @@ PUBLIC
     glm::glm
     ${BULLET_LIBRARIES}
     opengl_framework
-    stb_image
 )

@@ -7,12 +7,11 @@
 
 #include <memory>
 
-#include <json.hpp>
-
 #include <glmmd/core/Model.h>
 #include <glmmd/core/PhysicsWorld.h>
 #include <glmmd/render/ModelRenderer.h>
 
+#include "json.hpp"
 #include "SimpleAnimator.h"
 
 using json = nlohmann::json;
