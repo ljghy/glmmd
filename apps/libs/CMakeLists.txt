@@ -3,6 +3,7 @@ add_subdirectory(nlohmann_json)
 include(FetchContent)
 set(FETCHCONTENT_QUIET OFF)
 
+option(GLMMD_APPS_USE_SYSTEM_GLFW "Use system glfw library" ON)
 if (GLMMD_APPS_USE_SYSTEM_GLFW)
     find_package(glfw3 3.3)
 endif()

@@ -1,41 +1,21 @@
-add_library(glmmd STATIC)
+add_library(glmmd_compiler_flags INTERFACE)
 
-if(MSVC)
-    add_compile_options(/W4)
-else()
-    add_compile_options(-Wall -Wextra)
-endif()
+set(gcc_like_cxx "$<COMPILE_LANG_AND_ID:CXX,ARMClang,AppleClang,Clang,GNU,LCC>")
+set(msvc_cxx "$<COMPILE_LANG_AND_ID:CXX,MSVC>")
 
-target_sources(glmmd
-PRIVATE
-    ${CMAKE_CURRENT_SOURCE_DIR}/core/PhysicsWorld.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/core/ModelPose.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/core/ModelPoseSolver.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/core/FixedMotionClip.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/core/RenderData.cpp
-
-    ${CMAKE_CURRENT_SOURCE_DIR}/files/CodeConverter.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/files/PmxFileLoader.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/files/VmdFileLoader.cpp
-
-    ${CMAKE_CURRENT_SOURCE_DIR}/render/Camera.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/render/Lighting.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/render/ModelRenderer.cpp
-    
+target_compile_options(glmmd_compiler_flags INTERFACE
+    "$<${gcc_like_cxx}:$<BUILD_INTERFACE:-Wall;-Wextra;-Wshadow;-Wformat=2;-Wunused>>"
+    "$<${msvc_cxx}:$<BUILD_INTERFACE:-W3>>"
 )
+
+file(GLOB_RECURSE GLMMD_SOURCES *.cpp)
+
+add_library(glmmd ${GLMMD_SOURCES})
 
 find_package(Bullet REQUIRED)
 
-if (GLMMD_USE_SYSTEM_GLM)
-    if (GLMMD_GLM_ROOT)
-        find_package(glm
-                    PATHS "${GLMMD_GLM_ROOT}" "${GLMMD_GLM_ROOT}/cmake")
-    else()
-        find_package(glm)
-    endif()
-endif()
-
-if (NOT GLMMD_USE_SYSTEM_GLM OR NOT glm_FOUND)
+find_package(glm)
+if (NOT glm_FOUND)
     include(FetchContent)
     set(FETCHCONTENT_QUIET OFF)
     FetchContent_Declare(glm
@@ -45,19 +25,10 @@ if (NOT GLMMD_USE_SYSTEM_GLM OR NOT glm_FOUND)
     FetchContent_MakeAvailable(glm)
 endif()
 
-set(GLMMD_COMPILE_DEFINITIONS "")
-
-if (GLMMD_DO_NOT_USE_STD_EXECUTION)
-    list(APPEND GLMMD_COMPILE_DEFINITIONS GLMMD_DO_NOT_USE_STD_EXECUTION)
-endif()
-
-if (GLMMD_DO_NOT_FORCE_UTF8)
-    list(APPEND GLMMD_COMPILE_DEFINITIONS GLMMD_DO_NOT_FORCE_UTF8)
-endif()
-
 target_compile_definitions(glmmd
 PUBLIC
-    ${GLMMD_COMPILE_DEFINITIONS}
+    $<$<BOOL:${GLMMD_DO_NOT_USE_STD_EXECUTION}>:GLMMD_DO_NOT_USE_STD_EXECUTION>
+    $<$<BOOL:${GLMMD_DO_NOT_FORCE_UTF8}>:GLMMD_DO_NOT_FORCE_UTF8>
 )
 
 target_include_directories(glmmd
@@ -66,10 +37,11 @@ PUBLIC
     ${PROJECT_SOURCE_DIR}/include
 )
 
-target_link_libraries(glmmd 
+target_link_libraries(glmmd
+PRIVATE
+    glmmd_compiler_flags
 PUBLIC
     glm::glm
-    glad
     ${BULLET_LIBRARIES}
     opengl_framework
     stb_image
