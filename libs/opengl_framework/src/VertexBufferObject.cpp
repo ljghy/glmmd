@@ -1,8 +1,7 @@
 #include <glad/glad.h>
 #include <opengl_framework/VertexBufferObject.h>
 
-#include <cassert>
-
+#include "GLCheck.h"
 namespace ogl
 {
 
@@ -21,26 +20,28 @@ void VertexBufferObject::create(const void *data, unsigned int size,
                                 GLenum drawType)
 {
     destroy();
-    glGenBuffers(1, &m_id);
-    glBindBuffer(GL_ARRAY_BUFFER, m_id);
-    glBufferData(GL_ARRAY_BUFFER, size, data, drawType);
+    GL_CHECK(glGenBuffers(1, &m_id));
+    GL_CHECK(glBindBuffer(GL_ARRAY_BUFFER, m_id));
+    GL_CHECK(glBufferData(GL_ARRAY_BUFFER, size, data, drawType));
 }
 
 void VertexBufferObject::destroy()
 {
     if (m_id != 0)
     {
-        glDeleteBuffers(1, &m_id);
+        GL_CHECK(glDeleteBuffers(1, &m_id));
         m_id = 0;
     }
 }
 
 void VertexBufferObject::bind() const
 {
-    assert(m_id != 0);
-    glBindBuffer(GL_ARRAY_BUFFER, m_id);
+    GL_CHECK(glBindBuffer(GL_ARRAY_BUFFER, m_id));
 }
 
-void VertexBufferObject::unbind() const { glBindBuffer(GL_ARRAY_BUFFER, 0); }
+void VertexBufferObject::unbind() const
+{
+    GL_CHECK(glBindBuffer(GL_ARRAY_BUFFER, 0));
+}
 
 } // namespace ogl

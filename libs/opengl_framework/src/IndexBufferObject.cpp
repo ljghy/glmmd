@@ -1,8 +1,8 @@
 #include <glad/glad.h>
 
-#include <cassert>
-
 #include <opengl_framework/IndexBufferObject.h>
+
+#include "GLCheck.h"
 
 namespace ogl
 {
@@ -24,9 +24,9 @@ void IndexBufferObject::create(const unsigned int *data, unsigned int size,
                                GLenum drawType)
 {
     destroy();
-    glGenBuffers(1, &m_id);
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_id);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, size, data, drawType);
+    GL_CHECK(glGenBuffers(1, &m_id));
+    GL_CHECK(glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_id));
+    GL_CHECK(glBufferData(GL_ELEMENT_ARRAY_BUFFER, size, data, drawType));
     m_count = size / sizeof(unsigned int);
 }
 
@@ -34,20 +34,19 @@ void IndexBufferObject::destroy()
 {
     if (m_id != 0)
     {
-        glDeleteBuffers(1, &m_id);
+        GL_CHECK(glDeleteBuffers(1, &m_id));
         m_id = 0;
     }
 }
 
 void IndexBufferObject::bind() const
 {
-    assert(m_id != 0);
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_id);
+    GL_CHECK(glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_id));
 }
 
 void IndexBufferObject::unbind() const
 {
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+    GL_CHECK(glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0));
 }
 
 } // namespace ogl
