@@ -50,6 +50,61 @@ std::string UTF16_LE_to_UTF8(const std::string &input)
     return output;
 }
 
+std::string UTF8_to_UTF16_LE(const std::string &input)
+{
+    std::string output;
+    output.reserve(input.size() * 2);
+
+    size_t i = 0;
+    while (i < input.size())
+    {
+        uint32_t u = 0;
+
+        if (!(input[i] & 0x80))
+        {
+            u = uint8_t(input[i++]);
+        }
+        else if ((input[i] & 0xE0) == 0xC0)
+        {
+            u = (uint8_t(input[i++]) & 0x1F) << 6;
+            u |= uint8_t(input[i++]) & 0x3F;
+        }
+        else if ((uint8_t(input[i]) & 0xF0) == 0xE0)
+        {
+            u = (uint8_t(input[i++]) & 0x0F) << 12;
+            u |= (uint8_t(input[i++]) & 0x3F) << 6;
+            u |= uint8_t(input[i++]) & 0x3F;
+        }
+        else if ((uint8_t(input[i]) & 0xF8) == 0xF0)
+        {
+            u = (uint8_t(input[i++]) & 0x07) << 18;
+            u |= (uint8_t(input[i++]) & 0x3F) << 12;
+            u |= (uint8_t(input[i++]) & 0x3F) << 6;
+            u |= uint8_t(input[i++]) & 0x3F;
+        }
+
+        if (u <= 0xFFFF)
+        {
+            output.push_back(u & 0xFF);
+            output.push_back((u >> 8) & 0xFF);
+        }
+        else
+        {
+            u -= 0x10000;
+
+            uint16_t lead  = 0xD800 | ((u >> 10) & 0x3FF);
+            uint16_t trail = 0xDC00 | (u & 0x3FF);
+
+            output.push_back(lead & 0xFF);
+            output.push_back((lead >> 8) & 0xFF);
+            output.push_back(trail & 0xFF);
+            output.push_back((trail >> 8) & 0xFF);
+        }
+    }
+
+    return output;
+}
+
 #include "ShiftJIS_convTable.inl"
 
 std::string shiftJIS_to_UTF8(const std::string &input)

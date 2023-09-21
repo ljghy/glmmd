@@ -69,6 +69,12 @@ void PmxFileLoader::loadInfo(ModelData &data)
     for (int i = 0; i < 8; ++i)
         readUInt(*(&info.encodingMethod + i));
 
+#ifndef GLMMD_DO_NOT_FORCE_UTF8
+    info.internalEncodingMethod = 1; // UTF-8
+#else
+    info.internalEncodingMethod = info.encodingMethod;
+#endif
+
     readTextBuffer(info.modelName);
     readTextBuffer(info.modelNameEN);
     readTextBuffer(info.comment);
@@ -161,16 +167,19 @@ void PmxFileLoader::loadTextures(ModelData &data)
     for (auto &texture : data.textures)
     {
         readTextBuffer(texture.path);
-        if (data.info.encodingMethod == 0)
-            texture.path = UTF16_LE_to_UTF8(texture.path);
+
+        std::string u8path = data.info.encodingMethod == 0
+                                 ? UTF16_LE_to_UTF8(texture.path)
+                                 : texture.path;
+
 #ifndef _WIN32
-        std::replace(texture.path.begin(), texture.path.end(), '\\', '/');
+        std::replace(u8path.begin(), u8path.end(), '\\', '/');
 #endif
         std::filesystem::path path =
 #if __cplusplus <= 201703L
-            std::filesystem::u8path(texture.path);
+            std::filesystem::u8path(u8path);
 #else
-            reinterpret_cast<const char8_t *>(texture.path.c_str());
+            reinterpret_cast<const char8_t *>(u8path.c_str());
 #endif
         path = m_modelDir / path.make_preferred();
 
@@ -227,6 +236,10 @@ void PmxFileLoader::loadMaterials(ModelData &data)
         else
             readInt(mat.toonTextureIndex, 1);
         readTextBuffer(mat.memo);
+#ifndef GLMMD_DO_NOT_FORCE_UTF8
+        if (data.info.encodingMethod == 0)
+            mat.memo = UTF16_LE_to_UTF8(mat.memo);
+#endif
         readInt(mat.indicesCount);
     }
 }
@@ -312,7 +325,7 @@ void PmxFileLoader::loadBones(ModelData &data)
 #else
         data.u8BoneNameToIndex[data.info.encodingMethod
                                    ? bone.name
-                                   : UTF16_LE_to_UTF8(bone.name)]   = i++;
+                                   : UTF16_LE_to_UTF8(bone.name)] = i++;
 #endif
     }
 }

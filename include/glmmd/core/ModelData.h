@@ -26,6 +26,8 @@ struct ModelInfo
     uint8_t morphIndexSize;
     uint8_t rigidBodyIndexSize;
 
+    uint8_t internalEncodingMethod; // 0: UTF-16 LE, 1: UTF-8
+
     std::string modelName;
     std::string modelNameEN;
     std::string comment;
