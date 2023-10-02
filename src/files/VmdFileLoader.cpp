@@ -6,10 +6,7 @@
 namespace glmmd
 {
 
-VmdFileLoader::VmdFileLoader(const std::string &filename,
-                             const ModelData &modelData, bool utf8)
-    : m_modelData(modelData)
-    , m_version(0)
+VmdFileLoader::VmdFileLoader(const std::string &filename, bool utf8)
 {
     if (utf8)
     {
@@ -28,50 +25,51 @@ VmdFileLoader::VmdFileLoader(const std::string &filename,
         throw std::runtime_error("Failed to open file \"" + filename + "\".");
 }
 
-void VmdFileLoader::load(FixedMotionClip &clip)
+void VmdFileLoader::load(VmdData &data)
 {
-    loadHeader();
-    clip.m_frameCount = 0;
-    loadBoneFrames(clip);
-    loadMorphFrames(clip);
+    loadHeader(data);
+    loadBoneFrames(data);
+    loadMorphFrames(data);
+    loadCameraFrames(data);
 }
 
-void VmdFileLoader::loadHeader()
+void VmdFileLoader::loadHeader(VmdData &data)
 {
     std::string header(30, '\0');
     m_fin.read(header.data(), 30);
     if (header == "Vocaloid Motion Data file")
-        m_version = 1;
+        data.version = 1;
     else if (header != "Vocaloid Motion Data 0002")
-        m_version = 2;
+        data.version = 2;
     else
         throw std::runtime_error("VMD file format error.");
 
-    m_modelName.resize(m_version * 10);
-    m_fin.read(m_modelName.data(), m_version * 10);
-    m_modelName = shiftJIS_to_UTF8(m_modelName);
+    char modelName[21];
+    m_fin.read(modelName, data.version * 10);
+    modelName[data.version * 10] = '\0';
+
+    data.modelName = modelName;
 }
 
-void VmdFileLoader::loadBoneFrames(FixedMotionClip &clip)
+void VmdFileLoader::loadBoneFrames(VmdData &data)
 {
     uint32_t count;
-    readInt(count);
+    readUInt(count);
 
-    clip.m_boneFrameIndex.resize(m_modelData.bones.size());
-    clip.m_boneFrames.reserve(count);
+    data.boneFrames.resize(count);
     for (uint32_t i = 0; i < count; ++i)
     {
+        auto &boneFrame = data.boneFrames[i];
+
         char name[16];
         m_fin.read(name, 15);
-        name[15] = '\0';
+        name[15]           = '\0';
+        boneFrame.boneName = name;
 
-        FixedMotionClip::BoneKeyFrame boneFrame;
-
-        uint32_t frameNumber;
-        readInt(frameNumber);
-        clip.m_frameCount = std::max(clip.m_frameCount, frameNumber);
+        readUInt(boneFrame.frameNumber);
 
         readFloat<3>(boneFrame.translation.x);
+
         glm::vec4 q;
         readFloat<4>(q.x);
         boneFrame.rotation.x = q.x;
@@ -79,71 +77,46 @@ void VmdFileLoader::loadBoneFrames(FixedMotionClip &clip)
         boneFrame.rotation.z = q.z;
         boneFrame.rotation.w = q.w;
 
-        uint8_t v;
-        for (int j = 0; j < 4; ++j)
-        {
-            readInt(v);
-            boneFrame.xCurve[j] = v / 127.f;
-            m_fin.seekg(3, std::ios::cur);
-        }
-        for (int j = 0; j < 4; ++j)
-        {
-            readInt(v);
-            boneFrame.yCurve[j] = v / 127.f;
-            m_fin.seekg(3, std::ios::cur);
-        }
-        for (int j = 0; j < 4; ++j)
-        {
-            readInt(v);
-            boneFrame.zCurve[j] = v / 127.f;
-            m_fin.seekg(3, std::ios::cur);
-        }
-        for (int j = 0; j < 4; ++j)
-        {
-            readInt(v);
-            boneFrame.rCurve[j] = v / 127.f;
-            m_fin.seekg(3, std::ios::cur);
-        }
-
-        int32_t boneIndex = m_modelData.getBoneIndex(shiftJIS_to_UTF8(name));
-        if (boneIndex == -1)
-            continue;
-
-        clip.m_boneFrameIndex[boneIndex][frameNumber] =
-            static_cast<uint32_t>(clip.m_boneFrames.size());
-        clip.m_boneFrames.emplace_back(boneFrame);
+        m_fin.read(reinterpret_cast<char *>(boneFrame.interpolation), 64);
     }
 }
 
-void VmdFileLoader::loadMorphFrames(FixedMotionClip &clip)
+void VmdFileLoader::loadMorphFrames(VmdData &data)
 {
     uint32_t count;
-    readInt(count);
+    readUInt(count);
 
-    clip.m_morphFrameIndex.resize(m_modelData.morphs.size());
-    clip.m_morphFrames.reserve(count);
-
+    data.morphFrames.resize(count);
     for (uint32_t i = 0; i < count; ++i)
     {
+        auto &morphFrame = data.morphFrames[i];
+
         char name[16];
         m_fin.read(name, 15);
-        name[15] = '\0';
-
-        FixedMotionClip::MorphKeyFrame morphFrame;
-
-        uint32_t frameNumber;
-        readInt(frameNumber);
-        clip.m_frameCount = std::max(clip.m_frameCount, frameNumber);
-
+        name[15]             = '\0';
+        morphFrame.morphName = name;
+        readUInt(morphFrame.frameNumber);
         readFloat(morphFrame.ratio);
+    }
+}
 
-        int32_t morphIndex = m_modelData.getMorphIndex(shiftJIS_to_UTF8(name));
-        if (morphIndex == -1)
-            continue;
+void VmdFileLoader::loadCameraFrames(VmdData &data)
+{
+    uint32_t count;
+    readUInt(count);
 
-        clip.m_morphFrameIndex[morphIndex][frameNumber] =
-            static_cast<uint32_t>(clip.m_morphFrames.size());
-        clip.m_morphFrames.emplace_back(morphFrame);
+    data.cameraFrames.resize(count);
+    for (uint32_t i = 0; i < count; ++i)
+    {
+        auto &cameraFrame = data.cameraFrames[i];
+
+        readUInt(cameraFrame.frameNumber);
+        readFloat(cameraFrame.distance);
+        readFloat<3>(cameraFrame.targetPosition.x);
+        readFloat<3>(cameraFrame.rotation.x);
+        m_fin.read(reinterpret_cast<char *>(cameraFrame.interpolation), 24);
+        readUInt(cameraFrame.fov);
+        readUInt(cameraFrame.perspective);
     }
 }
 

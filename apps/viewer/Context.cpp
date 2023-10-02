@@ -11,6 +11,7 @@
 #include <imgui_impl_glfw.h>
 #include <imgui_impl_opengl3.h>
 
+#include <glmmd/files/CodeConverter.h>
 #include <glmmd/files/PmxFileLoader.h>
 #include <glmmd/files/VmdFileLoader.h>
 
@@ -185,19 +186,21 @@ void Context::loadResources()
     {
         try
         {
+            auto           modelIndex = motionNode["model"].get<size_t>();
+            auto           filename = motionNode["filename"].get<std::string>();
+            glmmd::VmdData vmdData;
+            glmmd::VmdFileLoader loader(filename, true);
+            loader.load(vmdData);
+
             bool loop = false;
             if (motionNode.find("loop") != motionNode.end())
                 loop = motionNode["loop"].get<bool>();
-
-            auto clip       = std::make_shared<glmmd::FixedMotionClip>(loop);
-            auto modelIndex = motionNode["model"].get<size_t>();
-            auto filename   = motionNode["filename"].get<std::string>();
-            glmmd::VmdFileLoader loader(filename, *m_modelData[modelIndex],
-                                        true);
-            loader.load(*clip);
+            auto clip = std::make_shared<glmmd::FixedMotionClip>(
+                vmdData.toFixedMotionClip(m_models[modelIndex].data(), loop));
 
             std::cout << "Motion data loaded from: " << filename << '\n';
-            std::cout << "Created for: " << loader.modelName() << '\n';
+            std::cout << "Created for: "
+                      << glmmd::shiftJIS_to_UTF8(vmdData.modelName) << '\n';
             std::cout << std::endl;
 
             motions[modelIndex].emplace_back(clip);

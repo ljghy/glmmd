@@ -3,8 +3,7 @@
 
 #include <fstream>
 
-#include <glmmd/core/ModelData.h>
-#include <glmmd/core/FixedMotionClip.h>
+#include <glmmd/files/VmdData.h>
 
 namespace glmmd
 {
@@ -12,17 +11,14 @@ namespace glmmd
 class VmdFileLoader
 {
 public:
-    VmdFileLoader(const std::string &filename, const ModelData &modelData,
-                  bool utf8 = false);
-    void load(FixedMotionClip &clip);
-
-    int                version() const { return m_version; }
-    const std::string &modelName() const { return m_modelName; }
+    VmdFileLoader(const std::string &filename, bool utf8 = false);
+    void load(VmdData &data);
 
 private:
-    void loadHeader();
-    void loadBoneFrames(FixedMotionClip &clip);
-    void loadMorphFrames(FixedMotionClip &clip);
+    void loadHeader(VmdData &data);
+    void loadBoneFrames(VmdData &data);
+    void loadMorphFrames(VmdData &data);
+    void loadCameraFrames(VmdData &data);
 
     template <int count = 1>
     void readFloat(float &val)
@@ -31,18 +27,14 @@ private:
             m_fin.read(reinterpret_cast<char *>(&val + i), sizeof(float));
     }
 
-    template <typename IntType>
-    void readInt(IntType &val, int sz = sizeof(IntType))
+    template <typename UIntType>
+    void readUInt(UIntType &val, int sz = sizeof(UIntType))
     {
         m_fin.read(reinterpret_cast<char *>(&val), sz);
     }
 
 private:
-    std::ifstream    m_fin;
-    const ModelData &m_modelData;
-
-    int         m_version;
-    std::string m_modelName;
+    std::ifstream m_fin;
 };
 
 } // namespace glmmd

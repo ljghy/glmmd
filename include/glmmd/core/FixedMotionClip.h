@@ -12,7 +12,7 @@ namespace glmmd
 
 class FixedMotionClip : public Motion
 {
-    friend class VmdFileLoader;
+    friend struct VmdData;
 
 private:
     using InterpolationCurve = glm::vec4;
