@@ -2,9 +2,9 @@
 
 ## Requirements
 
-+ C++20
++ C++17
 
-+ CMake 3.12+
++ CMake 3.14+
 
 + OpenGL
 
