@@ -37,9 +37,15 @@ PUBLIC
     ${PROJECT_SOURCE_DIR}/include
 )
 
+if ((NOT GLMMD_DO_NOT_USE_STD_EXECUTION) AND (CMAKE_SYSTEM_NAME STREQUAL "Linux"))
+    find_package(TBB REQUIRED)
+    set(GLMMD_TBB_LIBRARY "TBB::tbb")
+endif()
+
 target_link_libraries(glmmd
 PRIVATE
     glmmd_compiler_flags
+    ${GLMMD_TBB_LIBRARY}
 PUBLIC
     glm::glm
     ${BULLET_LIBRARIES}
