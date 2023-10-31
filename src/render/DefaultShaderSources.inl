@@ -69,7 +69,18 @@ const char *defaultFragShaderSrc =
         projCoords = projCoords * 0.5 + 0.5;
         float closestDepth = texture(u_shadowMap, projCoords.xy).r;
         float currentDepth = projCoords.z;
+        if (currentDepth > 1.0) return 0.0;
+
+        vec2 texelSize = 1.0 / textureSize(u_shadowMap, 0);
         float shadow = currentDepth - bias > closestDepth ? 1.0 : 0.0;
+
+        int ker = 3;
+        for (int x = -ker; x <= ker; ++x)
+            for (int y = -ker; y <= ker; ++y) {
+                float pcfDepth = texture(u_shadowMap, projCoords.xy + vec2(x, y) * texelSize).r;
+                shadow += currentDepth - bias > pcfDepth ? 1.0 : 0.0;
+            }
+        shadow /= (2 * ker + 1) * (2 * ker + 1);
         return shadow;
     }
     void main() {
