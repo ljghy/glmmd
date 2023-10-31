@@ -18,9 +18,32 @@ public:
 
     virtual ~Animator() = default;
 
-    void  reset() { m_startTime = std::chrono::high_resolution_clock::now(); }
-    float getElapsedTime() const
+    void pause()
     {
+        m_paused    = true;
+        m_pauseTime = std::chrono::high_resolution_clock::now();
+    }
+    void resume()
+    {
+        m_paused = false;
+        auto now = std::chrono::high_resolution_clock::now();
+        m_startTime += now - m_pauseTime;
+    }
+    bool isPaused() const { return m_paused; }
+
+    void reset()
+    {
+        m_startTime = std::chrono::high_resolution_clock::now();
+        if (m_paused)
+            m_pauseTime = m_startTime;
+    }
+
+    float getElapsedTime() const
+
+    {
+        if (m_paused)
+            return std::chrono::duration<float>(m_pauseTime - m_startTime)
+                .count();
         auto now = std::chrono::high_resolution_clock::now();
         return std::chrono::duration<float>(now - m_startTime).count();
     }
@@ -30,6 +53,8 @@ public:
 
 protected:
     std::chrono::time_point<std::chrono::high_resolution_clock> m_startTime;
+    std::chrono::time_point<std::chrono::high_resolution_clock> m_pauseTime;
+    bool m_paused = false;
 };
 
 } // namespace glmmd

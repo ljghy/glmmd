@@ -413,6 +413,24 @@ void Context::run()
         ImGui::Text("Total: %.3f ms",
                     (physicsDur + modelUpdateDur + renderDur) * 1000.f);
 
+        static bool pause = false;
+        if (ImGui::Button(pause ? "Resume" : "Pause"))
+        {
+            if (pause)
+                for (auto &animator : m_animators)
+                    animator->resume();
+            else
+                for (auto &animator : m_animators)
+                    animator->pause();
+            pause = !pause;
+        }
+
+        if (ImGui::Button("Reset"))
+        {
+            for (auto &animator : m_animators)
+                animator->reset();
+        }
+
         static glm::vec3 gravity = glm::vec3(0.f, -9.8f, 0.f);
         if (ImGui::SliderFloat3("Gravity", &gravity.x, -10.f, 10.f))
             m_physicsWorld.setGravity(gravity);
