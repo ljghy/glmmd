@@ -14,15 +14,25 @@ add_library(glmmd ${GLMMD_SOURCES})
 
 find_package(Bullet REQUIRED)
 
+include(FetchContent)
+set(FETCHCONTENT_QUIET OFF)
+
 find_package(glm)
 if (NOT glm_FOUND)
-    include(FetchContent)
-    set(FETCHCONTENT_QUIET OFF)
     FetchContent_Declare(glm
         GIT_REPOSITORY https://github.com/g-truc/glm.git
         GIT_TAG        0.9.9.8
     )
     FetchContent_MakeAvailable(glm)
+endif()
+
+find_package(opengl_framework)
+if (NOT opengl_framework_FOUND)
+    FetchContent_Declare(opengl_framework
+        GIT_REPOSITORY https://github.com/ljghy/opengl_framework.git
+        GIT_TAG        00a7302cd2f64faba41ef6ae19b97bb2a3b2793e
+    )
+    FetchContent_MakeAvailable(opengl_framework)
 endif()
 
 target_compile_definitions(glmmd
@@ -49,5 +59,5 @@ PRIVATE
 PUBLIC
     glm::glm
     ${BULLET_LIBRARIES}
-    opengl_framework
+    opengl_framework::opengl_framework
 )
