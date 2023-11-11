@@ -41,13 +41,10 @@ void ModelRenderer::initBuffers()
                  GL_DYNAMIC_DRAW);
     m_VBO.bind();
 
-    ogl::VertexBufferLayout layout(true);
-    layout.push(GL_FLOAT, 3,
-                static_cast<unsigned int>(m_modelData->vertices.size() * 3));
-    layout.push(GL_FLOAT, 3,
-                static_cast<unsigned int>(m_modelData->vertices.size() * 3));
-    layout.push(GL_FLOAT, 2,
-                static_cast<unsigned int>(m_modelData->vertices.size() * 2));
+    ogl::VertexBufferLayout layout;
+    layout.push(GL_FLOAT, 3);
+    layout.push(GL_FLOAT, 3);
+    layout.push(GL_FLOAT, 2);
 
     m_VAO.create();
     m_VAO.bind();
@@ -105,19 +102,9 @@ void ModelRenderer::initSharedToonTextures()
 
 void ModelRenderer::fillBuffers() const
 {
-    glBufferSubData(GL_ARRAY_BUFFER, 0,
-                    3 * sizeof(float) * m_renderData.positions.size(),
-                    m_renderData.positions.data());
-
-    glBufferSubData(GL_ARRAY_BUFFER,
-                    3 * sizeof(float) * m_renderData.positions.size(),
-                    3 * sizeof(float) * m_renderData.normals.size(),
-                    m_renderData.normals.data());
-
-    glBufferSubData(GL_ARRAY_BUFFER,
-                    (3 + 3) * sizeof(float) * m_renderData.positions.size(),
-                    2 * sizeof(float) * m_renderData.UVs.size(),
-                    m_renderData.UVs.data());
+    glBufferData(GL_ARRAY_BUFFER,
+                 (3 + 3 + 2) * sizeof(float) * m_renderData.vertexBuffer.size(),
+                 m_renderData.vertexBuffer.data(), GL_DYNAMIC_DRAW);
 }
 
 void ModelRenderer::render(const Camera &camera, const Lighting &lighting,

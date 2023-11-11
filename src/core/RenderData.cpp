@@ -4,30 +4,24 @@ namespace glmmd
 {
 
 RenderData::RenderData(const std::shared_ptr<const ModelData> &data)
-    : positions(data->vertices.size())
-    , normals(data->vertices.size())
-    , UVs(data->vertices.size())
+    : vertexBuffer(data->vertices.size())
     , materialAdd(data->materials.size())
     , materialMul(data->materials.size())
     , materials(data->materials.size())
     , m_data(data)
-    , m_initialPositions(data->vertices.size())
-    , m_initialNormals(data->vertices.size())
-    , m_initialUVs(data->vertices.size())
+    , m_initialVertexBuffer(data->vertices.size())
 {
     for (size_t i = 0; i < m_data->vertices.size(); ++i)
     {
-        m_initialPositions[i] = m_data->vertices[i].position;
-        m_initialNormals[i]   = m_data->vertices[i].normal;
-        m_initialUVs[i]       = m_data->vertices[i].uv;
+        m_initialVertexBuffer[i].position = m_data->vertices[i].position;
+        m_initialVertexBuffer[i].normal   = m_data->vertices[i].normal;
+        m_initialVertexBuffer[i].uv       = m_data->vertices[i].uv;
     }
 }
 
 void RenderData::init()
 {
-    positions = m_initialPositions;
-    normals   = m_initialNormals;
-    UVs       = m_initialUVs;
+    vertexBuffer = m_initialVertexBuffer;
 
     for (size_t i = 0; i < m_data->materials.size(); ++i)
     {

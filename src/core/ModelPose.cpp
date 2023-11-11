@@ -105,7 +105,8 @@ void ModelPose::applyMorphsToRenderData(RenderData &renderData) const
             for (const auto &d : morph.data)
             {
                 const auto &data = d.vertex;
-                renderData.positions[data.index] += ratio * data.offset;
+                renderData.vertexBuffer[data.index].position +=
+                    ratio * data.offset;
             }
             break;
         case MorphType::Material:
@@ -152,7 +153,8 @@ void ModelPose::applyMorphsToRenderData(RenderData &renderData) const
             for (const auto &d : morph.data)
             {
                 const auto &data = d.uv;
-                renderData.UVs[data.index] += ratio * glm::vec2(data.offset[0]);
+                renderData.vertexBuffer[data.index].uv +=
+                    ratio * glm::vec2(data.offset[0]);
             }
             break;
 #if 0
@@ -213,8 +215,8 @@ void ModelPose::applyBoneTransformsToRenderData(RenderData &renderData) const
 #endif
         {
             const auto &vert = m_modelData->vertices[i];
-            auto       &pos  = renderData.positions[i];
-            auto       &norm = renderData.normals[i];
+            auto       &pos  = renderData.vertexBuffer[i].position;
+            auto       &norm = renderData.vertexBuffer[i].normal;
 
             glm::mat4 vertMatrix;
 
