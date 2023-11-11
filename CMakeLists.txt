@@ -21,6 +21,7 @@ if(NOT "${GLMMD_BULLET_ROOT}" STREQUAL "")
     set(BULLET_ROOT "${GLMMD_BULLET_ROOT}")
 endif()
 
+add_subdirectory(lib)
 add_subdirectory(src)
 
 if(GLMMD_BUILD_APPS)

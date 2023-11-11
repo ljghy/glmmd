@@ -1,8 +1,8 @@
 #include <iostream>
 #include <fstream>
+#include <algorithm>
 
 #ifndef GLMMD_DO_NOT_USE_STD_EXECUTION
-#include <algorithm>
 #include <numeric>
 #include <execution>
 #endif
@@ -10,6 +10,9 @@
 #include <imgui.h>
 #include <imgui_impl_glfw.h>
 #include <imgui_impl_opengl3.h>
+
+#define STB_IMAGE_WRITE_IMPLEMENTATION
+#include <stb/stb_image_write.h>
 
 #include <glmmd/files/CodeConverter.h>
 #include <glmmd/files/PmxFileLoader.h>
@@ -110,8 +113,8 @@ void Context::initFBO()
     texInfo.width       = m_viewportWidth;
     texInfo.height      = m_viewportHeight;
     texInfo.samples     = samples;
-    texInfo.internalFmt = GL_RGB;
-    texInfo.dataFmt     = GL_RGB;
+    texInfo.internalFmt = GL_RGBA;
+    texInfo.dataFmt     = GL_RGBA;
     m_FBO.attachColorTexture(std::make_unique<ogl::Texture2D>(texInfo));
 
     ogl::RenderBufferObjectCreateInfo rboInfo;
@@ -265,6 +268,42 @@ void Context::updateCamera(float deltaTime)
     }
 }
 
+void Context::saveScreenshot()
+{
+    int channels = 3;
+
+    std::vector<float> screenshotBuffer(channels * m_viewportHeight *
+                                        m_viewportWidth);
+
+    m_intermediateFBO.readColorAttachment(screenshotBuffer.data(), GL_RGB,
+                                          GL_FLOAT);
+
+    std::vector<uint8_t> m_screenshotBuffer(channels * m_viewportHeight *
+                                            m_viewportWidth);
+
+    for (int i = 0; i < m_viewportHeight * m_viewportWidth * channels; ++i)
+    {
+        m_screenshotBuffer[i] =
+            static_cast<uint8_t>(glm::round(screenshotBuffer[i] * 255.f));
+    }
+
+    for (int row = 0; row != m_viewportHeight / 2; ++row)
+    {
+        std::swap_ranges(
+            m_screenshotBuffer.begin() + row * m_viewportWidth * channels,
+            m_screenshotBuffer.begin() + (row + 1) * m_viewportWidth * channels,
+            m_screenshotBuffer.begin() +
+                (m_viewportHeight - row - 1) * m_viewportWidth * channels);
+    }
+
+    static int  screenshotIndex = 0;
+    std::string filename =
+        "screenshot_" + std::to_string(screenshotIndex++) + ".png";
+    stbi_write_png(filename.c_str(), m_viewportWidth, m_viewportHeight,
+                   channels, m_screenshotBuffer.data(),
+                   m_viewportWidth * channels);
+}
+
 void Context::updateModelPose(size_t i)
 {
     auto &model = m_models[i];
@@ -406,6 +445,10 @@ void Context::run()
                 renderEnd - renderStart)
                 .count();
 
+        if (io.WantCaptureKeyboard)
+            if (ImGui::IsKeyPressed(ImGuiKey_F2))
+                saveScreenshot();
+
         ImGui::Text("FPS: %.1f", io.Framerate);
         ImGui::Text("Physics: %.3f ms", physicsDur * 1000.f);
         ImGui::Text("Model update: %.3f ms", modelUpdateDur * 1000.f);
@@ -475,6 +518,11 @@ void Context::run()
 Context::~Context()
 {
     glmmd::ModelRenderer::releaseSharedToonTextures();
+
+    m_modelRenderers.clear();
+    m_FBO.destroy();
+    m_intermediateFBO.destroy();
+    m_shadowMapFBO.destroy();
 
     ImGui_ImplOpenGL3_Shutdown();
     ImGui_ImplGlfw_Shutdown();

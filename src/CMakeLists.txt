@@ -26,15 +26,6 @@ if (NOT glm_FOUND)
     FetchContent_MakeAvailable(glm)
 endif()
 
-find_package(opengl_framework)
-if (NOT opengl_framework_FOUND)
-    FetchContent_Declare(opengl_framework
-        GIT_REPOSITORY https://github.com/ljghy/opengl_framework.git
-        GIT_TAG        00a7302cd2f64faba41ef6ae19b97bb2a3b2793e
-    )
-    FetchContent_MakeAvailable(opengl_framework)
-endif()
-
 target_compile_definitions(glmmd
 PUBLIC
     $<$<BOOL:${GLMMD_DO_NOT_USE_STD_EXECUTION}>:GLMMD_DO_NOT_USE_STD_EXECUTION>
@@ -60,4 +51,5 @@ PUBLIC
     glm::glm
     ${BULLET_LIBRARIES}
     opengl_framework::opengl_framework
+    stb::stb
 )

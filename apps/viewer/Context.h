@@ -34,6 +34,8 @@ private:
 
     void updateCamera(float deltaTime);
 
+    void saveScreenshot();
+
 private:
     json m_initData;
 
