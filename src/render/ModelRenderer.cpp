@@ -66,14 +66,20 @@ void ModelRenderer::initTextures()
     m_textures.resize(m_modelData->textures.size());
     for (size_t i = 0; i < m_modelData->textures.size(); ++i)
     {
-        if (!m_modelData->textures[i].exists)
+        const auto &tex = m_modelData->textures[i];
+        if (!tex.exists)
             continue;
 
         ogl::Texture2DCreateInfo info;
-        info.width    = m_modelData->textures[i].width;
-        info.height   = m_modelData->textures[i].height;
-        info.data     = m_modelData->textures[i].pixels.data();
-        info.wrapMode = GL_CLAMP_TO_EDGE;
+        info.width       = tex.width;
+        info.height      = tex.height;
+        info.data        = tex.data.get();
+        info.internalFmt = tex.channels == 4 ? GL_RGBA : GL_RGB;
+        info.dataFmt     = info.internalFmt;
+        info.dataType    = GL_UNSIGNED_BYTE;
+        info.wrapMode    = GL_CLAMP_TO_EDGE;
+        info.filterMode  = GL_LINEAR;
+
         m_textures[i].create(info);
     }
 }

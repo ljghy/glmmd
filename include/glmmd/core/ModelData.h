@@ -5,6 +5,7 @@
 #include <cstdint>
 #include <array>
 #include <vector>
+#include <memory>
 #include <unordered_map>
 
 #define GLM_FORCE_RADIANS
@@ -71,11 +72,13 @@ struct Vertex
 
 struct Texture
 {
-    std::string          path;
-    bool                 exists;
-    int                  width;
-    int                  height;
-    std::vector<uint8_t> pixels;
+    std::string path;
+    bool        exists;
+    int         width;
+    int         height;
+    int         channels;
+
+    std::shared_ptr<uint8_t[]> data;
 };
 
 struct Material
