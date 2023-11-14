@@ -89,17 +89,19 @@ private:
             writeUInt(sz);
             m_fout.write(buf.data(), sz);
         }
-        else if (m_textEncoding == 0) // internal is UTF-8, convert to UTF-16 LE
+        else if (m_textEncoding == EncodingMethod::UTF16_LE)
+        // internal is UTF-8, convert to UTF-16 LE
         {
-            auto utf16 = UTF8_to_UTF16_LE(buf);
+            auto utf16 = CodeCvt::UTF8_to_UTF16_LE(buf);
 
             uint32_t sz = static_cast<uint32_t>(utf16.size());
             writeUInt(sz);
             m_fout.write(utf16.data(), sz);
         }
-        else // internal is UTF-16 LE, convert to UTF-8
+        else
+        // internal is UTF-16 LE, convert to UTF-8
         {
-            auto utf8 = UTF16_LE_to_UTF8(buf);
+            auto utf8 = CodeCvt::UTF16_LE_to_UTF8(buf);
 
             uint32_t sz = static_cast<uint32_t>(utf8.size());
             writeUInt(sz);
@@ -110,8 +112,8 @@ private:
 private:
     std::ofstream m_fout;
 
-    uint8_t m_textEncoding;
-    uint8_t m_internalTextEncoding;
+    EncodingMethod m_textEncoding;
+    EncodingMethod m_internalTextEncoding;
 };
 
 } // namespace glmmd

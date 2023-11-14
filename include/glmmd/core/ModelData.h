@@ -13,11 +13,18 @@
 
 namespace glmmd
 {
+
+enum class EncodingMethod : uint8_t
+{
+    UTF16_LE = 0,
+    UTF8     = 1,
+};
 struct ModelInfo
 {
     float version;
 
-    uint8_t encodingMethod; // 0: UTF-16 LE, 1: UTF-8
+    EncodingMethod encodingMethod;
+
     uint8_t additionalUVNum;
     uint8_t vertexIndexSize;
     uint8_t textureIndexSize;
@@ -26,7 +33,7 @@ struct ModelInfo
     uint8_t morphIndexSize;
     uint8_t rigidBodyIndexSize;
 
-    uint8_t internalEncodingMethod; // 0: UTF-16 LE, 1: UTF-8
+    EncodingMethod internalEncodingMethod;
 
     std::string modelName;
     std::string modelNameEN;

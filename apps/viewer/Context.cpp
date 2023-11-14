@@ -203,7 +203,8 @@ void Context::loadResources()
 
             std::cout << "Motion data loaded from: " << filename << '\n';
             std::cout << "Created for: "
-                      << glmmd::shiftJIS_to_UTF8(vmdData.modelName) << '\n';
+                      << glmmd::CodeCvt::shiftJIS_to_UTF8(vmdData.modelName)
+                      << '\n';
             std::cout << std::endl;
 
             motions[modelIndex].emplace_back(clip);
