@@ -5,7 +5,7 @@ set(msvc_cxx "$<COMPILE_LANG_AND_ID:CXX,MSVC>")
 
 target_compile_options(glmmd_compiler_flags INTERFACE
     "$<${gcc_like_cxx}:$<BUILD_INTERFACE:-Wall;-Wshadow;-Wformat=2;-Wunused>>"
-    "$<${msvc_cxx}:$<BUILD_INTERFACE:/W3 /MP>>"
+    "$<${msvc_cxx}:$<BUILD_INTERFACE:-W3>>"
 )
 
 file(GLOB_RECURSE GLMMD_SOURCES *.cpp)
@@ -24,9 +24,6 @@ add_library(glmmd::glmmd ALIAS glmmd)
 
 set_target_properties(glmmd
 PROPERTIES
-    DEBUG_POSTFIX d
-    CXX_STANDARD 17
-    CXX_STANDARD_REQUIRED ON
     INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/lib/glmmd-${glmmd_VERSION}"
     INSTALL_RPATH_USE_LINK_PATH TRUE
 )
