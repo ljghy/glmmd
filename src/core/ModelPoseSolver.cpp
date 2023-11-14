@@ -15,8 +15,12 @@ ModelPoseSolver::ModelPoseSolver(
     , m_boneDeformOrder(modelData->bones.size())
     , m_afterPhysicsStartIndex(static_cast<uint32_t>(modelData->bones.size()))
 {
-    std::iota(m_boneDeformOrder.begin(), m_boneDeformOrder.end(), 0);
+    sortBoneDeformOrder();
+}
 
+void ModelPoseSolver::sortBoneDeformOrder()
+{
+    std::iota(m_boneDeformOrder.begin(), m_boneDeformOrder.end(), 0);
     std::sort(m_boneDeformOrder.begin(), m_boneDeformOrder.end(),
               [&](uint32_t a, uint32_t b)
               {

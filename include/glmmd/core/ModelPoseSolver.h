@@ -16,6 +16,8 @@ public:
 
     ModelPoseSolver(const ModelPoseSolver &other) = default;
 
+    void sortBoneDeformOrder();
+
     void solveBeforePhysics(ModelPose &pose);
     void syncWithPhysics(ModelPose &pose, ModelPhysics &physics);
     void solveAfterPhysics(ModelPose &pose);
