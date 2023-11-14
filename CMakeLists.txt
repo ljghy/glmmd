@@ -1,15 +1,9 @@
 cmake_minimum_required(VERSION 3.14)
 
-project(glmmd)
-
-set(CMAKE_CXX_STANDARD 17)
+project(glmmd LANGUAGES CXX VERSION 0.0.1)
 
 if(NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE "Release" CACHE STRING "" FORCE)
-endif()
-
-if(MSVC)
-    ADD_DEFINITIONS(/MP)
 endif()
 
 option(GLMMD_DO_NOT_USE_STD_EXECUTION "Do not use std::execution" OFF)

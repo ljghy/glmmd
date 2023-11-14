@@ -2,6 +2,7 @@
 !CMakeLists.txt
 !.gitignore
 !.gitattributes
+!cmake/
 !lib/
 !include/
 !src/
