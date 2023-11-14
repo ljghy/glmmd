@@ -1,4 +1,12 @@
+cmake_minimum_required(VERSION 3.14)
+
 project(glmmd_viewer)
+
+set(CMAKE_CXX_STANDARD 17)
+
+if (NOT CMAKE_BUILD_TYPE)
+    set(CMAKE_BUILD_TYPE Release)
+endif()
 
 include(FetchContent)
 set(FETCHCONTENT_QUIET OFF)
@@ -60,6 +68,6 @@ PRIVATE
 
 target_link_libraries(viewer
 PRIVATE
-    glmmd
+    glmmd::glmmd
     imgui
 )
