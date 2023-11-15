@@ -15,11 +15,15 @@ struct OPENGL_FRAMEWORK_API Texture2DCreateInfo
 
     const unsigned char *data = nullptr;
 
-    GLenum internalFmt = GL_RGBA;
-    GLenum dataFmt     = GL_RGBA;
-    GLenum dataType    = GL_UNSIGNED_BYTE;
-    GLenum wrapMode    = GL_REPEAT;
-    GLenum filterMode  = GL_LINEAR;
+    bool genMipmaps = false;
+
+    GLenum internalFmt   = GL_RGBA;
+    GLenum dataFmt       = GL_RGBA;
+    GLenum dataType      = GL_UNSIGNED_BYTE;
+    GLenum wrapModeS     = GL_REPEAT;
+    GLenum wrapModeT     = GL_REPEAT;
+    GLenum minFilterMode = GL_LINEAR;
+    GLenum magFilterMode = GL_LINEAR;
 };
 
 class OPENGL_FRAMEWORK_API Texture2D

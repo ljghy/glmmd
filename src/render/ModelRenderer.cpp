@@ -71,14 +71,17 @@ void ModelRenderer::initTextures()
             continue;
 
         ogl::Texture2DCreateInfo info;
-        info.width       = tex.width;
-        info.height      = tex.height;
-        info.data        = tex.data.get();
-        info.internalFmt = tex.channels == 4 ? GL_RGBA : GL_RGB;
-        info.dataFmt     = info.internalFmt;
-        info.dataType    = GL_UNSIGNED_BYTE;
-        info.wrapMode    = GL_CLAMP_TO_EDGE;
-        info.filterMode  = GL_LINEAR;
+        info.width         = tex.width;
+        info.height        = tex.height;
+        info.data          = tex.data.get();
+        info.genMipmaps    = true;
+        info.internalFmt   = tex.channels == 4 ? GL_RGBA : GL_RGB;
+        info.dataFmt       = info.internalFmt;
+        info.dataType      = GL_UNSIGNED_BYTE;
+        info.wrapModeS     = GL_CLAMP_TO_EDGE;
+        info.wrapModeT     = GL_CLAMP_TO_EDGE;
+        info.minFilterMode = GL_LINEAR_MIPMAP_LINEAR;
+        info.magFilterMode = GL_LINEAR;
 
         m_textures[i].create(info);
     }
@@ -98,8 +101,9 @@ void ModelRenderer::initSharedToonTextures()
             info.height = 32;
             info.data   = reinterpret_cast<unsigned char *>(
                 sharedToonTextureData[i].data());
-            info.dataFmt  = GL_RGB;
-            info.wrapMode = GL_CLAMP_TO_EDGE;
+            info.dataFmt   = GL_RGB;
+            info.wrapModeS = GL_CLAMP_TO_EDGE;
+            info.wrapModeT = GL_CLAMP_TO_EDGE;
             sharedToonTextures[i].create(info);
         }
         sharedToonTexturesLoaded = true;

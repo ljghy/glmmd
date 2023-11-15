@@ -143,7 +143,8 @@ void Context::initFBO()
     shadowMapTexInfo.internalFmt = GL_DEPTH_COMPONENT;
     shadowMapTexInfo.dataFmt     = GL_DEPTH_COMPONENT;
     shadowMapTexInfo.dataType    = GL_FLOAT;
-    shadowMapTexInfo.wrapMode    = GL_CLAMP_TO_BORDER;
+    shadowMapTexInfo.wrapModeS   = GL_CLAMP_TO_BORDER;
+    shadowMapTexInfo.wrapModeT   = GL_CLAMP_TO_BORDER;
     std::unique_ptr<ogl::Texture2D> shadowMapTex =
         std::make_unique<ogl::Texture2D>(shadowMapTexInfo);
     shadowMapTex->bind();

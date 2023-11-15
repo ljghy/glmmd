@@ -46,17 +46,19 @@ void Texture2D::create(const Texture2DCreateInfo &info)
     }
     else
     {
-        GL_CHECK(glTexImage2D(GL_TEXTURE_2D, 0 /* mipmap level */,
-                              info.internalFmt, info.width, info.height, 0,
-                              info.dataFmt, info.dataType, info.data));
+        GL_CHECK(glTexImage2D(GL_TEXTURE_2D, 0, info.internalFmt, info.width,
+                              info.height, 0, info.dataFmt, info.dataType,
+                              info.data));
+        if (info.genMipmaps)
+            GL_CHECK(glGenerateMipmap(GL_TEXTURE_2D));
         GL_CHECK(
-            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, info.wrapMode));
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, info.wrapModeS));
         GL_CHECK(
-            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, info.wrapMode));
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, info.wrapModeT));
         GL_CHECK(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER,
-                                 info.filterMode));
+                                 info.minFilterMode));
         GL_CHECK(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER,
-                                 info.filterMode));
+                                 info.magFilterMode));
     }
 
     GL_CHECK(glBindTexture(m_target, 0));
@@ -97,6 +99,8 @@ void Texture2D::resize(int width, int height)
         GL_CHECK(glTexImage2D(GL_TEXTURE_2D, 0, m_info.internalFmt,
                               m_info.width, m_info.height, 0, m_info.dataFmt,
                               m_info.dataType, m_info.data));
+        if (m_info.genMipmaps)
+            GL_CHECK(glGenerateMipmap(GL_TEXTURE_2D));
     }
 
     GL_CHECK(glBindTexture(m_target, 0));
