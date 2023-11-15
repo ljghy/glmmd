@@ -75,8 +75,8 @@ void ModelRenderer::initTextures()
         info.height        = tex.height;
         info.data          = tex.data.get();
         info.genMipmaps    = true;
-        info.internalFmt   = tex.channels == 4 ? GL_RGBA : GL_RGB;
-        info.dataFmt       = info.internalFmt;
+        info.internalFmt   = GL_RGBA;
+        info.dataFmt       = GL_RGBA;
         info.dataType      = GL_UNSIGNED_BYTE;
         info.wrapModeS     = GL_CLAMP_TO_EDGE;
         info.wrapModeT     = GL_CLAMP_TO_EDGE;

@@ -192,22 +192,9 @@ void PmxFileLoader::loadTextures(ModelData &data)
 #endif
         path = m_modelDir / path.make_preferred();
 
-        int channels = 0;
-        int ok =
-            stbi_info(reinterpret_cast<const char *>(path.u8string().data()),
-                      nullptr, nullptr, &channels);
-
-        if (!ok)
-        {
-            texture.exists = false;
-            continue;
-        }
-
-        int reqChannels = channels == 1 || channels == 3 ? 3 : 4;
-
         stbi_uc *pixels =
             stbi_load(reinterpret_cast<const char *>(path.u8string().data()),
-                      &texture.width, &texture.height, nullptr, reqChannels);
+                      &texture.width, &texture.height, nullptr, 4);
         if (!pixels)
         {
             texture.exists = false;
@@ -215,7 +202,7 @@ void PmxFileLoader::loadTextures(ModelData &data)
         else
         {
             texture.exists   = true;
-            texture.channels = reqChannels;
+            texture.channels = 4;
             texture.data.reset(pixels, stbi_image_free);
         }
     }
