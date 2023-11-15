@@ -2,7 +2,6 @@
 #include <numeric>
 #ifndef GLMMD_DO_NOT_USE_STD_EXECUTION
 #include <execution>
-#include <mutex>
 #endif
 
 #define GLM_ENABLE_EXPERIMENTAL
@@ -183,11 +182,6 @@ void ModelPose::applyMorphsToRenderData(RenderData &renderData) const
     renderData.applyMaterialFactors();
 }
 
-#ifndef GLMMD_DO_NOT_USE_STD_EXECUTION
-static std::vector<uint32_t> vertexIndices;
-static std::mutex            vertexIndicesMutex;
-#endif
-
 void ModelPose::applyBoneTransformsToRenderData(RenderData &renderData) const
 {
     std::vector<glm::mat4> finalBoneTransforms(m_globalBoneTransforms.size());
@@ -195,28 +189,16 @@ void ModelPose::applyBoneTransformsToRenderData(RenderData &renderData) const
         finalBoneTransforms[i] = glm::translate(
             m_globalBoneTransforms[i], -m_modelData->bones[i].position);
 
-#ifndef GLMMD_DO_NOT_USE_STD_EXECUTION
-    {
-        std::lock_guard<std::mutex> lock(vertexIndicesMutex);
-        uint32_t sz = static_cast<uint32_t>(vertexIndices.size());
-        if (m_modelData->vertices.size() > sz)
-        {
-            vertexIndices.resize(m_modelData->vertices.size());
-            std::iota(vertexIndices.begin() + sz, vertexIndices.end(), sz);
-        }
-    }
-
     std::for_each(
-        std::execution::par, vertexIndices.begin(),
-        vertexIndices.begin() + m_modelData->vertices.size(),
-        [&](uint32_t i)
-#else
-    for (uint32_t i = 0; i < m_modelData->vertices.size(); ++i)
+#ifndef GLMMD_DO_NOT_USE_STD_EXECUTION
+        std::execution::par,
 #endif
+        m_modelData->vertices.cbegin(), m_modelData->vertices.cend(),
+        [&](const Vertex &vert)
         {
-            const auto &vert = m_modelData->vertices[i];
-            auto       &pos  = renderData.vertexBuffer[i].position;
-            auto       &norm = renderData.vertexBuffer[i].normal;
+            auto  i = static_cast<uint32_t>(&vert - &m_modelData->vertices[0]);
+            auto &pos  = renderData.vertexBuffer[i].position;
+            auto &norm = renderData.vertexBuffer[i].normal;
 
             glm::mat4 vertMatrix;
 
@@ -299,10 +281,7 @@ void ModelPose::applyBoneTransformsToRenderData(RenderData &renderData) const
                 pos  = glm::vec3(vertMatrix * glm::vec4(pos, 1.f));
                 norm = glm::mat3(vertMatrix) * norm;
             }
-        }
-#ifndef GLMMD_DO_NOT_USE_STD_EXECUTION
-    );
-#endif
+        });
 }
 
 void ModelPose::blendWith(const ModelPose &other, float t)
