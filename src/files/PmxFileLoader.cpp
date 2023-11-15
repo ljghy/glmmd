@@ -108,8 +108,10 @@ void PmxFileLoader::loadVertices(ModelData &data)
         readFloat<3>(vert.normal.x);
         readFloat<2>(vert.uv.x);
 
-        vert.uv.x = vert.uv.x - std::floor(vert.uv.x);
-        vert.uv.y = vert.uv.y - std::floor(vert.uv.y);
+        if (vert.uv.x > 1.f || vert.uv.x < 0.f)
+            vert.uv.x = vert.uv.x - std::floor(vert.uv.x);
+        if (vert.uv.y > 1.f || vert.uv.y < 0.f)
+            vert.uv.y = vert.uv.y - std::floor(vert.uv.y);
 
         for (int i = 0; i < data.info.additionalUVNum; ++i)
             readFloat<4>(vert.additionalUVs[i].x);
