@@ -41,20 +41,51 @@ private:
     }
 
     template <typename UIntType>
-    void readUInt(UIntType &val, int sz = sizeof(UIntType))
+    void readUInt(UIntType &val)
     {
-        m_fin.read(reinterpret_cast<char *>(&val), sz);
+        m_fin.read(reinterpret_cast<char *>(&val), sizeof(UIntType));
+    }
+
+    template <typename UIntType>
+    void readUInt(UIntType &val, int sz)
+    {
+        switch (sz)
+        {
+        case 1:
+        {
+            uint8_t tmp;
+            m_fin.read(reinterpret_cast<char *>(&tmp), sz);
+            val = static_cast<UIntType>(tmp);
+            break;
+        }
+        case 2:
+        {
+            uint16_t tmp;
+            m_fin.read(reinterpret_cast<char *>(&tmp), sz);
+            val = static_cast<UIntType>(tmp);
+            break;
+        }
+        case 4:
+        {
+            uint32_t tmp;
+            m_fin.read(reinterpret_cast<char *>(&tmp), sz);
+            val = static_cast<UIntType>(tmp);
+            break;
+        }
+        default:
+            m_fin.read(reinterpret_cast<char *>(&val), sz);
+        }
     }
 
     template <typename IntType>
-    void readInt(IntType &val, int sz = sizeof(IntType))
+    void readInt(IntType &val)
     {
-        if (sz == sizeof(IntType))
-        {
-            m_fin.read(reinterpret_cast<char *>(&val), sz);
-            return;
-        }
+        m_fin.read(reinterpret_cast<char *>(&val), sizeof(IntType));
+    }
 
+    template <typename IntType>
+    void readInt(IntType &val, int sz)
+    {
         switch (sz)
         {
         case 1:

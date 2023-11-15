@@ -415,7 +415,7 @@ Morph::MorphData PmxFileLoader::loadGroupMorph(ModelData &data)
 {
     Morph::MorphData morph;
     auto            &group = morph.group;
-    readInt(group.index, data.info.morphIndexSize);
+    readUInt(group.index, data.info.morphIndexSize);
     readFloat(group.ratio);
     return morph;
 }
@@ -424,7 +424,7 @@ Morph::MorphData PmxFileLoader::loadVertexMorph(ModelData &data)
 {
     Morph::MorphData morph;
     auto            &vertex = morph.vertex;
-    readInt(vertex.index, data.info.vertexIndexSize);
+    readUInt(vertex.index, data.info.vertexIndexSize);
     readFloat<3>(vertex.offset.x);
     return morph;
 }
@@ -433,7 +433,7 @@ Morph::MorphData PmxFileLoader::loadBoneMorph(ModelData &data)
 {
     Morph::MorphData morph;
     auto            &bone = morph.bone;
-    readInt(bone.index, data.info.boneIndexSize);
+    readUInt(bone.index, data.info.boneIndexSize);
     readFloat<3>(bone.translation.x);
     glm::vec4 q;
     readFloat<4>(q.x); // internal order: x, y, z, w
@@ -448,7 +448,7 @@ Morph::MorphData PmxFileLoader::loadUVMorph(ModelData &data, uint8_t num)
     for (uint8_t i = 0; i < 5; ++i)
         if (i != num)
             uv.offset[num] = glm::vec4(0.f);
-    readInt(uv.index, data.info.vertexIndexSize);
+    readUInt(uv.index, data.info.vertexIndexSize);
     readFloat<4>(uv.offset[num].x);
     return morph;
 }
@@ -457,7 +457,7 @@ Morph::MorphData PmxFileLoader::loadMaterialMorph(ModelData &data)
 {
     Morph::MorphData morph;
     auto            &mat = morph.material;
-    readInt(mat.index, data.info.materialIndexSize);
+    readUInt(mat.index, data.info.materialIndexSize);
     readUInt(mat.operation);
     readFloat<4>(mat.diffuse.x);
     readFloat<3>(mat.specular.x);
