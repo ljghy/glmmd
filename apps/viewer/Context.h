@@ -54,6 +54,7 @@ private:
 
     std::vector<std::unique_ptr<SimpleAnimator>> m_animators;
 
+    glm::vec3       m_cameraTarget;
     glmmd::Camera   m_camera;
     glmmd::Lighting m_lighting;
 

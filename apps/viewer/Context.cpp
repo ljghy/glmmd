@@ -35,6 +35,7 @@ Context::Context(const std::string &initFile)
     initFBO();
     loadResources();
 
+    m_cameraTarget          = glm::vec3(0.f);
     m_camera.projType       = glmmd::CameraProjectionType::Perspective;
     m_camera.position       = glm::vec3(0.0f, 14.0f, -24.0f);
     m_lighting.direction    = glm::normalize(glm::vec3(-1.f, -2.f, 1.f));
@@ -232,15 +233,17 @@ void Context::updateCamera(float deltaTime)
         constexpr float sensitivity = glm::radians(0.1f);
 
         if (io.MouseDown[1])
-            m_camera.rotateAround(glm::vec3(0.f), -mouseDelta.x * sensitivity,
+            m_camera.rotateAround(m_cameraTarget, -mouseDelta.x * sensitivity,
                                   -mouseDelta.y * sensitivity);
 
         if (io.MouseDown[2])
         {
-            float vel = 5.f * glm::tan(m_camera.fovy * 0.5f);
-            m_camera.position +=
-                -vel * mouseDelta.x * deltaTime * m_camera.right;
-            m_camera.position += vel * mouseDelta.y * deltaTime * m_camera.up;
+            float     vel = 5.f * glm::tan(m_camera.fovy * 0.5f);
+            glm::vec3 translation =
+                -vel * mouseDelta.x * deltaTime * m_camera.right +
+                vel * mouseDelta.y * deltaTime * m_camera.up;
+            m_camera.position += translation;
+            m_cameraTarget += translation;
         }
 
         if (m_camera.projType == glmmd::CameraProjectionType::Perspective)
@@ -259,14 +262,19 @@ void Context::updateCamera(float deltaTime)
     if (io.WantCaptureKeyboard)
     {
         constexpr float vel = 25.f;
+
+        glm::vec3 translation(0.f);
         if (io.KeysDown[GLFW_KEY_W])
-            m_camera.position += vel * deltaTime * m_camera.front;
+            translation += vel * deltaTime * m_camera.front;
         if (io.KeysDown[GLFW_KEY_S])
-            m_camera.position -= vel * deltaTime * m_camera.front;
+            translation -= vel * deltaTime * m_camera.front;
         if (io.KeysDown[GLFW_KEY_A])
-            m_camera.position -= vel * deltaTime * m_camera.right;
+            translation -= vel * deltaTime * m_camera.right;
         if (io.KeysDown[GLFW_KEY_D])
-            m_camera.position += vel * deltaTime * m_camera.right;
+            translation += vel * deltaTime * m_camera.right;
+
+        m_camera.position += translation;
+        m_cameraTarget += translation;
     }
 }
 
