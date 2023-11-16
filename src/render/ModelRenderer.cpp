@@ -8,13 +8,19 @@ namespace glmmd
 #include "DefaultShaderSources.inl"
 #include "SharedToonTextures.inl"
 
+std::mutex sharedToonTexturesInitMutex;
+
 bool                           ModelRenderer::sharedToonTexturesLoaded = false;
 std::array<ogl::Texture2D, 10> ModelRenderer::sharedToonTextures;
 
 void ModelRenderer::releaseSharedToonTextures()
 {
+    std::lock_guard<std::mutex> lock(sharedToonTexturesInitMutex);
+    if (!sharedToonTexturesLoaded)
+        return;
     for (auto &texture : sharedToonTextures)
         texture.destroy();
+    sharedToonTexturesLoaded = false;
 }
 
 ModelRenderer::ModelRenderer(const std::shared_ptr<const ModelData> &data,
@@ -86,8 +92,6 @@ void ModelRenderer::initTextures()
         m_textures[i].create(info);
     }
 }
-
-std::mutex sharedToonTexturesInitMutex;
 
 void ModelRenderer::initSharedToonTextures()
 {
