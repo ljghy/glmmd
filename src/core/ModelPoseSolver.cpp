@@ -331,13 +331,13 @@ void ModelPoseSolver::updateInheritedBoneTransforms(ModelPose &pose)
     {
         uint32_t    i    = m_boneDeformOrder[j];
         const auto &bone = m_modelData->bones[i];
-        if (bone.inheritRotation())
+        if (bone.inheritRotation() && bone.inheritParentIndex != -1)
             pose.m_localBoneRotations[i] =
                 glm::slerp(glm::quat(1.f, 0.f, 0.f, 0.f),
                            pose.m_localBoneRotations[bone.inheritParentIndex],
                            bone.inheritWeight) *
                 pose.m_localBoneRotations[i];
-        if (bone.inheritTranslation())
+        if (bone.inheritTranslation() && bone.inheritParentIndex != -1)
             pose.m_localBoneTranslations[i] +=
                 pose.m_localBoneTranslations[bone.inheritParentIndex] *
                 bone.inheritWeight;
