@@ -161,14 +161,13 @@ void Context::loadResources()
 {
     for (const auto &modelNode : m_initData["models"])
     {
-        auto &modelData =
-            m_modelData.emplace_back(std::make_shared<glmmd::ModelData>());
-
         try
         {
             auto filename = modelNode["filename"].get<std::string>();
-            glmmd::PmxFileLoader loader(filename, true);
-            loader.load(*modelData);
+            m_modelData.push_back(glmmd::loadPmxFile(filename, true));
+            auto modelData = m_modelData.back();
+            m_models.emplace_back(modelData);
+            m_modelRenderers.emplace_back(modelData);
 
             std::cout << "Model loaded from: " << filename << '\n';
             std::cout << "Name: " << modelData->info.modelName << '\n';
@@ -179,9 +178,6 @@ void Context::loadResources()
         {
             std::cerr << e.what() << '\n';
         }
-
-        m_models.emplace_back(modelData);
-        m_modelRenderers.emplace_back(modelData);
     }
 
     std::vector<std::vector<std::shared_ptr<glmmd::Motion>>> motions(
@@ -191,21 +187,22 @@ void Context::loadResources()
     {
         try
         {
-            auto           modelIndex = motionNode["model"].get<size_t>();
-            auto           filename = motionNode["filename"].get<std::string>();
-            glmmd::VmdData vmdData;
-            glmmd::VmdFileLoader loader(filename, true);
-            loader.load(vmdData);
+            auto modelIndex = motionNode["model"].get<size_t>();
+            if (modelIndex >= m_models.size())
+                throw std::runtime_error("Invalid model index.");
+
+            auto filename = motionNode["filename"].get<std::string>();
+            auto vmdData  = glmmd::VmdFileLoader{}.load(filename, true);
 
             bool loop = false;
             if (motionNode.find("loop") != motionNode.end())
                 loop = motionNode["loop"].get<bool>();
             auto clip = std::make_shared<glmmd::FixedMotionClip>(
-                vmdData.toFixedMotionClip(m_models[modelIndex].data(), loop));
+                vmdData->toFixedMotionClip(m_models[modelIndex].data(), loop));
 
             std::cout << "Motion data loaded from: " << filename << '\n';
             std::cout << "Created for: "
-                      << glmmd::CodeCvt::shiftJIS_to_UTF8(vmdData.modelName)
+                      << glmmd::CodeCvt::shiftJIS_to_UTF8(vmdData->modelName)
                       << '\n';
             std::cout << std::endl;
 

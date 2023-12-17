@@ -11,11 +11,11 @@
 namespace glmmd
 {
 
-PmxFileLoader::PmxFileLoader(const std::string &filename, bool utf8)
+std::shared_ptr<ModelData> PmxFileLoader::load(const std::string &filename,
+                                               bool               utf8Path)
 {
     std::filesystem::path path;
-    if (utf8)
-
+    if (utf8Path)
     {
         path =
 #if __cplusplus <= 201703L
@@ -31,20 +31,21 @@ PmxFileLoader::PmxFileLoader(const std::string &filename, bool utf8)
     if (!m_fin)
         throw std::runtime_error("Failed to open file \"" + filename + "\".");
     m_modelDir = path.make_preferred().parent_path();
-}
 
-void PmxFileLoader::load(ModelData &data)
-{
-    loadInfo(data);
-    loadVertices(data);
-    loadIndices(data);
-    loadTextures(data);
-    loadMaterials(data);
-    loadBones(data);
-    loadMorphs(data);
-    loadDisplayFrames(data);
-    loadRigidBodies(data);
-    loadJoints(data);
+    auto data = std::make_shared<ModelData>();
+
+    loadInfo(*data);
+    loadVertices(*data);
+    loadIndices(*data);
+    loadTextures(*data);
+    loadMaterials(*data);
+    loadBones(*data);
+    loadMorphs(*data);
+    loadDisplayFrames(*data);
+    loadRigidBodies(*data);
+    loadJoints(*data);
+
+    return data;
 }
 
 void PmxFileLoader::loadInfo(ModelData &data)

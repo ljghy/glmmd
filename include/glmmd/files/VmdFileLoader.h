@@ -11,8 +11,14 @@ namespace glmmd
 class VmdFileLoader
 {
 public:
-    VmdFileLoader(const std::string &filename, bool utf8 = false);
-    void load(VmdData &data);
+    VmdFileLoader()                                 = default;
+    VmdFileLoader(const VmdFileLoader &)            = delete;
+    VmdFileLoader(VmdFileLoader &&)                 = delete;
+    VmdFileLoader &operator=(const VmdFileLoader &) = delete;
+    VmdFileLoader &operator=(VmdFileLoader &&)      = delete;
+
+    std::shared_ptr<VmdData> load(const std::string &filename,
+                                  bool               utf8Path = false);
 
 private:
     void loadHeader(VmdData &data);
@@ -36,6 +42,12 @@ private:
 private:
     std::ifstream m_fin;
 };
+
+inline std::shared_ptr<VmdData> loadVmdFile(const std::string &filename,
+                                            bool               utf8Path = false)
+{
+    return VmdFileLoader{}.load(filename, utf8Path);
+}
 
 } // namespace glmmd
 

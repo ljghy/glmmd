@@ -6,9 +6,10 @@
 namespace glmmd
 {
 
-VmdFileLoader::VmdFileLoader(const std::string &filename, bool utf8)
+std::shared_ptr<VmdData> VmdFileLoader::load(const std::string &filename,
+                                             bool               utf8Path)
 {
-    if (utf8)
+    if (utf8Path)
     {
         std::filesystem::path path =
 #if __cplusplus <= 201703L
@@ -23,14 +24,15 @@ VmdFileLoader::VmdFileLoader(const std::string &filename, bool utf8)
         m_fin.open(filename, std::ios::binary);
     if (!m_fin)
         throw std::runtime_error("Failed to open file \"" + filename + "\".");
-}
 
-void VmdFileLoader::load(VmdData &data)
-{
-    loadHeader(data);
-    loadBoneFrames(data);
-    loadMorphFrames(data);
-    loadCameraFrames(data);
+    auto data = std::make_shared<VmdData>();
+
+    loadHeader(*data);
+    loadBoneFrames(*data);
+    loadMorphFrames(*data);
+    loadCameraFrames(*data);
+
+    return data;
 }
 
 void VmdFileLoader::loadHeader(VmdData &data)

@@ -3,6 +3,7 @@
 
 #include <fstream>
 #include <filesystem>
+#include <memory>
 
 #include <glmmd/core/ModelData.h>
 
@@ -12,8 +13,14 @@ namespace glmmd
 class PmxFileLoader
 {
 public:
-    PmxFileLoader(const std::string &filename, bool utf8 = false);
-    void load(ModelData &data);
+    PmxFileLoader()                                 = default;
+    PmxFileLoader(const PmxFileLoader &)            = delete;
+    PmxFileLoader(PmxFileLoader &&)                 = delete;
+    PmxFileLoader &operator=(const PmxFileLoader &) = delete;
+    PmxFileLoader &operator=(PmxFileLoader &&)      = delete;
+
+    std::shared_ptr<ModelData> load(const std::string &filename,
+                                    bool               utf8Path = false);
 
 private:
     void loadInfo(ModelData &);
@@ -126,6 +133,12 @@ private:
     std::ifstream         m_fin;
     std::filesystem::path m_modelDir;
 };
+
+inline std::shared_ptr<ModelData> loadPmxFile(const std::string &filename,
+                                              bool utf8Path = false)
+{
+    return PmxFileLoader{}.load(filename, utf8Path);
+}
 
 } // namespace glmmd
 
