@@ -27,8 +27,7 @@ inline void framebufferSizeCallback(GLFWwindow *, int width, int height)
 
 Context::Context(const std::string &initFile)
 {
-    std::ifstream fin(initFile);
-    m_initData = json::parse(fin);
+    m_initData = parseJsonFile(initFile);
 
     initWindow();
     initImGui();

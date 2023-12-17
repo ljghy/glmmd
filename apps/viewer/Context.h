@@ -11,10 +11,8 @@
 #include <glmmd/core/PhysicsWorld.h>
 #include <glmmd/render/ModelRenderer.h>
 
-#include "json.hpp"
+#include "JsonParser.hpp"
 #include "SimpleAnimator.h"
-
-using json = nlohmann::json;
 
 class Context
 {
@@ -37,7 +35,7 @@ private:
     void saveScreenshot();
 
 private:
-    json m_initData;
+    JsonNode m_initData;
 
     GLFWwindow *m_window;
 
