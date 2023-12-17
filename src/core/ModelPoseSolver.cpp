@@ -12,28 +12,37 @@ constexpr float IK_SOLVER_THRESHOLD = 1e-5f;
 ModelPoseSolver::ModelPoseSolver(
     const std::shared_ptr<const ModelData> &modelData)
     : m_modelData(modelData)
+    , m_boneChildren(modelData->bones.size())
     , m_boneDeformOrder(modelData->bones.size())
     , m_afterPhysicsStartIndex(static_cast<uint32_t>(modelData->bones.size()))
 {
+    for (uint32_t i = 0; i < modelData->bones.size(); ++i)
+    {
+        const auto &bone = modelData->bones[i];
+        if (bone.parentIndex != -1)
+            m_boneChildren[bone.parentIndex].push_back(i);
+    }
+
     sortBoneDeformOrder();
 }
 
 void ModelPoseSolver::sortBoneDeformOrder()
 {
     std::iota(m_boneDeformOrder.begin(), m_boneDeformOrder.end(), 0);
-    std::sort(m_boneDeformOrder.begin(), m_boneDeformOrder.end(),
-              [&](uint32_t a, uint32_t b)
-              {
-                  const auto &boneA = m_modelData->bones[a];
-                  const auto &boneB = m_modelData->bones[b];
-                  if (!boneA.deformAfterPhysics() && boneB.deformAfterPhysics())
-                      return true;
-                  if (boneA.deformAfterPhysics() && !boneB.deformAfterPhysics())
-                      return false;
-                  if (boneA.deformLayer != boneB.deformLayer)
-                      return boneA.deformLayer < boneB.deformLayer;
-                  return a < b;
-              });
+    std::stable_sort(
+        m_boneDeformOrder.begin(), m_boneDeformOrder.end(),
+        [&](uint32_t a, uint32_t b)
+        {
+            const auto &boneA = m_modelData->bones[a];
+            const auto &boneB = m_modelData->bones[b];
+            if (!boneA.deformAfterPhysics() && boneB.deformAfterPhysics())
+                return true;
+            if (boneA.deformAfterPhysics() && !boneB.deformAfterPhysics())
+                return false;
+            if (boneA.deformLayer != boneB.deformLayer)
+                return boneA.deformLayer < boneB.deformLayer;
+            return a < b;
+        });
 
     m_afterPhysicsStartIndex = static_cast<uint32_t>(std::distance(
         m_boneDeformOrder.begin(),
@@ -174,7 +183,7 @@ void ModelPoseSolver::solveIK(ModelPose &pose)
     for (const auto &ik : m_modelData->ikData)
     {
         glm::vec3 targetPos =
-            pose.getBoneGlobalPosition(ik.realTargetBoneIndex);
+            pose.getGlobalBonePosition(ik.realTargetBoneIndex);
 
         for (int32_t i = 0; i < ik.loopCount; ++i)
         {
@@ -183,7 +192,7 @@ void ModelPoseSolver::solveIK(ModelPose &pose)
             for (const auto &link : ik.links)
             {
                 glm::vec3 endEffectorPos =
-                    pose.getBoneGlobalPosition(ik.targetBoneIndex);
+                    pose.getGlobalBonePosition(ik.targetBoneIndex);
 
                 if (glm::distance(endEffectorPos, targetPos) <
                     IK_SOLVER_THRESHOLD)
@@ -192,7 +201,7 @@ void ModelPoseSolver::solveIK(ModelPose &pose)
                     break;
                 }
 
-                glm::vec3 linkPos = pose.getBoneGlobalPosition(link.boneIndex);
+                glm::vec3 linkPos = pose.getGlobalBonePosition(link.boneIndex);
 
                 glm::vec3 linkToTarget      = targetPos - linkPos;
                 glm::vec3 linkToEndEffector = endEffectorPos - linkPos;
@@ -269,7 +278,7 @@ void ModelPoseSolver::solveChildGlobalBoneTransforms(ModelPose &pose,
                 pose.m_globalBoneTransforms[bone.parentIndex] *
                 pose.m_globalBoneTransforms[i];
 
-        for (int32_t j : bone.children)
+        for (int32_t j : m_boneChildren[i])
             que.push(j);
     }
 }

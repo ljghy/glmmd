@@ -325,9 +325,6 @@ void PmxFileLoader::loadBones(ModelData &data)
             }
         }
 
-        if (bone.parentIndex != -1)
-            data.bones[bone.parentIndex].children.push_back(i);
-
 #ifndef GLMMD_DO_NOT_FORCE_UTF8
         data.u8BoneNameToIndex[bone.name] = i++;
 #else

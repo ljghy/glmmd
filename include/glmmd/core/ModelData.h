@@ -186,8 +186,6 @@ struct Bone
     int32_t externalParentKey;
 
     int32_t ikDataIndex;
-
-    std::vector<int32_t> children;
 };
 
 enum class MorphType : uint8_t

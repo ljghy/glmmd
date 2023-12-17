@@ -26,7 +26,7 @@ ModelPose::ModelPose(const std::shared_ptr<const ModelData> &modelData)
 {
 }
 
-glm::vec3 ModelPose::getBoneGlobalPosition(uint32_t boneIndex) const
+glm::vec3 ModelPose::getGlobalBonePosition(uint32_t boneIndex) const
 {
     return glm::vec3(m_globalBoneTransforms[boneIndex][3]);
 }

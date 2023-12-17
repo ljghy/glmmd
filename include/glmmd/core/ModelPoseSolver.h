@@ -35,8 +35,9 @@ private:
 private:
     std::shared_ptr<const ModelData> m_modelData;
 
-    std::vector<uint32_t> m_boneDeformOrder;
-    uint32_t              m_afterPhysicsStartIndex;
+    std::vector<std::vector<uint32_t>> m_boneChildren;
+    std::vector<uint32_t>              m_boneDeformOrder;
+    uint32_t                           m_afterPhysicsStartIndex;
 };
 
 } // namespace glmmd

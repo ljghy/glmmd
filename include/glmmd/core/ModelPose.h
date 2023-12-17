@@ -34,7 +34,7 @@ public:
 
     void setGlobalBoneTransform(uint32_t boneIndex, const glm::mat4 &transform);
     const glm::mat4 &getGlobalBoneTransform(uint32_t boneIndex) const;
-    glm::vec3        getBoneGlobalPosition(uint32_t boneIndex) const;
+    glm::vec3        getGlobalBonePosition(uint32_t boneIndex) const;
 
     const glm::vec3 &getLocalBoneTranslation(uint32_t boneIndex) const;
     const glm::quat &getLocalBoneRotation(uint32_t boneIndex) const;
