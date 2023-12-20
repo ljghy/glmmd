@@ -17,7 +17,7 @@ public:
 
     void clearModelPhysics(Model &model);
 
-    void update(float deltaTime, int maxSubSteps = 1,
+    void update(float deltaTime, int maxSubSteps = 10,
                 float fixedDeltaTime = 1.f / 60.f);
 
     void setGravity(const glm::vec3 &gravity);
