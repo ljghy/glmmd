@@ -7,12 +7,12 @@ namespace glmmd
 
 constexpr float GRAVITY_SCALE = 12.5f;
 
-inline btVector3 glm2btVector3(const glm::vec3 &v)
+inline static btVector3 glm2btVector3(const glm::vec3 &v)
 {
     return btVector3(v.x, v.y, v.z);
 }
 
-inline btMatrix3x3 eulerAnglesToMatrix(const glm::vec3 &eulerAngles)
+inline static btMatrix3x3 eulerAnglesToMatrix(const glm::vec3 &eulerAngles)
 {
     glm::mat4 rot =
         glm::eulerAngleYXZ(eulerAngles.y, eulerAngles.x, eulerAngles.z);
@@ -69,11 +69,11 @@ void PhysicsWorld::setupModelPhysics(Model &model, bool applyCurrentTransforms)
 void PhysicsWorld::setupModelRigidBodies(Model &model,
                                          bool   applyCurrentTransforms)
 {
+    model.physics().rigidBodies.clear();
     model.physics().rigidBodies.reserve(model.data().rigidBodies.size());
     for (const auto &rigidBody : model.data().rigidBodies)
     {
-        model.physics().rigidBodies.emplace_back();
-        auto &body = model.physics().rigidBodies.back();
+        auto &body = model.physics().rigidBodies.emplace_back();
 
         switch (rigidBody.shape)
         {
@@ -134,7 +134,6 @@ void PhysicsWorld::setupModelRigidBodies(Model &model,
                 std::make_unique<btDefaultMotionState>(transform);
         }
         else
-
             body.motionState = std::make_unique<btDefaultMotionState>(offset);
 
         btRigidBody::btRigidBodyConstructionInfo info(
@@ -167,23 +166,27 @@ void PhysicsWorld::setupModelRigidBodies(Model &model,
 
 void PhysicsWorld::setupModelJoints(Model &model, bool applyCurrentTransforms)
 {
+    model.physics().joints.clear();
     model.physics().joints.reserve(model.data().joints.size());
     for (const auto &joint : model.data().joints)
     {
         if (joint.rigidBodyIndexA < 0 || joint.rigidBodyIndexB < 0)
             continue;
 
-        model.physics().joints.emplace_back();
-        auto &constraint = model.physics().joints.back();
-
-        btTransform transform;
-        transform.setOrigin(glm2btVector3(joint.position));
-        transform.setBasis(eulerAnglesToMatrix(joint.rotation));
-
         const auto &rigidBodyA =
             model.physics().rigidBodies[joint.rigidBodyIndexA];
         const auto &rigidBodyB =
             model.physics().rigidBodies[joint.rigidBodyIndexB];
+
+        if (rigidBodyA.rigidBody->getMass() == 0.f &&
+            rigidBodyB.rigidBody->getMass() == 0.f)
+            continue;
+
+        auto &constraint = model.physics().joints.emplace_back();
+
+        btTransform transform;
+        transform.setOrigin(glm2btVector3(joint.position));
+        transform.setBasis(eulerAnglesToMatrix(joint.rotation));
 
         if (applyCurrentTransforms)
         {
@@ -223,6 +226,17 @@ void PhysicsWorld::setupModelJoints(Model &model, bool applyCurrentTransforms)
 
         m_world->addConstraint(constraint.get());
     }
+}
+
+void PhysicsWorld::clearModelPhysics(Model &model)
+{
+    for (const auto &j : model.physics().joints)
+        m_world->removeConstraint(j.get());
+    model.physics().joints.clear();
+
+    for (const auto &r : model.physics().rigidBodies)
+        m_world->removeRigidBody(r.rigidBody.get());
+    model.physics().rigidBodies.clear();
 }
 
 } // namespace glmmd

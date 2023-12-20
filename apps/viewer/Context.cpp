@@ -474,6 +474,21 @@ void Context::run()
             pause = !pause;
         }
 
+        static bool physics = true;
+        if (ImGui::Checkbox("Physics", &physics))
+        {
+            if (physics)
+            {
+                for (auto &model : m_models)
+                    m_physicsWorld.setupModelPhysics(model, true);
+            }
+            else
+            {
+                for (auto &model : m_models)
+                    m_physicsWorld.clearModelPhysics(model);
+            }
+        }
+
         if (ImGui::Button("Reset"))
         {
             for (auto &animator : m_animators)

@@ -15,6 +15,8 @@ public:
 
     void setupModelPhysics(Model &model, bool applyCurrentTransforms = false);
 
+    void clearModelPhysics(Model &model);
+
     void update(float deltaTime, int maxSubSteps = 1,
                 float fixedDeltaTime = 1.f / 60.f);
 
