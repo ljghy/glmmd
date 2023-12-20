@@ -24,7 +24,7 @@ public:
 
 private:
     void setupModelRigidBodies(Model &model, bool applyCurrentTransforms);
-    void setupModelJoints(Model &model, bool applyCurrentTransforms);
+    void setupModelJoints(Model &model);
 
 private:
     std::unique_ptr<btDefaultCollisionConfiguration>     m_collisionConfig;

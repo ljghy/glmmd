@@ -12,6 +12,20 @@ inline static btVector3 glm2btVector3(const glm::vec3 &v)
     return btVector3(v.x, v.y, v.z);
 }
 
+inline static btQuaternion glm2btQuaternion(const glm::quat &q)
+{
+    return btQuaternion(q.x, q.y, q.z, q.w);
+}
+
+inline static btTransform glm2btTransform(const glm::vec3 &translation,
+                                          const glm::quat &rotation)
+{
+    btTransform t;
+    t.setOrigin(glm2btVector3(translation));
+    t.setRotation(glm2btQuaternion(rotation));
+    return t;
+}
+
 inline static btMatrix3x3 eulerAnglesToMatrix(const glm::vec3 &eulerAngles)
 {
     glm::mat4 rot =
@@ -63,7 +77,7 @@ void PhysicsWorld::setGravity(const glm::vec3 &gravity)
 void PhysicsWorld::setupModelPhysics(Model &model, bool applyCurrentTransforms)
 {
     setupModelRigidBodies(model, applyCurrentTransforms);
-    setupModelJoints(model, applyCurrentTransforms);
+    setupModelJoints(model);
 }
 
 void PhysicsWorld::setupModelRigidBodies(Model &model,
@@ -125,11 +139,7 @@ void PhysicsWorld::setupModelRigidBodies(Model &model,
                 glm::quat_cast(model.pose().getGlobalBoneTransform(j)) *
                 body.rotationOffset;
 
-            btTransform transform;
-            transform.setOrigin(
-                btVector3(translation.x, translation.y, translation.z));
-            transform.setRotation(
-                btQuaternion(rotation.x, rotation.y, rotation.z, rotation.w));
+            auto transform = glm2btTransform(translation, rotation);
             body.motionState =
                 std::make_unique<btDefaultMotionState>(transform);
         }
@@ -164,7 +174,7 @@ void PhysicsWorld::setupModelRigidBodies(Model &model,
     }
 }
 
-void PhysicsWorld::setupModelJoints(Model &model, bool applyCurrentTransforms)
+void PhysicsWorld::setupModelJoints(Model &model)
 {
     model.physics().joints.clear();
     model.physics().joints.reserve(model.data().joints.size());
@@ -173,13 +183,10 @@ void PhysicsWorld::setupModelJoints(Model &model, bool applyCurrentTransforms)
         if (joint.rigidBodyIndexA < 0 || joint.rigidBodyIndexB < 0)
             continue;
 
-        const auto &rigidBodyA =
-            model.physics().rigidBodies[joint.rigidBodyIndexA];
-        const auto &rigidBodyB =
-            model.physics().rigidBodies[joint.rigidBodyIndexB];
+        const auto &a = model.physics().rigidBodies[joint.rigidBodyIndexA];
+        const auto &b = model.physics().rigidBodies[joint.rigidBodyIndexB];
 
-        if (rigidBodyA.rigidBody->getMass() == 0.f &&
-            rigidBodyB.rigidBody->getMass() == 0.f)
+        if (a.rigidBody->getMass() == 0.f && b.rigidBody->getMass() == 0.f)
             continue;
 
         auto &constraint = model.physics().joints.emplace_back();
@@ -188,25 +195,14 @@ void PhysicsWorld::setupModelJoints(Model &model, bool applyCurrentTransforms)
         transform.setOrigin(glm2btVector3(joint.position));
         transform.setBasis(eulerAnglesToMatrix(joint.rotation));
 
-        if (applyCurrentTransforms)
-        {
-            btTransform transformA = rigidBodyA.rigidBody->getWorldTransform();
-            btTransform offsetA;
-            offsetA.setIdentity();
-            offsetA.setOrigin(glm2btVector3(rigidBodyA.translationOffset));
-            offsetA.setRotation(btQuaternion(
-                rigidBodyA.rotationOffset.x, rigidBodyA.rotationOffset.y,
-                rigidBodyA.rotationOffset.z, rigidBodyA.rotationOffset.w));
-
-            transform = transformA * offsetA.inverse() * transform;
-        }
-
-        btTransform invA = rigidBodyA.rigidBody->getWorldTransform().inverse(),
-                    invB = rigidBodyB.rigidBody->getWorldTransform().inverse();
+        auto invA = glm2btTransform(a.translationOffset, a.rotationOffset);
+        invA      = invA.inverse();
+        auto invB = glm2btTransform(b.translationOffset, b.rotationOffset);
+        invB      = invB.inverse();
 
         constraint = std::make_unique<btGeneric6DofSpringConstraint>(
-            *rigidBodyA.rigidBody, *rigidBodyB.rigidBody, invA * transform,
-            invB * transform, true);
+            *a.rigidBody, *b.rigidBody, invA * transform, invB * transform,
+            true);
 
         constraint->setLinearLowerLimit(glm2btVector3(joint.linearLowerLimit));
         constraint->setLinearUpperLimit(glm2btVector3(joint.linearUpperLimit));

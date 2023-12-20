@@ -51,7 +51,7 @@ void ModelPoseSolver::sortBoneDeformOrder()
                      { return m_modelData->bones[i].deformAfterPhysics(); })));
 }
 
-void ModelPoseSolver::solveBeforePhysics(ModelPose &pose)
+void ModelPoseSolver::solveBeforePhysics(ModelPose &pose) const
 {
     applyGroupMorphs(pose);
     applyBoneMorphs(pose);
@@ -62,94 +62,105 @@ void ModelPoseSolver::solveBeforePhysics(ModelPose &pose)
     solveGlobalBoneTransformsBeforePhysics(pose);
 }
 
-void ModelPoseSolver::solveAfterPhysics(ModelPose &pose)
+void ModelPoseSolver::solveAfterPhysics(ModelPose &pose) const
 {
     solveGlobalBoneTransformsAfterPhysics(pose);
 }
 
-void ModelPoseSolver::syncWithPhysics(ModelPose &pose, ModelPhysics &physics)
+void ModelPoseSolver::syncStaticRigidBodyTransforms(const ModelPose     &pose,
+                                                    const RigidBodyData &rb,
+                                                    int32_t bi) const
+{
+    glm::vec3 translation = glm::vec3(
+        pose.getGlobalBoneTransform(bi) *
+        glm::vec4(rb.translationOffset - m_modelData->bones[bi].position, 1.f));
+
+    glm::quat rotation =
+        glm::quat_cast(pose.getGlobalBoneTransform(bi)) * rb.rotationOffset;
+
+    btTransform transform;
+    transform.setOrigin(btVector3(translation.x, translation.y, translation.z));
+    transform.setRotation(
+        btQuaternion(rotation.x, rotation.y, rotation.z, rotation.w));
+
+    rb.motionState->setWorldTransform(transform);
+}
+
+void ModelPoseSolver::syncDynamicRigidBodyTransforms(ModelPose           &pose,
+                                                     const RigidBodyData &rb,
+                                                     int32_t bi) const
+{
+    btTransform transform;
+    rb.motionState->getWorldTransform(transform);
+
+    glm::vec3 translation(transform.getOrigin().x(), transform.getOrigin().y(),
+                          transform.getOrigin().z());
+
+    const auto &q = transform.getRotation();
+    glm::quat   rotation =
+        glm::quat(q.w(), q.x(), q.y(), q.z()) * glm::inverse(rb.rotationOffset);
+
+    pose.setGlobalBoneTransform(
+        bi, glm::translate(glm::mat4(1.f), translation) *
+                glm::mat4_cast(rotation) *
+                glm::translate(glm::mat4(1.f), m_modelData->bones[bi].position -
+                                                   rb.translationOffset));
+}
+
+void ModelPoseSolver::syncMixedRigidBodyTransforms(ModelPose           &pose,
+                                                   const RigidBodyData &rb,
+                                                   int32_t bi) const
+{
+    btTransform transform;
+    rb.motionState->getWorldTransform(transform);
+
+    glm::vec3 translation = pose.getGlobalBonePosition(bi);
+
+    const auto &q = transform.getRotation();
+    glm::quat   rotation =
+        glm::quat(q.w(), q.x(), q.y(), q.z()) * glm::inverse(rb.rotationOffset);
+
+    pose.setGlobalBoneTransform(bi,
+                                glm::translate(glm::mat4(1.f), translation) *
+                                    glm::mat4_cast(rotation));
+
+    translation = glm::vec3(
+        pose.getGlobalBoneTransform(bi) *
+        glm::vec4(rb.translationOffset - m_modelData->bones[bi].position, 1.f));
+
+    transform.setOrigin(btVector3(translation.x, translation.y, translation.z));
+    rb.motionState->setWorldTransform(transform);
+
+    for (auto k : m_boneChildren[bi])
+        solveChildGlobalBoneTransforms(pose, k);
+}
+
+void ModelPoseSolver::syncWithPhysics(ModelPose    &pose,
+                                      ModelPhysics &physics) const
 {
     for (size_t i = 0; i < physics.rigidBodies.size(); ++i)
     {
-        auto   &rigidBody = physics.rigidBodies[i];
-        int32_t j         = m_modelData->rigidBodies[i].boneIndex;
+        auto   &rb = physics.rigidBodies[i];
+        int32_t j  = m_modelData->rigidBodies[i].boneIndex;
         if (j < 0)
             continue;
 
-        if (m_modelData->rigidBodies[i].physicsCalcType ==
-            PhysicsCalcType::Static)
+        switch (m_modelData->rigidBodies[i].physicsCalcType)
         {
-            glm::vec3 translation =
-                glm::vec3(pose.getGlobalBoneTransform(j) *
-                          glm::vec4(rigidBody.translationOffset -
-                                        m_modelData->bones[j].position,
-                                    1.f));
-
-            glm::quat rotation =
-                glm::quat_cast(pose.getGlobalBoneTransform(j)) *
-                rigidBody.rotationOffset;
-
-            btTransform transform;
-            transform.setOrigin(
-                btVector3(translation.x, translation.y, translation.z));
-            transform.setRotation(
-                btQuaternion(rotation.x, rotation.y, rotation.z, rotation.w));
-
-            rigidBody.rigidBody->getMotionState()->setWorldTransform(transform);
-        }
-        else if (m_modelData->rigidBodies[i].physicsCalcType ==
-                 PhysicsCalcType::Dynamic)
-        {
-            btTransform transform;
-            rigidBody.rigidBody->getMotionState()->getWorldTransform(transform);
-
-            glm::vec3 translation(transform.getOrigin().x(),
-                                  transform.getOrigin().y(),
-                                  transform.getOrigin().z());
-
-            const auto &q        = transform.getRotation();
-            glm::quat   rotation = glm::quat(q.w(), q.x(), q.y(), q.z()) *
-                                 glm::inverse(rigidBody.rotationOffset);
-
-            pose.setGlobalBoneTransform(
-                j, glm::translate(glm::mat4(1.f), translation) *
-                       glm::mat4_cast(rotation) *
-                       glm::translate(glm::mat4(1.f),
-                                      m_modelData->bones[j].position -
-                                          rigidBody.translationOffset));
-        }
-        else // PhysicsCalcType::Mixed
-        {
-            btTransform transform;
-            rigidBody.rigidBody->getMotionState()->getWorldTransform(transform);
-
-            glm::vec3 translation = pose.getGlobalBonePosition(j);
-
-            const auto &q        = transform.getRotation();
-            glm::quat   rotation = glm::quat(q.w(), q.x(), q.y(), q.z()) *
-                                 glm::inverse(rigidBody.rotationOffset);
-
-            pose.setGlobalBoneTransform(
-                j, glm::translate(glm::mat4(1.f), translation) *
-                       glm::mat4_cast(rotation));
-
-            translation =
-                glm::vec3(pose.getGlobalBoneTransform(j) *
-                          glm::vec4(rigidBody.translationOffset -
-                                        m_modelData->bones[j].position,
-                                    1.f));
-
-            transform.setOrigin(
-                btVector3(translation.x, translation.y, translation.z));
-            rigidBody.rigidBody->getMotionState()->setWorldTransform(transform);
-
-            for (auto k : m_boneChildren[j])
-                solveChildGlobalBoneTransforms(pose, k);
+        case PhysicsCalcType::Static:
+            syncStaticRigidBodyTransforms(pose, rb, j);
+            break;
+        case PhysicsCalcType::Dynamic:
+            syncDynamicRigidBodyTransforms(pose, rb, j);
+            break;
+        case PhysicsCalcType::Mixed:
+            syncMixedRigidBodyTransforms(pose, rb, j);
+            break;
         }
     }
 }
 
-void ModelPoseSolver::applyGroupMorphs(ModelPose &pose)
+void ModelPoseSolver::applyGroupMorphs(ModelPose &pose) const
 {
     for (uint32_t i = 0; i < pose.m_morphRatios.size(); ++i)
     {
@@ -164,7 +175,7 @@ void ModelPoseSolver::applyGroupMorphs(ModelPose &pose)
     }
 }
 
-void ModelPoseSolver::applyBoneMorphs(ModelPose &pose)
+void ModelPoseSolver::applyBoneMorphs(ModelPose &pose) const
 {
     for (uint32_t i = 0; i < pose.m_morphRatios.size(); ++i)
     {
@@ -185,7 +196,7 @@ void ModelPoseSolver::applyBoneMorphs(ModelPose &pose)
     }
 }
 
-void ModelPoseSolver::solveIK(ModelPose &pose)
+void ModelPoseSolver::solveIK(ModelPose &pose) const
 {
     for (const auto &ik : m_modelData->ikData)
     {
@@ -257,7 +268,7 @@ void ModelPoseSolver::solveIK(ModelPose &pose)
 }
 
 void ModelPoseSolver::solveChildGlobalBoneTransforms(ModelPose &pose,
-                                                     uint32_t   boneIndex)
+                                                     uint32_t   boneIndex) const
 {
     std::queue<uint32_t> que;
 
@@ -290,7 +301,8 @@ void ModelPoseSolver::solveChildGlobalBoneTransforms(ModelPose &pose,
     }
 }
 
-void ModelPoseSolver::solveGlobalBoneTransformsBeforePhysics(ModelPose &pose)
+void ModelPoseSolver::solveGlobalBoneTransformsBeforePhysics(
+    ModelPose &pose) const
 {
     for (uint32_t j = 0; j < m_afterPhysicsStartIndex; ++j)
     {
@@ -315,7 +327,8 @@ void ModelPoseSolver::solveGlobalBoneTransformsBeforePhysics(ModelPose &pose)
     }
 }
 
-void ModelPoseSolver::solveGlobalBoneTransformsAfterPhysics(ModelPose &pose)
+void ModelPoseSolver::solveGlobalBoneTransformsAfterPhysics(
+    ModelPose &pose) const
 {
     for (uint32_t j = m_afterPhysicsStartIndex; j < m_modelData->bones.size();
          ++j)
@@ -341,7 +354,7 @@ void ModelPoseSolver::solveGlobalBoneTransformsAfterPhysics(ModelPose &pose)
     }
 }
 
-void ModelPoseSolver::updateInheritedBoneTransforms(ModelPose &pose)
+void ModelPoseSolver::updateInheritedBoneTransforms(ModelPose &pose) const
 {
     for (uint32_t j = 0; j < m_modelData->bones.size(); ++j)
     {
