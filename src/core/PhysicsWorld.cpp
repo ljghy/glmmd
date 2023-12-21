@@ -180,7 +180,8 @@ void PhysicsWorld::setupModelJoints(Model &model)
     model.physics().joints.reserve(model.data().joints.size());
     for (const auto &joint : model.data().joints)
     {
-        if (joint.rigidBodyIndexA < 0 || joint.rigidBodyIndexB < 0)
+        if (joint.rigidBodyIndexA < 0 || joint.rigidBodyIndexB < 0 ||
+            joint.rigidBodyIndexA == joint.rigidBodyIndexB)
             continue;
 
         const auto &a = model.physics().rigidBodies[joint.rigidBodyIndexA];
@@ -195,14 +196,13 @@ void PhysicsWorld::setupModelJoints(Model &model)
         transform.setOrigin(glm2btVector3(joint.position));
         transform.setBasis(eulerAnglesToMatrix(joint.rotation));
 
-        auto invA = glm2btTransform(a.translationOffset, a.rotationOffset);
-        invA      = invA.inverse();
-        auto invB = glm2btTransform(b.translationOffset, b.rotationOffset);
-        invB      = invB.inverse();
+        auto invA = glm2btTransform(a.translationOffset, a.rotationOffset)
+                        .inverseTimes(transform);
+        auto invB = glm2btTransform(b.translationOffset, b.rotationOffset)
+                        .inverseTimes(transform);
 
         constraint = std::make_unique<btGeneric6DofSpringConstraint>(
-            *a.rigidBody, *b.rigidBody, invA * transform, invB * transform,
-            true);
+            *a.rigidBody, *b.rigidBody, invA, invB, true);
 
         constraint->setLinearLowerLimit(glm2btVector3(joint.linearLowerLimit));
         constraint->setLinearUpperLimit(glm2btVector3(joint.linearUpperLimit));
