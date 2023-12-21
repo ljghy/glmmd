@@ -5,3 +5,5 @@
 *.txt text eol=lf
 *.md text eol=lf
 .clang-format text eol=lf
+
+*.h linguist-language=C++
