@@ -59,6 +59,12 @@ const glm::mat4 &ModelPose::getGlobalBoneTransform(uint32_t boneIndex) const
     return m_globalBoneTransforms[boneIndex];
 }
 
+glm::mat4 ModelPose::getFinalBoneTransform(uint32_t boneIndex) const
+{
+    return glm::translate(m_globalBoneTransforms[boneIndex],
+                          -m_modelData->bones[boneIndex].position);
+}
+
 const glm::vec3 &ModelPose::getLocalBoneTranslation(uint32_t boneIndex) const
 {
     return m_localBoneTranslations[boneIndex];
@@ -186,8 +192,7 @@ void ModelPose::applyBoneTransformsToRenderData(RenderData &renderData) const
 {
     std::vector<glm::mat4> finalBoneTransforms(m_globalBoneTransforms.size());
     for (size_t i = 0; i < finalBoneTransforms.size(); ++i)
-        finalBoneTransforms[i] = glm::translate(
-            m_globalBoneTransforms[i], -m_modelData->bones[i].position);
+        finalBoneTransforms[i] = getFinalBoneTransform(i);
 
     std::for_each(
 #ifndef GLMMD_DO_NOT_USE_STD_EXECUTION

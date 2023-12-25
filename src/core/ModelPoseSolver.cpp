@@ -56,32 +56,28 @@ void ModelPoseSolver::solveBeforePhysics(ModelPose &pose) const
     applyGroupMorphs(pose);
     applyBoneMorphs(pose);
 
-    solveGlobalBoneTransformsBeforePhysics(pose);
+    solveGlobalBoneTransformsRange(pose, 0u, m_afterPhysicsStartIndex);
     solveIK(pose);
     updateInheritedBoneTransforms(pose);
-    solveGlobalBoneTransformsBeforePhysics(pose);
+    solveGlobalBoneTransformsRange(pose, 0u, m_afterPhysicsStartIndex);
 }
 
 void ModelPoseSolver::solveAfterPhysics(ModelPose &pose) const
 {
-    solveGlobalBoneTransformsAfterPhysics(pose);
+    solveGlobalBoneTransformsRange(pose, m_afterPhysicsStartIndex,
+                                   m_modelData->bones.size());
 }
 
 void ModelPoseSolver::syncStaticRigidBodyTransforms(const ModelPose     &pose,
                                                     const RigidBodyData &rb,
                                                     int32_t bi) const
 {
-    glm::vec3 translation = glm::vec3(
-        pose.getGlobalBoneTransform(bi) *
-        glm::vec4(rb.translationOffset - m_modelData->bones[bi].position, 1.f));
-
-    glm::quat rotation =
-        glm::quat_cast(pose.getGlobalBoneTransform(bi)) * rb.rotationOffset;
+    glm::mat4 m = pose.getFinalBoneTransform(bi) *
+                  glm::translate(glm::mat4(1.f), rb.translationOffset) *
+                  glm::mat4_cast(rb.rotationOffset);
 
     btTransform transform;
-    transform.setOrigin(btVector3(translation.x, translation.y, translation.z));
-    transform.setRotation(
-        btQuaternion(rotation.x, rotation.y, rotation.z, rotation.w));
+    transform.setFromOpenGLMatrix(&m[0][0]);
 
     rb.motionState->setWorldTransform(transform);
 }
@@ -93,16 +89,11 @@ void ModelPoseSolver::syncDynamicRigidBodyTransforms(ModelPose           &pose,
     btTransform transform;
     rb.motionState->getWorldTransform(transform);
 
-    glm::vec3 translation(transform.getOrigin().x(), transform.getOrigin().y(),
-                          transform.getOrigin().z());
-
-    const auto &q = transform.getRotation();
-    glm::quat   rotation =
-        glm::quat(q.w(), q.x(), q.y(), q.z()) * glm::inverse(rb.rotationOffset);
+    glm::mat4 m;
+    transform.getOpenGLMatrix(&m[0][0]);
 
     pose.setGlobalBoneTransform(
-        bi, glm::translate(glm::mat4(1.f), translation) *
-                glm::mat4_cast(rotation) *
+        bi, m * glm::mat4_cast(glm::inverse(rb.rotationOffset)) *
                 glm::translate(glm::mat4(1.f), m_modelData->bones[bi].position -
                                                    rb.translationOffset));
 
@@ -304,37 +295,11 @@ void ModelPoseSolver::solveChildGlobalBoneTransforms(ModelPose &pose,
     }
 }
 
-void ModelPoseSolver::solveGlobalBoneTransformsBeforePhysics(
-    ModelPose &pose) const
+void ModelPoseSolver::solveGlobalBoneTransformsRange(ModelPose &pose,
+                                                     uint32_t   start,
+                                                     uint32_t   end) const
 {
-    for (uint32_t j = 0; j < m_afterPhysicsStartIndex; ++j)
-    {
-        uint32_t i = m_boneDeformOrder[j];
-
-        const auto &bone = m_modelData->bones[i];
-
-        glm::vec3 localTranslationOffset = bone.position;
-        if (bone.parentIndex != -1)
-            localTranslationOffset -=
-                m_modelData->bones[bone.parentIndex].position;
-
-        pose.m_globalBoneTransforms[i] =
-            glm::translate(glm::mat4(1.f), pose.m_localBoneTranslations[i] +
-                                               localTranslationOffset) *
-            glm::mat4_cast(pose.m_localBoneRotations[i]);
-
-        if (bone.parentIndex != -1)
-            pose.m_globalBoneTransforms[i] =
-                pose.m_globalBoneTransforms[bone.parentIndex] *
-                pose.m_globalBoneTransforms[i];
-    }
-}
-
-void ModelPoseSolver::solveGlobalBoneTransformsAfterPhysics(
-    ModelPose &pose) const
-{
-    for (uint32_t j = m_afterPhysicsStartIndex; j < m_modelData->bones.size();
-         ++j)
+    for (uint32_t j = start; j < end; ++j)
     {
         uint32_t i = m_boneDeformOrder[j];
 

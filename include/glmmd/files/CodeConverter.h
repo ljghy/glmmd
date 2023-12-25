@@ -4,13 +4,46 @@
 #include <string>
 #include <string_view>
 
-namespace glmmd::CodeCvt
+namespace glmmd
 {
 
-std::string UTF16_LE_to_UTF8(std::string_view input);
-std::string UTF8_to_UTF16_LE(std::string_view input);
-std::string shiftJIS_to_UTF8(std::string_view input);
+template <class From, class To>
+std::string codeCvt(std::string_view input)
+{
+    std::string output;
+    output.reserve(input.size() * To::bytes / From::bytes);
+    for (size_t i = 0; i < input.size();
+         To::encode(From::decode(input, i), output))
+        ;
+    return output;
+}
 
-} // namespace glmmd::CodeCvt
+class UTF8
+{
+public:
+    static void     encode(uint32_t u, std::string &output);
+    static uint32_t decode(std::string_view input, size_t &i);
+
+    static constexpr size_t bytes = 2;
+};
+
+class UTF16_LE
+{
+public:
+    static void     encode(uint32_t u, std::string &output);
+    static uint32_t decode(std::string_view input, size_t &i);
+
+    static constexpr size_t bytes = 2;
+};
+
+class ShiftJIS
+{
+public:
+    static uint32_t decode(std::string_view input, size_t &i);
+
+    static constexpr size_t bytes = 3;
+};
+
+} // namespace glmmd
 
 #endif

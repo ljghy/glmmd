@@ -27,10 +27,9 @@ private:
     void applyBoneMorphs(ModelPose &) const;
 
     void solveChildGlobalBoneTransforms(ModelPose &, uint32_t boneIndex) const;
-    void solveGlobalBoneTransformsBeforePhysics(ModelPose &) const;
+    void solveGlobalBoneTransformsRange(ModelPose &, uint32_t, uint32_t) const;
     void solveIK(ModelPose &) const;
     void updateInheritedBoneTransforms(ModelPose &) const;
-    void solveGlobalBoneTransformsAfterPhysics(ModelPose &) const;
 
     void syncStaticRigidBodyTransforms(const ModelPose     &pose,
                                        const RigidBodyData &rb,

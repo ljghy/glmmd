@@ -18,7 +18,7 @@ FixedMotionClip VmdData::toFixedMotionClip(const ModelData &modelData,
         clip.m_frameCount = std::max(clip.m_frameCount, vbf.frameNumber);
 
         auto boneIndex =
-            modelData.getBoneIndex(CodeCvt::shiftJIS_to_UTF8(vbf.boneName));
+            modelData.getBoneIndex(codeCvt<ShiftJIS, UTF8>(vbf.boneName));
         if (boneIndex == -1)
             continue;
 
@@ -46,7 +46,7 @@ FixedMotionClip VmdData::toFixedMotionClip(const ModelData &modelData,
         clip.m_frameCount = std::max(clip.m_frameCount, vmf.frameNumber);
 
         auto morphIndex =
-            modelData.getMorphIndex(CodeCvt::shiftJIS_to_UTF8(vmf.morphName));
+            modelData.getMorphIndex(codeCvt<ShiftJIS, UTF8>(vmf.morphName));
         if (morphIndex == -1)
             continue;
 

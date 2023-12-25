@@ -201,7 +201,8 @@ void Context::loadResources()
 
             std::cout << "Motion data loaded from: " << filename << '\n';
             std::cout << "Created on: "
-                      << glmmd::CodeCvt::shiftJIS_to_UTF8(vmdData->modelName)
+                      << glmmd::codeCvt<glmmd::ShiftJIS, glmmd::UTF8>(
+                             vmdData->modelName)
                       << '\n';
             std::cout << "Length: " << clip->duration() << " s\n";
             std::cout << std::endl;

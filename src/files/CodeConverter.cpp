@@ -1,9 +1,9 @@
 #include <glmmd/files/CodeConverter.h>
 
-namespace glmmd::CodeCvt
+namespace glmmd
 {
 
-static uint32_t decodeUTF8(std::string_view input, size_t &i)
+uint32_t UTF8::decode(std::string_view input, size_t &i)
 {
     uint32_t u = 0;
 
@@ -33,7 +33,7 @@ static uint32_t decodeUTF8(std::string_view input, size_t &i)
     return u;
 }
 
-static void encodeUTF8(uint32_t u, std::string &output)
+void UTF8::encode(uint32_t u, std::string &output)
 {
     if (u <= 0x7F)
         output.push_back(u & 0xFF);
@@ -57,7 +57,7 @@ static void encodeUTF8(uint32_t u, std::string &output)
     }
 }
 
-static uint32_t decodeUTF16_LE(std::string_view input, size_t &i)
+uint32_t UTF16_LE::decode(std::string_view input, size_t &i)
 {
     uint32_t u = 0;
 
@@ -77,7 +77,7 @@ static uint32_t decodeUTF16_LE(std::string_view input, size_t &i)
     return u;
 }
 
-static void encodeUTF16_LE(uint32_t u, std::string &output)
+void UTF16_LE::encode(uint32_t u, std::string &output)
 {
     if (u <= 0xFFFF)
     {
@@ -98,71 +98,35 @@ static void encodeUTF16_LE(uint32_t u, std::string &output)
     }
 }
 
-std::string UTF16_LE_to_UTF8(std::string_view input)
-{
-    std::string output;
-    output.reserve(input.size() / 2);
-
-    size_t i = 0;
-    while (i < input.size())
-        encodeUTF8(decodeUTF16_LE(input, i), output);
-    return output;
-}
-
-std::string UTF8_to_UTF16_LE(std::string_view input)
-{
-    std::string output;
-    output.reserve(input.size() * 2);
-
-    size_t i = 0;
-    while (i < input.size())
-        encodeUTF16_LE(decodeUTF8(input, i), output);
-    return output;
-}
-
 #include "ShiftJIS_convTable.inl"
 
-std::string shiftJIS_to_UTF8(std::string_view input)
+uint32_t ShiftJIS::decode(std::string_view input, size_t &i)
 {
-    std::string output;
+    char arraySection = ((uint8_t)input[i]) >> 4;
 
-    output.reserve(3 * input.length());
+    size_t arrayOffset;
+    if (arraySection == 0x8)
+        arrayOffset = 0x100; // these are two-byte shiftjis
+    else if (arraySection == 0x9)
+        arrayOffset = 0x1100;
+    else if (arraySection == 0xE)
+        arrayOffset = 0x2100;
+    else
+        arrayOffset = 0; // this is one byte shiftjis
 
-    size_t indexInput = 0;
-
-    while (indexInput < input.length())
+    // determining real array offset
+    if (arrayOffset)
     {
-        char arraySection = ((uint8_t)input[indexInput]) >> 4;
-
-        size_t arrayOffset;
-        if (arraySection == 0x8)
-            arrayOffset = 0x100; // these are two-byte shiftjis
-        else if (arraySection == 0x9)
-            arrayOffset = 0x1100;
-        else if (arraySection == 0xE)
-            arrayOffset = 0x2100;
-        else
-            arrayOffset = 0; // this is one byte shiftjis
-
-        // determining real array offset
-        if (arrayOffset)
-        {
-            arrayOffset += (((uint8_t)input[indexInput]) & 0xf) << 8;
-            indexInput++;
-            if (indexInput >= input.length())
-                break;
-        }
-        arrayOffset += (uint8_t)input[indexInput++];
-        arrayOffset <<= 1;
-
-        // unicode number is...
-        uint16_t unicodeValue = (shiftJIS_convTable[arrayOffset] << 8) |
-                                shiftJIS_convTable[arrayOffset + 1];
-
-        encodeUTF8(unicodeValue, output);
+        arrayOffset += (((uint8_t)input[i]) & 0xf) << 8;
+        ++i;
     }
+    arrayOffset += (uint8_t)input[i++];
+    arrayOffset <<= 1;
 
-    return output;
+    uint32_t u = (shiftJIS_convTable[arrayOffset] << 8) |
+                 shiftJIS_convTable[arrayOffset + 1];
+
+    return u;
 }
 
-} // namespace glmmd::CodeCvt
+} // namespace glmmd

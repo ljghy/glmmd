@@ -89,10 +89,10 @@ void PmxFileLoader::loadInfo(ModelData &data)
 #ifndef GLMMD_DO_NOT_FORCE_UTF8
     if (info.encodingMethod == EncodingMethod::UTF16_LE)
     {
-        info.modelName   = CodeCvt::UTF16_LE_to_UTF8(info.modelName);
-        info.modelNameEN = CodeCvt::UTF16_LE_to_UTF8(info.modelNameEN);
-        info.comment     = CodeCvt::UTF16_LE_to_UTF8(info.comment);
-        info.commentEN   = CodeCvt::UTF16_LE_to_UTF8(info.commentEN);
+        info.modelName   = codeCvt<UTF16_LE, UTF8>(info.modelName);
+        info.modelNameEN = codeCvt<UTF16_LE, UTF8>(info.modelNameEN);
+        info.comment     = codeCvt<UTF16_LE, UTF8>(info.comment);
+        info.commentEN   = codeCvt<UTF16_LE, UTF8>(info.commentEN);
     }
 #endif
 }
@@ -179,7 +179,7 @@ void PmxFileLoader::loadTextures(ModelData &data)
 
         std::string u8path =
             data.info.encodingMethod == EncodingMethod::UTF16_LE
-                ? CodeCvt::UTF16_LE_to_UTF8(texture.path)
+                ? codeCvt<UTF16_LE, UTF8>(texture.path)
                 : texture.path;
 
 #ifndef _WIN32
@@ -222,8 +222,8 @@ void PmxFileLoader::loadMaterials(ModelData &data)
 #ifndef GLMMD_DO_NOT_FORCE_UTF8
         if (data.info.encodingMethod == EncodingMethod::UTF16_LE)
         {
-            mat.name   = CodeCvt::UTF16_LE_to_UTF8(mat.name);
-            mat.nameEN = CodeCvt::UTF16_LE_to_UTF8(mat.nameEN);
+            mat.name   = codeCvt<UTF16_LE, UTF8>(mat.name);
+            mat.nameEN = codeCvt<UTF16_LE, UTF8>(mat.nameEN);
         }
 #endif
 
@@ -246,7 +246,7 @@ void PmxFileLoader::loadMaterials(ModelData &data)
         readTextBuffer(mat.memo);
 #ifndef GLMMD_DO_NOT_FORCE_UTF8
         if (data.info.encodingMethod == EncodingMethod::UTF16_LE)
-            mat.memo = CodeCvt::UTF16_LE_to_UTF8(mat.memo);
+            mat.memo = codeCvt<UTF16_LE, UTF8>(mat.memo);
 #endif
         readInt(mat.indicesCount);
     }
@@ -266,8 +266,8 @@ void PmxFileLoader::loadBones(ModelData &data)
 #ifndef GLMMD_DO_NOT_FORCE_UTF8
         if (data.info.encodingMethod == EncodingMethod::UTF16_LE)
         {
-            bone.name   = CodeCvt::UTF16_LE_to_UTF8(bone.name);
-            bone.nameEN = CodeCvt::UTF16_LE_to_UTF8(bone.nameEN);
+            bone.name   = codeCvt<UTF16_LE, UTF8>(bone.name);
+            bone.nameEN = codeCvt<UTF16_LE, UTF8>(bone.nameEN);
         }
 #endif
         readFloat<3>(bone.position.x);
@@ -350,8 +350,8 @@ void PmxFileLoader::loadMorphs(ModelData &data)
 #ifndef GLMMD_DO_NOT_FORCE_UTF8
         if (data.info.encodingMethod == EncodingMethod::UTF16_LE)
         {
-            morph.name   = CodeCvt::UTF16_LE_to_UTF8(morph.name);
-            morph.nameEN = CodeCvt::UTF16_LE_to_UTF8(morph.nameEN);
+            morph.name   = codeCvt<UTF16_LE, UTF8>(morph.name);
+            morph.nameEN = codeCvt<UTF16_LE, UTF8>(morph.nameEN);
         }
 #endif
         readUInt(morph.panel);
@@ -471,8 +471,8 @@ void PmxFileLoader::loadDisplayFrames(ModelData &data)
 #ifndef GLMMD_DO_NOT_FORCE_UTF8
         if (data.info.encodingMethod == EncodingMethod::UTF16_LE)
         {
-            frame.name   = CodeCvt::UTF16_LE_to_UTF8(frame.name);
-            frame.nameEN = CodeCvt::UTF16_LE_to_UTF8(frame.nameEN);
+            frame.name   = codeCvt<UTF16_LE, UTF8>(frame.name);
+            frame.nameEN = codeCvt<UTF16_LE, UTF8>(frame.nameEN);
         }
 #endif
 
@@ -504,8 +504,8 @@ void PmxFileLoader::loadRigidBodies(ModelData &data)
 #ifndef GLMMD_DO_NOT_FORCE_UTF8
         if (data.info.encodingMethod == EncodingMethod::UTF16_LE)
         {
-            rigidBody.name   = CodeCvt::UTF16_LE_to_UTF8(rigidBody.name);
-            rigidBody.nameEN = CodeCvt::UTF16_LE_to_UTF8(rigidBody.nameEN);
+            rigidBody.name   = codeCvt<UTF16_LE, UTF8>(rigidBody.name);
+            rigidBody.nameEN = codeCvt<UTF16_LE, UTF8>(rigidBody.nameEN);
         }
 #endif
 
@@ -539,8 +539,8 @@ void PmxFileLoader::loadJoints(ModelData &data)
 #ifndef GLMMD_DO_NOT_FORCE_UTF8
         if (data.info.encodingMethod == EncodingMethod::UTF16_LE)
         {
-            joint.name   = CodeCvt::UTF16_LE_to_UTF8(joint.name);
-            joint.nameEN = CodeCvt::UTF16_LE_to_UTF8(joint.nameEN);
+            joint.name   = codeCvt<UTF16_LE, UTF8>(joint.name);
+            joint.nameEN = codeCvt<UTF16_LE, UTF8>(joint.nameEN);
         }
 #endif
 

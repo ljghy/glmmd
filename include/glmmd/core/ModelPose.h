@@ -36,6 +36,8 @@ public:
     const glm::mat4 &getGlobalBoneTransform(uint32_t boneIndex) const;
     glm::vec3        getGlobalBonePosition(uint32_t boneIndex) const;
 
+    glm::mat4 getFinalBoneTransform(uint32_t boneIndex) const;
+
     const glm::vec3 &getLocalBoneTranslation(uint32_t boneIndex) const;
     const glm::quat &getLocalBoneRotation(uint32_t boneIndex) const;
     float            getMorphRatio(uint32_t morphIndex) const;
