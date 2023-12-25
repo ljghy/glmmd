@@ -105,6 +105,9 @@ void ModelPoseSolver::syncDynamicRigidBodyTransforms(ModelPose           &pose,
                 glm::mat4_cast(rotation) *
                 glm::translate(glm::mat4(1.f), m_modelData->bones[bi].position -
                                                    rb.translationOffset));
+
+    for (auto k : m_boneChildren[bi])
+        solveChildGlobalBoneTransforms(pose, k);
 }
 
 void ModelPoseSolver::syncMixedRigidBodyTransforms(ModelPose           &pose,
