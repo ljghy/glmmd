@@ -127,6 +127,7 @@ const char *defaultFragShaderSrc =
             toonColor = applyAdd(toonColor, u_mat.toonTextureAdd);
             color *= toonColor;
         }
+        color.rgb = pow(color.rgb, vec3(1.0 / 2.2));
         FragColor = color;
     }
     )";

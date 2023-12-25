@@ -191,7 +191,7 @@ void Context::loadResources()
                 throw std::runtime_error("Invalid model index.");
 
             auto filename = motionNode["filename"].get<std::string>();
-            auto vmdData  = glmmd::VmdFileLoader{}.load(filename, true);
+            auto vmdData  = glmmd::loadVmdFile(filename, true);
 
             bool loop = false;
             if (motionNode.find("loop") != motionNode.end())
@@ -200,9 +200,10 @@ void Context::loadResources()
                 vmdData->toFixedMotionClip(m_models[modelIndex].data(), loop));
 
             std::cout << "Motion data loaded from: " << filename << '\n';
-            std::cout << "Created for: "
+            std::cout << "Created on: "
                       << glmmd::CodeCvt::shiftJIS_to_UTF8(vmdData->modelName)
                       << '\n';
+            std::cout << "Length: " << clip->duration() << " s\n";
             std::cout << std::endl;
 
             motions[modelIndex].emplace_back(clip);

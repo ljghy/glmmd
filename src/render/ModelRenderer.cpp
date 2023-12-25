@@ -81,7 +81,7 @@ void ModelRenderer::initTextures()
         info.height        = tex.height;
         info.data          = tex.data.get();
         info.genMipmaps    = true;
-        info.internalFmt   = GL_RGBA;
+        info.internalFmt   = GL_SRGB_ALPHA;
         info.dataFmt       = GL_RGBA;
         info.dataType      = GL_UNSIGNED_BYTE;
         info.wrapModeS     = GL_CLAMP_TO_EDGE;
@@ -105,9 +105,11 @@ void ModelRenderer::initSharedToonTextures()
             info.height = 32;
             info.data   = reinterpret_cast<unsigned char *>(
                 sharedToonTextureData[i].data());
-            info.dataFmt   = GL_RGB;
-            info.wrapModeS = GL_CLAMP_TO_EDGE;
-            info.wrapModeT = GL_CLAMP_TO_EDGE;
+            info.genMipmaps  = false;
+            info.internalFmt = GL_SRGB;
+            info.dataFmt     = GL_RGB;
+            info.wrapModeS   = GL_CLAMP_TO_EDGE;
+            info.wrapModeT   = GL_CLAMP_TO_EDGE;
             sharedToonTextures[i].create(info);
         }
         sharedToonTexturesLoaded = true;

@@ -319,8 +319,7 @@ void ModelPose::operator*=(float t)
     {
         m_localBoneTranslations[i] *= t;
         m_localBoneRotations[i] = glm::slerp(glm::quat(1.f, 0.f, 0.f, 0.f),
-                                             m_localBoneRotations[i], t) *
-                                  m_localBoneRotations[i];
+                                             m_localBoneRotations[i], t);
     }
 
     for (size_t i = 0; i < m_morphRatios.size(); ++i)
