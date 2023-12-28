@@ -5,7 +5,7 @@ project(glmmd LANGUAGES CXX VERSION 0.0.1)
 set(CMAKE_CXX_STANDARD 17)
 
 if (MSVC)
-    add_compile_options(/MP /wd4996)
+    add_compile_options(/MP /wd4996 /Zc:__cplusplus)
 endif()
 
 if(NOT CMAKE_BUILD_TYPE)

@@ -19,8 +19,7 @@ public:
     PmxFileLoader &operator=(const PmxFileLoader &) = delete;
     PmxFileLoader &operator=(PmxFileLoader &&)      = delete;
 
-    std::shared_ptr<ModelData> load(const std::string &filename,
-                                    bool               utf8Path = false);
+    std::shared_ptr<ModelData> load(const std::filesystem::path &path);
 
 private:
     void loadInfo(ModelData &);
@@ -134,10 +133,9 @@ private:
     std::filesystem::path m_modelDir;
 };
 
-inline std::shared_ptr<ModelData> loadPmxFile(const std::string &filename,
-                                              bool utf8Path = false)
+inline std::shared_ptr<ModelData> loadPmxFile(const std::filesystem::path &path)
 {
-    return PmxFileLoader{}.load(filename, utf8Path);
+    return PmxFileLoader{}.load(path);
 }
 
 } // namespace glmmd

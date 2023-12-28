@@ -11,26 +11,15 @@
 namespace glmmd
 {
 
-std::shared_ptr<ModelData> PmxFileLoader::load(const std::string &filename,
-                                               bool               utf8Path)
+std::shared_ptr<ModelData>
+PmxFileLoader::load(const std::filesystem::path &path)
 {
-    std::filesystem::path path;
-    if (utf8Path)
-    {
-        path =
-#if __cplusplus <= 201703L
-            std::filesystem::u8path(filename);
-#else
-            reinterpret_cast<const char8_t *>(filename.data());
-#endif
-    }
-    else
-        path = filename;
-
     m_fin.open(path, std::ios::binary);
     if (!m_fin)
-        throw std::runtime_error("Failed to open file \"" + filename + "\".");
-    m_modelDir = path.make_preferred().parent_path();
+        throw std::runtime_error("Failed to open file \"" + path.string() +
+                                 "\".");
+
+    m_modelDir = path.parent_path();
 
     auto data = std::make_shared<ModelData>();
 
@@ -324,15 +313,7 @@ void PmxFileLoader::loadBones(ModelData &data)
                 }
             }
         }
-
-#ifndef GLMMD_DO_NOT_FORCE_UTF8
-        data.u8BoneNameToIndex[bone.name] = i++;
-#else
-        data.u8BoneNameToIndex[data.info.encodingMethod == EncodingMethod::UTF8
-                                   ? bone.name
-                                   : CodeCvt::UTF16_LE_to_UTF8(bone.name)] =
-            i++;
-#endif
+        ++i;
     }
 }
 
@@ -342,7 +323,6 @@ void PmxFileLoader::loadMorphs(ModelData &data)
     readInt(count);
     data.morphs.resize(count);
 
-    int32_t i = 0;
     for (auto &morph : data.morphs)
     {
         readTextBuffer(morph.name);
@@ -387,14 +367,6 @@ void PmxFileLoader::loadMorphs(ModelData &data)
                 break;
             }
         }
-#ifndef GLMMD_DO_NOT_FORCE_UTF8
-        data.u8MorphNameToIndex[morph.name] = i++;
-#else
-        data.u8MorphNameToIndex[data.info.encodingMethod == EncodingMethod::UTF8
-                                    ? morph.name
-                                    : CodeCvt::UTF16_LE_to_UTF8(morph.name)] =
-            i++;
-#endif
     }
 }
 

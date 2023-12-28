@@ -162,8 +162,8 @@ void Context::loadResources()
     {
         try
         {
-            auto filename = modelNode["filename"].get<std::string>();
-            m_modelData.push_back(glmmd::loadPmxFile(filename, true));
+            auto filename = modelNode["filename"].get<std::filesystem::path>();
+            m_modelData.push_back(glmmd::loadPmxFile(filename));
             auto modelData = m_modelData.back();
             m_models.emplace_back(modelData);
             m_modelRenderers.emplace_back(modelData);
@@ -190,8 +190,8 @@ void Context::loadResources()
             if (modelIndex >= m_models.size())
                 throw std::runtime_error("Invalid model index.");
 
-            auto filename = motionNode["filename"].get<std::string>();
-            auto vmdData  = glmmd::loadVmdFile(filename, true);
+            auto filename = motionNode["filename"].get<std::filesystem::path>();
+            auto vmdData  = glmmd::loadVmdFile(filename);
 
             bool loop = false;
             if (motionNode.find("loop") != motionNode.end())

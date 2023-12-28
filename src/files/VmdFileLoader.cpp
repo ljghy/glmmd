@@ -1,29 +1,15 @@
-#include <filesystem>
-
 #include <glmmd/files/CodeConverter.h>
 #include <glmmd/files/VmdFileLoader.h>
 
 namespace glmmd
 {
 
-std::shared_ptr<VmdData> VmdFileLoader::load(const std::string &filename,
-                                             bool               utf8Path)
+std::shared_ptr<VmdData> VmdFileLoader::load(const std::filesystem::path &path)
 {
-    if (utf8Path)
-    {
-        std::filesystem::path path =
-#if __cplusplus <= 201703L
-            std::filesystem::u8path(filename);
-#else
-            reinterpret_cast<const char8_t *>(filename.data());
-#endif
-
-        m_fin.open(path, std::ios::binary);
-    }
-    else
-        m_fin.open(filename, std::ios::binary);
+    m_fin.open(path, std::ios::binary);
     if (!m_fin)
-        throw std::runtime_error("Failed to open file \"" + filename + "\".");
+        throw std::runtime_error("Failed to open file \"" + path.string() +
+                                 "\".");
 
     auto data = std::make_shared<VmdData>();
 

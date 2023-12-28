@@ -6,7 +6,6 @@
 #include <array>
 #include <vector>
 #include <memory>
-#include <unordered_map>
 
 #define GLM_FORCE_RADIANS
 #include <glm/glm.hpp>
@@ -343,8 +342,6 @@ struct Joint
 
 struct ModelData
 {
-    friend class PmxFileLoader;
-
     ModelInfo info;
 
     std::vector<Vertex>       vertices;
@@ -357,22 +354,6 @@ struct ModelData
     std::vector<DisplayFrame> displayFrames;
     std::vector<RigidBody>    rigidBodies;
     std::vector<Joint>        joints;
-
-    int32_t getBoneIndex(const std::string &name) const
-    {
-        auto iter = u8BoneNameToIndex.find(name);
-        return iter == u8BoneNameToIndex.end() ? -1 : iter->second;
-    }
-
-    int32_t getMorphIndex(const std::string &name) const
-    {
-        auto iter = u8MorphNameToIndex.find(name);
-        return iter == u8MorphNameToIndex.end() ? -1 : iter->second;
-    }
-
-private:
-    std::unordered_map<std::string, int32_t> u8BoneNameToIndex;
-    std::unordered_map<std::string, int32_t> u8MorphNameToIndex;
 };
 
 } // namespace glmmd

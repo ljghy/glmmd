@@ -2,6 +2,7 @@
 #define GLMMD_FILES_VMD_FILE_LOADER_H_
 
 #include <fstream>
+#include <filesystem>
 
 #include <glmmd/files/VmdData.h>
 
@@ -17,8 +18,7 @@ public:
     VmdFileLoader &operator=(const VmdFileLoader &) = delete;
     VmdFileLoader &operator=(VmdFileLoader &&)      = delete;
 
-    std::shared_ptr<VmdData> load(const std::string &filename,
-                                  bool               utf8Path = false);
+    std::shared_ptr<VmdData> load(const std::filesystem::path &path);
 
 private:
     void loadHeader(VmdData &data);
@@ -43,10 +43,9 @@ private:
     std::ifstream m_fin;
 };
 
-inline std::shared_ptr<VmdData> loadVmdFile(const std::string &filename,
-                                            bool               utf8Path = false)
+inline std::shared_ptr<VmdData> loadVmdFile(const std::filesystem::path &path)
 {
-    return VmdFileLoader{}.load(filename, utf8Path);
+    return VmdFileLoader{}.load(path);
 }
 
 } // namespace glmmd
