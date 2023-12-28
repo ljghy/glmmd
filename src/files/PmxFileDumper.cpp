@@ -1,28 +1,14 @@
-#include <filesystem>
-
 #include <glmmd/files/PmxFileDumper.h>
 
 namespace glmmd
 {
 
-PmxFileDumper::PmxFileDumper(const std::string &filename, bool utf8)
+PmxFileDumper::PmxFileDumper(const std::filesystem::path &path)
 {
-    std::filesystem::path path;
-    if (utf8)
-    {
-        path =
-#if __cplusplus <= 201703L
-            std::filesystem::u8path(filename);
-#else
-            reinterpret_cast<const char8_t *>(filename.data());
-#endif
-    }
-    else
-        path = filename;
-
     m_fout.open(path, std::ios::binary);
     if (!m_fout)
-        throw std::runtime_error("Failed to open file \"" + filename + "\".");
+        throw std::runtime_error("Failed to open file \"" + path.string() +
+                                 "\".");
 }
 
 void PmxFileDumper::dump(const ModelData &data)

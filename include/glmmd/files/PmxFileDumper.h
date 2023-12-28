@@ -2,6 +2,7 @@
 #define GLMMD_FILES_PMX_FILE_DUMPER_H_
 
 #include <fstream>
+#include <filesystem>
 
 #include <glmmd/core/ModelData.h>
 #include <glmmd/files/CodeConverter.h>
@@ -12,7 +13,7 @@ namespace glmmd
 class PmxFileDumper
 {
 public:
-    PmxFileDumper(const std::string &filename, bool utf8 = false);
+    PmxFileDumper(const std::filesystem::path &path);
     void dump(const ModelData &data);
 
 private:
@@ -115,6 +116,12 @@ private:
     EncodingMethod m_textEncoding;
     EncodingMethod m_internalTextEncoding;
 };
+
+inline void dumpPmxFile(const std::filesystem::path &path,
+                        const ModelData             &data)
+{
+    PmxFileDumper{path}.dump(data);
+}
 
 } // namespace glmmd
 

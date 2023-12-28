@@ -171,11 +171,15 @@ void PmxFileLoader::loadTextures(ModelData &data)
                 ? codeCvt<UTF16_LE, UTF8>(texture.path)
                 : texture.path;
 
+#ifndef GLMMD_DO_NOT_FORCE_UTF8
+        texture.path = u8path;
+#endif
+
 #ifndef _WIN32
         std::replace(u8path.begin(), u8path.end(), '\\', '/');
 #endif
         std::filesystem::path path =
-#if __cplusplus <= 201703L
+#if __cplusplus < 202002L
             std::filesystem::u8path(u8path);
 #else
             reinterpret_cast<const char8_t *>(u8path.c_str());
