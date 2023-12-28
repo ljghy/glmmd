@@ -168,7 +168,7 @@ void Context::loadResources()
             m_models.emplace_back(modelData);
             m_modelRenderers.emplace_back(modelData);
 
-            std::cout << "Model loaded from: " << filename << '\n';
+            std::cout << "Model loaded from: " << filename.u8string() << '\n';
             std::cout << "Name: " << modelData->info.modelName << '\n';
             std::cout << "Comment: " << modelData->info.comment << '\n';
             std::cout << std::endl;
@@ -199,7 +199,8 @@ void Context::loadResources()
             auto clip = std::make_shared<glmmd::FixedMotionClip>(
                 vmdData->toFixedMotionClip(m_models[modelIndex].data(), loop));
 
-            std::cout << "Motion data loaded from: " << filename << '\n';
+            std::cout << "Motion data loaded from: " << filename.u8string()
+                      << '\n';
             std::cout << "Created on: "
                       << glmmd::codeCvt<glmmd::ShiftJIS, glmmd::UTF8>(
                              vmdData->modelName)
