@@ -203,6 +203,14 @@ void ModelPoseSolver::solveIK(ModelPose &pose) const
 
             for (const auto &link : ik.links)
             {
+                if (link.angleLimitFlag && i == 0 && ik.loopCount > 1)
+                {
+                    pose.m_localBoneRotations[link.boneIndex] =
+                        glm::quat(0.5f * (link.lowerLimit + link.upperLimit));
+                    solveChildGlobalBoneTransforms(pose, link.boneIndex);
+                    continue;
+                }
+
                 glm::vec3 endEffectorPos =
                     pose.getGlobalBonePosition(ik.targetBoneIndex);
 
