@@ -14,21 +14,49 @@
 
 #### Windows
 
+Install with vcpkg:
+
+```shell
+vcpkg install bullet3
+```
+
+Or build and install from source code:
+
 ```
 git clone https://github.com/bulletphysics/bullet3.git
 ```
 
-Then build and Install from source code.
+Then set environment variable `Bullet_ROOT` to the install directory, or add definition `-DGLMMD_BULLET_ROOT=<install directory>` to CMake when building glmmd.
 
-Set environment variable `Bullet_ROOT` to the install directory, or add definition `-DGLMMD_BULLET_ROOT=<install directory>` to CMake when building glmmd.
-
-#### Ubuntu
+#### Linux (Ubuntu)
 
 ```shell
 sudo apt install libbullet-dev
 ```
 
-### 2. Build `glmmd` library and viewer
+### 2. Install glm
+
+#### Windows
+
+Install with vcpkg:
+
+```shell
+vcpkg install glm
+```
+
+Or build and install from source code:
+
+```shell
+git clone https://github.com/g-truc/glm.git
+```
+
+#### Linux (Ubuntu)
+
+```shell
+sudo apt install libglm-dev
+```
+
+### 3. Build `glmmd` library and viewer
 
 ```shell
 git clone --recursive https://github.com/ljghy/glmmd.git
@@ -68,12 +96,12 @@ Create file `init.json` in `build`:
 }
 ```
 
-If `execution` header file is not supported, add definition `-DGLMMD_DO_NOT_USE_STD_EXECUTION=ON` to CMake.
+Install [Intel oneTBB](https://github.com/oneapi-src/oneTBB) to enable parallel execution with `gcc` on Linux. Otherwise, add definition `-DGLMMD_DO_NOT_USE_STD_EXECUTION=ON` to CMake to disable the use of `std::execution::par`.
 
 #### Windows MSVC
 
 ```shell
-cmake ..
+cmake -G"Visual Studio 17 2022" [-DCMAKE_TOOLCHAIN_FILE="your_vcpkg_cmake_toolchain_file"] ..
 cmake --build . --config Release [--parallel <N>]
 .\apps\viewer\Release\viewer.exe
 ```
@@ -98,12 +126,10 @@ make [-j<N>]
 
 [Saba](https://github.com/benikabocha/saba)
 
-[Dear ImGui](https://github.com/ocornut/imgui)
-
-[nlohmann json](https://github.com/nlohmann/json)
+[glm](https://github.com/g-truc/glm)
 
 [stb image](https://github.com/nothings/stb)
 
-[glm](https://github.com/g-truc/glm)
+[Dear ImGui](https://github.com/ocornut/imgui)
 
 [GLFW](https://github.com/glfw/glfw)
