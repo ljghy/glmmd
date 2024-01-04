@@ -3,6 +3,7 @@
 
 #include <fstream>
 #include <filesystem>
+#include <cassert>
 
 #include <glmmd/core/ModelData.h>
 #include <glmmd/files/CodeConverter.h>
@@ -37,9 +38,8 @@ private:
     template <int count = 1>
     void writeFloat(const float &val)
     {
-        for (int i = 0; i < count; ++i)
-            m_fout.write(reinterpret_cast<const char *>(&val + i),
-                         sizeof(float));
+        m_fout.write(reinterpret_cast<const char *>(&val),
+                     sizeof(float) * count);
     }
 
     template <typename UIntType>
@@ -78,7 +78,8 @@ private:
             break;
         }
         default:
-            m_fout.write(reinterpret_cast<const char *>(&val), sz);
+            assert(0);
+            break;
         }
     }
 

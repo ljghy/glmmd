@@ -4,6 +4,7 @@
 #include <fstream>
 #include <filesystem>
 #include <memory>
+#include <cassert>
 
 #include <glmmd/core/ModelData.h>
 
@@ -42,8 +43,7 @@ private:
     template <int count = 1>
     void readFloat(float &val)
     {
-        for (int i = 0; i < count; ++i)
-            m_fin.read(reinterpret_cast<char *>(&val + i), sizeof(float));
+        m_fin.read(reinterpret_cast<char *>(&val), sizeof(float) * count);
     }
 
     template <typename UIntType>
@@ -79,7 +79,8 @@ private:
             break;
         }
         default:
-            m_fin.read(reinterpret_cast<char *>(&val), sz);
+            assert(0);
+            break;
         }
     }
 
@@ -116,7 +117,8 @@ private:
             break;
         }
         default:
-            m_fin.read(reinterpret_cast<char *>(&val), sz);
+            assert(0);
+            break;
         }
     }
 
