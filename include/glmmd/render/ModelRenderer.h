@@ -43,6 +43,8 @@ public:
     ModelRenderer(const std::shared_ptr<const ModelData> &data,
                   ModelRendererShaderSources              shaderSources = {});
 
+    void fillBuffers() const;
+
     void renderShadowMap(const Lighting &lighting) const;
     void render(const Camera &camera, const Lighting &lighting,
                 const ogl::Texture2D *shadowMap = nullptr) const;
@@ -59,7 +61,6 @@ private:
     void initTextures();
     void initSharedToonTextures();
 
-    void fillBuffers() const;
     void renderMesh(const Camera &camera, const Lighting &lighting,
                     const ogl::Texture2D *shadowMap) const;
     void renderEdge(const Camera &camera) const;

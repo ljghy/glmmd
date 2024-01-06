@@ -118,6 +118,8 @@ void ModelRenderer::initSharedToonTextures()
 
 void ModelRenderer::fillBuffers() const
 {
+    m_VBO.bind();
+    m_VAO.bind();
     glBufferData(GL_ARRAY_BUFFER,
                  (3 + 3 + 2) * sizeof(float) * m_renderData.vertexBuffer.size(),
                  m_renderData.vertexBuffer.data(), GL_DYNAMIC_DRAW);
@@ -131,7 +133,6 @@ void ModelRenderer::render(const Camera &camera, const Lighting &lighting,
 
     m_VBO.bind();
     m_VAO.bind();
-    fillBuffers();
 
     if (m_renderFlag & MODEL_RENDER_FLAG_MESH)
         renderMesh(camera, lighting, shadowMap);
@@ -302,7 +303,6 @@ void ModelRenderer::renderShadowMap(const Lighting &lighting) const
 {
     m_VBO.bind();
     m_VAO.bind();
-    fillBuffers();
 
     glEnable(GL_DEPTH_TEST);
 

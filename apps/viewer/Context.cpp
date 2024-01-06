@@ -383,6 +383,9 @@ void Context::run()
 
         auto renderStart = std::chrono::high_resolution_clock::now();
 
+        for (const auto &renderer : m_modelRenderers)
+            renderer.fillBuffers();
+
         // Render shadow map
 
         static bool renderShadow = true;
