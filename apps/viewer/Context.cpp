@@ -54,10 +54,6 @@ void Context::initWindow()
 
     glfwWindowHint(GLFW_TRANSPARENT_FRAMEBUFFER, GLFW_TRUE);
 
-    if (m_initData.find("MSAA") != m_initData.end() &&
-        m_initData["MSAA"].get<int>() > 1)
-        glfwWindowHint(GLFW_SAMPLES, m_initData["MSAA"].get<int>());
-
     m_window = glfwCreateWindow(1600, 900, "Viewer", NULL, NULL);
     glfwSetFramebufferSizeCallback(m_window, framebufferSizeCallback);
     if (m_window == nullptr)
@@ -104,9 +100,7 @@ void Context::initFBO()
 {
     m_viewportWidth  = 1600;
     m_viewportHeight = 900;
-    int samples      = m_initData.find("MSAA") != m_initData.end()
-                           ? m_initData["MSAA"].get<int>()
-                           : 1;
+    int samples      = m_initData.get<int>("MSAA", 1);
 
     m_FBO.create();
     ogl::Texture2DCreateInfo texInfo;
@@ -158,11 +152,11 @@ void Context::initFBO()
 
 void Context::loadResources()
 {
-    for (const auto &modelNode : m_initData["models"])
+    for (const auto &modelNode : m_initData["models"].arr())
     {
         try
         {
-            auto filename = modelNode["filename"].get<std::filesystem::path>();
+            auto filename = modelNode.get<std::filesystem::path>("filename");
             m_modelData.push_back(glmmd::loadPmxFile(filename));
             auto modelData = m_modelData.back();
             m_models.emplace_back(modelData);
@@ -182,20 +176,18 @@ void Context::loadResources()
     std::vector<std::vector<std::shared_ptr<glmmd::Motion>>> motions(
         m_models.size());
 
-    for (const auto &motionNode : m_initData["motions"])
+    for (const auto &motionNode : m_initData["motions"].arr())
     {
         try
         {
-            auto modelIndex = motionNode["model"].get<size_t>();
+            auto modelIndex = motionNode.get<size_t>("model");
             if (modelIndex >= m_models.size())
                 throw std::runtime_error("Invalid model index.");
 
-            auto filename = motionNode["filename"].get<std::filesystem::path>();
+            auto filename = motionNode.get<std::filesystem::path>("filename");
             auto vmdData  = glmmd::loadVmdFile(filename);
 
-            bool loop = false;
-            if (motionNode.find("loop") != motionNode.end())
-                loop = motionNode["loop"].get<bool>();
+            bool loop = motionNode.get<bool>("loop", false);
             auto clip = std::make_shared<glmmd::FixedMotionClip>(
                 vmdData->toFixedMotionClip(m_models[modelIndex].data(), loop));
 
