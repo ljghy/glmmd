@@ -248,15 +248,28 @@ struct Morph
     uint8_t   panel;
     MorphType type;
 
-    union MorphData
+    union
     {
-        GroupMorph    group;
-        VertexMorph   vertex;
-        UVMorph       uv;
-        BoneMorph     bone;
-        MaterialMorph material;
+        GroupMorph    *group;
+        VertexMorph   *vertex;
+        UVMorph       *uv;
+        BoneMorph     *bone;
+        MaterialMorph *material;
     };
-    std::vector<MorphData> data;
+    int32_t count;
+
+    void init()
+    {
+        constexpr size_t dataSize[]{
+            sizeof(GroupMorph), sizeof(VertexMorph), sizeof(BoneMorph),
+            sizeof(UVMorph),    sizeof(UVMorph),     sizeof(UVMorph),
+            sizeof(UVMorph),    sizeof(UVMorph),     sizeof(MaterialMorph)};
+        data.resize(dataSize[static_cast<uint8_t>(type)] * count);
+        group = reinterpret_cast<GroupMorph *>(data.data());
+    }
+
+private:
+    std::vector<uint8_t> data;
 };
 
 struct DisplayFrame

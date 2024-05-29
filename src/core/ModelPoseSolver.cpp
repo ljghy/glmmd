@@ -158,14 +158,16 @@ void ModelPoseSolver::applyGroupMorphs(ModelPose &pose) const
 {
     for (uint32_t i = 0; i < pose.m_morphRatios.size(); ++i)
     {
-        if (pose.m_morphRatios[i] == 0.f ||
-            m_modelData->morphs[i].type != MorphType::Group)
+        const auto &morph = m_modelData->morphs[i];
+        if (pose.m_morphRatios[i] == 0.f || morph.type != MorphType::Group)
             continue;
 
-        for (const auto &data : m_modelData->morphs[i].data)
-            if (m_modelData->morphs[data.group.index].type != MorphType::Group)
-                pose.m_morphRatios[data.group.index] +=
-                    pose.m_morphRatios[i] * data.group.ratio;
+        for (int32_t j = 0; j < morph.count; ++j)
+        {
+            const auto &m = morph.group[j];
+            if (m_modelData->morphs[m.index].type != MorphType::Group)
+                pose.m_morphRatios[m.index] += pose.m_morphRatios[i] * m.ratio;
+        }
     }
 }
 
@@ -173,12 +175,12 @@ void ModelPoseSolver::applyBoneMorphs(ModelPose &pose) const
 {
     for (uint32_t i = 0; i < pose.m_morphRatios.size(); ++i)
     {
-        if (m_modelData->morphs[i].type == MorphType::Bone &&
-            pose.m_morphRatios[i] != 0.f)
+        const auto &morph = m_modelData->morphs[i];
+        if (morph.type == MorphType::Bone && pose.m_morphRatios[i] != 0.f)
         {
-            for (const auto &data : m_modelData->morphs[i].data)
+            for (int32_t j = 0; j < morph.count; ++j)
             {
-                const auto &transform = data.bone;
+                const auto &transform = morph.bone[j];
                 pose.m_localBoneTranslations[transform.index] +=
                     pose.m_morphRatios[i] * transform.translation;
                 pose.m_localBoneRotations[transform.index] =

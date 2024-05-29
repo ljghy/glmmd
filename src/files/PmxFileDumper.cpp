@@ -214,80 +214,93 @@ void PmxFileDumper::dumpMorphs(const ModelData &data)
 
         writeUInt(m.panel);
         writeUInt(m.type);
-
-        writeUInt(static_cast<uint32_t>(m.data.size()));
-        for (const auto &d : m.data)
+        writeInt(m.count);
+        switch (m.type)
         {
-            switch (m.type)
-            {
-            case MorphType::Group:
-                dumpGroupMorph(data, d.group);
-                break;
-            case MorphType::Vertex:
-                dumpVertexMorph(data, d.vertex);
-                break;
-            case MorphType::Bone:
-                dumpBoneMorph(data, d.bone);
-                break;
-            case MorphType::UV:
-            case MorphType::UV1:
-            case MorphType::UV2:
-            case MorphType::UV3:
-            case MorphType::UV4:
-                dumpUVMorph(data, d.uv,
-                            static_cast<uint8_t>(m.type) -
-                                static_cast<uint8_t>(MorphType::UV));
-                break;
-            case MorphType::Material:
-                dumpMaterialMorph(data, d.material);
-                break;
-            }
+        case MorphType::Group:
+            dumpGroupMorph(data, m);
+            break;
+        case MorphType::Vertex:
+            dumpVertexMorph(data, m);
+            break;
+        case MorphType::Bone:
+            dumpBoneMorph(data, m);
+            break;
+        case MorphType::UV:
+        case MorphType::UV1:
+        case MorphType::UV2:
+        case MorphType::UV3:
+        case MorphType::UV4:
+            dumpUVMorph(data, m,
+                        static_cast<uint8_t>(m.type) -
+                            static_cast<uint8_t>(MorphType::UV));
+            break;
+        case MorphType::Material:
+            dumpMaterialMorph(data, m);
+            break;
         }
     }
 }
 
-void PmxFileDumper::dumpGroupMorph(const ModelData  &data,
-                                   const GroupMorph &morph)
+void PmxFileDumper::dumpGroupMorph(const ModelData &data, const Morph &morph)
 {
-    writeInt(morph.index, data.info.morphIndexSize);
-    writeFloat(morph.ratio);
+    for (int32_t i = 0; i < morph.count; ++i)
+    {
+        const auto &m = morph.group[i];
+        writeInt(m.index, data.info.morphIndexSize);
+        writeFloat(m.ratio);
+    }
 }
 
-void PmxFileDumper::dumpVertexMorph(const ModelData   &data,
-                                    const VertexMorph &morph)
+void PmxFileDumper::dumpVertexMorph(const ModelData &data, const Morph &morph)
 {
-    writeInt(morph.index, data.info.vertexIndexSize);
-    writeFloat<3>(morph.offset.x);
+    for (int32_t i = 0; i < morph.count; ++i)
+    {
+        const auto &m = morph.vertex[i];
+        writeInt(m.index, data.info.vertexIndexSize);
+        writeFloat<3>(m.offset.x);
+    }
 }
 
-void PmxFileDumper::dumpBoneMorph(const ModelData &data, const BoneMorph &morph)
+void PmxFileDumper::dumpBoneMorph(const ModelData &data, const Morph &morph)
 {
-    writeInt(morph.index, data.info.boneIndexSize);
-    writeFloat<3>(morph.translation.x);
-    writeFloat<4>(morph.rotation[0]);
+    for (int32_t i = 0; i < morph.count; ++i)
+    {
+        const auto &m = morph.bone[i];
+        writeInt(m.index, data.info.boneIndexSize);
+        writeFloat<3>(m.translation.x);
+        writeFloat<4>(m.rotation[0]);
+    }
 }
 
-void PmxFileDumper::dumpUVMorph(const ModelData &data, const UVMorph &morph,
+void PmxFileDumper::dumpUVMorph(const ModelData &data, const Morph &morph,
                                 uint8_t num)
 {
-    writeInt(morph.index, data.info.vertexIndexSize);
-    writeFloat<4>(morph.offset[num].x);
+    for (int32_t i = 0; i < morph.count; ++i)
+    {
+        const auto &m = morph.uv[i];
+        writeInt(m.index, data.info.vertexIndexSize);
+        writeFloat<4>(m.offset[num].x);
+    }
 }
 
-void PmxFileDumper::dumpMaterialMorph(const ModelData     &data,
-                                      const MaterialMorph &morph)
+void PmxFileDumper::dumpMaterialMorph(const ModelData &data, const Morph &morph)
 {
-    writeInt(morph.index, data.info.materialIndexSize);
-    writeUInt(morph.operation);
-    writeFloat<4>(morph.diffuse.x);
-    writeFloat<3>(morph.specular.x);
-    writeFloat(morph.specularPower);
-    writeFloat<3>(morph.ambient.x);
-    writeFloat<4>(morph.edgeColor.x);
-    writeFloat(morph.edgeSize);
-    writeFloat<4>(morph.texture.x);
-    writeFloat<4>(morph.sphereTexture.x);
-    writeFloat<4>(morph.toonTexture.x);
+    for (int32_t i = 0; i < morph.count; ++i)
+    {
+        const auto &m = morph.material[i];
+        writeInt(m.index, data.info.materialIndexSize);
+        writeUInt(m.operation);
+        writeFloat<4>(m.diffuse.x);
+        writeFloat<3>(m.specular.x);
+        writeFloat(m.specularPower);
+        writeFloat<3>(m.ambient.x);
+        writeFloat<4>(m.edgeColor.x);
+        writeFloat(m.edgeSize);
+        writeFloat<4>(m.texture.x);
+        writeFloat<4>(m.sphereTexture.x);
+        writeFloat<4>(m.toonTexture.x);
+    }
 }
 
 void PmxFileDumper::dumpDisplayFrames(const ModelData &data)

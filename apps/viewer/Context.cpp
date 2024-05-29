@@ -132,6 +132,8 @@ void Context::initFBO()
 
     m_shadowMapFBO.create();
     ogl::Texture2DCreateInfo shadowMapTexInfo;
+    m_shadowMapWidth             = m_initData.get<int>("ShadowMapWidth", 1024);
+    m_shadowMapHeight            = m_initData.get<int>("ShadowMapHeight", 1024);
     shadowMapTexInfo.width       = m_shadowMapWidth;
     shadowMapTexInfo.height      = m_shadowMapHeight;
     shadowMapTexInfo.internalFmt = GL_DEPTH_COMPONENT;
@@ -339,7 +341,7 @@ void Context::run()
         float deltaTime = io.DeltaTime;
 
         auto physicsStart = std::chrono::high_resolution_clock::now();
-        m_physicsWorld.update(deltaTime, 10, 1.f / 120.f);
+        m_physicsWorld.update(deltaTime, 10, 1.f / 60.f);
         auto physicsEnd = std::chrono::high_resolution_clock::now();
         auto physicsDur =
             std::chrono::duration_cast<std::chrono::duration<float>>(

@@ -29,11 +29,11 @@ private:
     void dumpRigidBodies(const ModelData &);
     void dumpJoints(const ModelData &);
 
-    void dumpGroupMorph(const ModelData &, const GroupMorph &);
-    void dumpVertexMorph(const ModelData &, const VertexMorph &);
-    void dumpBoneMorph(const ModelData &, const BoneMorph &);
-    void dumpUVMorph(const ModelData &, const UVMorph &, uint8_t);
-    void dumpMaterialMorph(const ModelData &, const MaterialMorph &);
+    void dumpGroupMorph(const ModelData &, const Morph &);
+    void dumpVertexMorph(const ModelData &, const Morph &);
+    void dumpBoneMorph(const ModelData &, const Morph &);
+    void dumpUVMorph(const ModelData &, const Morph &, uint8_t);
+    void dumpMaterialMorph(const ModelData &, const Morph &);
 
     template <int count = 1>
     void writeFloat(const float &val)

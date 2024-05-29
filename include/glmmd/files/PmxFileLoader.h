@@ -34,11 +34,11 @@ private:
     void loadRigidBodies(ModelData &);
     void loadJoints(ModelData &);
 
-    Morph::MorphData loadGroupMorph(ModelData &);
-    Morph::MorphData loadVertexMorph(ModelData &);
-    Morph::MorphData loadBoneMorph(ModelData &);
-    Morph::MorphData loadUVMorph(ModelData &, uint8_t);
-    Morph::MorphData loadMaterialMorph(ModelData &);
+    void loadGroupMorph(const ModelData &, Morph &);
+    void loadVertexMorph(const ModelData &, Morph &);
+    void loadBoneMorph(const ModelData &, Morph &);
+    void loadUVMorph(const ModelData &, Morph &, uint8_t);
+    void loadMaterialMorph(const ModelData &, Morph &);
 
     template <int count = 1>
     void readFloat(float &val)

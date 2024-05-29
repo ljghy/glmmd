@@ -107,17 +107,20 @@ void ModelPose::applyMorphsToRenderData(RenderData &renderData) const
         switch (morph.type)
         {
         case MorphType::Vertex:
-            for (const auto &d : morph.data)
-            {
-                const auto &data = d.vertex;
-                renderData.vertexBuffer[data.index].position +=
-                    ratio * data.offset;
-            }
+            std::for_each(
+#ifndef GLMMD_DO_NOT_USE_STD_EXECUTION
+                std::execution::par,
+#endif
+                morph.vertex, morph.vertex + morph.count,
+                [&](const VertexMorph &data) {
+                    renderData.vertexBuffer[data.index].position +=
+                        ratio * data.offset;
+                });
             break;
         case MorphType::Material:
-            for (const auto &d : morph.data)
+            for (int32_t j = 0; j < morph.count; ++j)
             {
-                const auto &data = d.material;
+                const auto &data = morph.material[j];
                 if (data.operation == 0) // multiply
                 {
                     auto &mat = renderData.materialMul[data.index];
@@ -155,9 +158,9 @@ void ModelPose::applyMorphsToRenderData(RenderData &renderData) const
             }
             break;
         case MorphType::UV:
-            for (const auto &d : morph.data)
+            for (int32_t j = 0; j < morph.count; ++j)
             {
-                const auto &data = d.uv;
+                const auto &data = morph.uv[j];
                 renderData.vertexBuffer[data.index].uv +=
                     ratio * glm::vec2(data.offset[0]);
             }

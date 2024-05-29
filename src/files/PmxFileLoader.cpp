@@ -340,98 +340,99 @@ void PmxFileLoader::loadMorphs(ModelData &data)
 #endif
         readUInt(morph.panel);
         readUInt(morph.type);
-
-        int32_t dataCount;
-        readInt(dataCount);
-        morph.data.reserve(dataCount);
-        for (int32_t j = 0; j < dataCount; ++j)
+        readInt(morph.count);
+        morph.init();
+        switch (morph.type)
         {
-            switch (morph.type)
-            {
-            case MorphType::Group:
-                morph.data.emplace_back(loadGroupMorph(data));
-                break;
-            case MorphType::Vertex:
-                morph.data.emplace_back(loadVertexMorph(data));
-                break;
-            case MorphType::Bone:
-                morph.data.emplace_back(loadBoneMorph(data));
-                break;
-            case MorphType::UV:
-            case MorphType::UV1:
-            case MorphType::UV2:
-            case MorphType::UV3:
-            case MorphType::UV4:
-                morph.data.emplace_back(
-                    loadUVMorph(data, static_cast<uint8_t>(morph.type) -
-                                          static_cast<uint8_t>(MorphType::UV)));
-                break;
-            case MorphType::Material:
-                morph.data.emplace_back(loadMaterialMorph(data));
-                break;
-            }
+        case MorphType::Group:
+            loadGroupMorph(data, morph);
+            break;
+        case MorphType::Vertex:
+            loadVertexMorph(data, morph);
+            break;
+        case MorphType::Bone:
+            loadBoneMorph(data, morph);
+            break;
+        case MorphType::UV:
+        case MorphType::UV1:
+        case MorphType::UV2:
+        case MorphType::UV3:
+        case MorphType::UV4:
+            loadUVMorph(data, morph,
+                        static_cast<uint8_t>(morph.type) -
+                            static_cast<uint8_t>(MorphType::UV));
+            break;
+        case MorphType::Material:
+            loadMaterialMorph(data, morph);
+            break;
         }
     }
 }
 
-Morph::MorphData PmxFileLoader::loadGroupMorph(ModelData &data)
+void PmxFileLoader::loadGroupMorph(const ModelData &modelData, Morph &morph)
 {
-    Morph::MorphData morph;
-    auto            &group = morph.group;
-    readUInt(group.index, data.info.morphIndexSize);
-    readFloat(group.ratio);
-    return morph;
+    for (int32_t i = 0; i < morph.count; ++i)
+    {
+        auto &group = morph.group[i];
+        readUInt(group.index, modelData.info.morphIndexSize);
+        readFloat(group.ratio);
+    }
 }
 
-Morph::MorphData PmxFileLoader::loadVertexMorph(ModelData &data)
+void PmxFileLoader::loadVertexMorph(const ModelData &data, Morph &morph)
 {
-    Morph::MorphData morph;
-    auto            &vertex = morph.vertex;
-    readUInt(vertex.index, data.info.vertexIndexSize);
-    readFloat<3>(vertex.offset.x);
-    return morph;
+    for (int32_t i = 0; i < morph.count; ++i)
+    {
+        auto &vertex = morph.vertex[i];
+        readUInt(vertex.index, data.info.vertexIndexSize);
+        readFloat<3>(vertex.offset.x);
+    }
 }
 
-Morph::MorphData PmxFileLoader::loadBoneMorph(ModelData &data)
+void PmxFileLoader::loadBoneMorph(const ModelData &data, Morph &morph)
 {
-    Morph::MorphData morph;
-    auto            &bone = morph.bone;
-    readUInt(bone.index, data.info.boneIndexSize);
-    readFloat<3>(bone.translation.x);
-    glm::vec4 q;
-    readFloat<4>(q.x); // internal order: x, y, z, w
-    bone.rotation = glm::quat(q.w, q.x, q.y, q.z);
-    return morph;
+    for (int32_t i = 0; i < morph.count; ++i)
+    {
+        auto &bone = morph.bone[i];
+        readUInt(bone.index, data.info.boneIndexSize);
+        readFloat<3>(bone.translation.x);
+        glm::vec4 q;
+        readFloat<4>(q.x); // internal order: x, y, z, w
+        bone.rotation = glm::quat(q.w, q.x, q.y, q.z);
+    }
 }
 
-Morph::MorphData PmxFileLoader::loadUVMorph(ModelData &data, uint8_t num)
+void PmxFileLoader::loadUVMorph(const ModelData &data, Morph &morph,
+                                uint8_t num)
 {
-    Morph::MorphData morph;
-    auto            &uv = morph.uv;
-    for (uint8_t i = 0; i < 5; ++i)
-        if (i != num)
-            uv.offset[num] = glm::vec4(0.f);
-    readUInt(uv.index, data.info.vertexIndexSize);
-    readFloat<4>(uv.offset[num].x);
-    return morph;
+    for (int32_t i = 0; i < morph.count; ++i)
+    {
+        auto &uv = morph.uv[i];
+        for (uint8_t j = 0; j < 5; ++j)
+            if (j != num)
+                uv.offset[num] = glm::vec4(0.f);
+        readUInt(uv.index, data.info.vertexIndexSize);
+        readFloat<4>(uv.offset[num].x);
+    }
 }
 
-Morph::MorphData PmxFileLoader::loadMaterialMorph(ModelData &data)
+void PmxFileLoader::loadMaterialMorph(const ModelData &data, Morph &morph)
 {
-    Morph::MorphData morph;
-    auto            &mat = morph.material;
-    readUInt(mat.index, data.info.materialIndexSize);
-    readUInt(mat.operation);
-    readFloat<4>(mat.diffuse.x);
-    readFloat<3>(mat.specular.x);
-    readFloat(mat.specularPower);
-    readFloat<3>(mat.ambient.x);
-    readFloat<4>(mat.edgeColor.x);
-    readFloat(mat.edgeSize);
-    readFloat<4>(mat.texture.x);
-    readFloat<4>(mat.sphereTexture.x);
-    readFloat<4>(mat.toonTexture.x);
-    return morph;
+    for (int32_t i = 0; i < morph.count; ++i)
+    {
+        auto &mat = morph.material[i];
+        readUInt(mat.index, data.info.materialIndexSize);
+        readUInt(mat.operation);
+        readFloat<4>(mat.diffuse.x);
+        readFloat<3>(mat.specular.x);
+        readFloat(mat.specularPower);
+        readFloat<3>(mat.ambient.x);
+        readFloat<4>(mat.edgeColor.x);
+        readFloat(mat.edgeSize);
+        readFloat<4>(mat.texture.x);
+        readFloat<4>(mat.sphereTexture.x);
+        readFloat<4>(mat.toonTexture.x);
+    }
 }
 
 void PmxFileLoader::loadDisplayFrames(ModelData &data)
