@@ -1,13 +1,17 @@
 #ifndef JSON_PARSER_HPP_
 #define JSON_PARSER_HPP_
 
+#include <cmath>
 #include <cstddef>
 #include <cstdint>
+#include <cstdlib>
 #include <filesystem>
 #include <fstream>
 #include <initializer_list>
 #include <iomanip>
+#include <locale>
 #include <map>
+#include <sstream>
 #include <stack>
 #include <stdexcept>
 #include <string>
@@ -71,6 +75,7 @@ public:
 
   JsonStr_t &str();
   const JsonStr_t &str() const;
+  const char *c_str() const;
   JsonArr_t &arr();
   const JsonArr_t &arr() const;
   JsonObj_t &obj();
@@ -124,6 +129,7 @@ public:
     Serializer &indent(size_t);
     Serializer &ascii(bool);
     Serializer &dump(std::ostream &);
+    std::string dumps();
   };
 
   Serializer serializer() const;
@@ -602,6 +608,10 @@ public:
     requireType(StrType_);
     return *val_.s;
   }
+  const char *c_str() const {
+    requireType(StrType_);
+    return val_.s->c_str();
+  }
 
   JsonArr_t &arr() {
     if (ty_ != ArrType_) {
@@ -862,8 +872,10 @@ public:
     }
 
     Serializer &dump(std::ostream &os) {
-      size_t p = os.precision();
+      size_t prec = os.precision();
       os.precision(m_precision);
+      auto loc = os.getloc();
+      os.imbue(std::locale::classic());
 
       bool formatted = (m_indent != static_cast<size_t>(-1));
 
@@ -973,9 +985,16 @@ public:
         }
       }
 
-      os << std::setprecision(p);
+      os << std::setprecision(prec);
+      os.imbue(loc);
 
       return *this;
+    }
+
+    std::string dumps() {
+      std::ostringstream oss;
+      dump(oss);
+      return oss.str();
     }
 
   private:
@@ -1605,6 +1624,8 @@ inline void JsonParser::parseNumber(JsonInputStreamBase<Derived> &is,
   bool isSigned = false;
   bool isFloatingPoint = false;
 
+  enum class NumType { DBL, INT, UINT } numType{};
+
   if (is.ch() == '-') {
     isSigned = true;
     numStr.push_back(is.get());
@@ -1645,62 +1666,58 @@ inline void JsonParser::parseNumber(JsonInputStreamBase<Derived> &is,
       numStr.push_back(is.get());
   }
 
-  try {
-    if (isFloatingPoint) {
-      *node = std::stod(numStr);
-    } else if (isSigned) {
-      constexpr std::string_view maxSignedIntStr =
-          "9223372036854775808"; // 2^63
-      size_t unsignedLen = numStr.size() - 1;
-      bool overflow = false;
-      if (unsignedLen == maxSignedIntStr.size()) {
-        for (size_t i = 0; i < maxSignedIntStr.size(); ++i) {
-          if (numStr[i + 1] > maxSignedIntStr[i]) {
-            overflow = true;
-            break;
-          } else if (numStr[i + 1] < maxSignedIntStr[i]) {
-            break;
-          }
-        }
-      } else {
-        overflow = unsignedLen > maxSignedIntStr.size();
+  if (isFloatingPoint) {
+    numType = NumType::DBL;
+  } else if (isSigned) {
+    constexpr std::string_view maxSignedIntStr = "9223372036854775808"; // 2^63
+    size_t unsignedLen = numStr.size() - 1;
+    bool overflow = false;
+    if (unsignedLen == maxSignedIntStr.size())
+      for (size_t i = 0; i < maxSignedIntStr.size(); ++i) {
+        if (numStr[i + 1] == maxSignedIntStr[i])
+          continue;
+        overflow = numStr[i + 1] > maxSignedIntStr[i];
+        break;
       }
+    else
+      overflow = unsignedLen > maxSignedIntStr.size();
+    numType = overflow ? NumType::DBL : NumType::INT;
+  } else {
+    constexpr std::string_view maxUnsignedIntStr =
+        "18446744073709551615"; // 2^64 - 1
+    bool overflow = false;
+    if (numStr.size() == maxUnsignedIntStr.size())
+      for (size_t i = 0; i < maxUnsignedIntStr.size(); ++i) {
+        if (numStr[i] == maxUnsignedIntStr[i])
+          continue;
+        overflow = numStr[i] > maxUnsignedIntStr[i];
+        break;
+      }
+    else
+      overflow = numStr.size() > maxUnsignedIntStr.size();
+    numType = overflow ? NumType::DBL : NumType::UINT;
+  }
 
-      if (overflow) {
-        *node = std::stod(numStr);
-      } else {
-        *node = std::stoll(numStr);
-      }
-
-    } else {
-      constexpr std::string_view maxUnsignedIntStr =
-          "18446744073709551615"; // 2^64 - 1
-      bool overflow = false;
-      if (numStr.size() == maxUnsignedIntStr.size()) {
-        for (size_t i = 0; i < maxUnsignedIntStr.size(); ++i) {
-          if (numStr[i] > maxUnsignedIntStr[i]) {
-            overflow = true;
-            break;
-          } else if (numStr[i] < maxUnsignedIntStr[i]) {
-            break;
-          }
-        }
-      } else {
-        overflow = numStr.size() > maxUnsignedIntStr.size();
-      }
-
-      if (overflow) {
-        *node = std::stod(numStr);
-      } else {
-        *node = std::stoull(numStr);
-      }
-    }
-  } catch (const std::out_of_range &) {
-    throw std::runtime_error(
-        getJsonErrorMsg(detail::JsonErrorCode::InvalidNumber));
-  } catch (const std::invalid_argument &) {
-    throw std::runtime_error(
-        getJsonErrorMsg(detail::JsonErrorCode::InvalidNumber));
+  switch (numType) {
+  case NumType::DBL: {
+    double num = std::strtod(numStr.c_str(), nullptr);
+    if (std::isinf(num))
+      throw std::runtime_error(
+          getJsonErrorMsg(detail::JsonErrorCode::InvalidNumber));
+    *node = num;
+  } break;
+  case NumType::INT: {
+    int64_t num{};
+    for (size_t i = 1; i < numStr.size(); ++i)
+      num = num * 10 + (numStr[i] - '0');
+    *node = -num;
+  } break;
+  case NumType::UINT: {
+    uint64_t num{};
+    for (size_t i = 0; i < numStr.size(); ++i)
+      num = num * 10 + (numStr[i] - '0');
+    *node = num;
+  } break;
   }
 }
 

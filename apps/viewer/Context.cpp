@@ -341,7 +341,7 @@ void Context::run()
         float deltaTime = io.DeltaTime;
 
         auto physicsStart = std::chrono::high_resolution_clock::now();
-        m_physicsWorld.update(deltaTime, 10, 1.f / 60.f);
+        m_physicsWorld.update(deltaTime, 10, 1.f / 240.f);
         auto physicsEnd = std::chrono::high_resolution_clock::now();
         auto physicsDur =
             std::chrono::duration_cast<std::chrono::duration<float>>(

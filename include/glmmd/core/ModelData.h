@@ -264,12 +264,41 @@ struct Morph
             sizeof(GroupMorph), sizeof(VertexMorph), sizeof(BoneMorph),
             sizeof(UVMorph),    sizeof(UVMorph),     sizeof(UVMorph),
             sizeof(UVMorph),    sizeof(UVMorph),     sizeof(MaterialMorph)};
-        data.resize(dataSize[static_cast<uint8_t>(type)] * count);
-        group = reinterpret_cast<GroupMorph *>(data.data());
+        m_buffer.resize((dataSize[static_cast<uint8_t>(type)] * count +
+                         sizeof(AlignedStorageType) - 1) /
+                        sizeof(AlignedStorageType));
+        group = reinterpret_cast<GroupMorph *>(m_buffer.data());
     }
 
 private:
-    std::vector<uint8_t> data;
+    template <size_t... N>
+    struct Max;
+    template <size_t N>
+    struct Max<N>
+    {
+        static constexpr size_t value = N;
+    };
+    template <size_t N, size_t... Rest>
+    struct Max<N, Rest...>
+    {
+        static constexpr size_t value =
+            N > Max<Rest...>::value ? N : Max<Rest...>::value;
+    };
+    template <typename... Types>
+    struct AlignedStorage
+    {
+        static constexpr size_t value = Max<alignof(Types)...>::value;
+        struct type
+        {
+            alignas(value) char data[Max<sizeof(Types)...>::value];
+        };
+    };
+
+    using AlignedStorageType =
+        typename AlignedStorage<GroupMorph, VertexMorph, BoneMorph, UVMorph,
+                                MaterialMorph>::type;
+    std::vector<AlignedStorageType>
+        m_buffer; // aligned allocation guaranteed after C++17
 };
 
 struct DisplayFrame
