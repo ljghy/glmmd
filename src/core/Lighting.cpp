@@ -1,6 +1,6 @@
 #include <glm/gtc/matrix_transform.hpp>
 
-#include <glmmd/render/Lighting.h>
+#include <glmmd/core/Lighting.h>
 
 namespace glmmd
 {

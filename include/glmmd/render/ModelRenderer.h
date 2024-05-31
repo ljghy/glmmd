@@ -7,8 +7,8 @@
 
 #include <glmmd/core/ModelData.h>
 #include <glmmd/core/RenderData.h>
-#include <glmmd/render/Camera.h>
-#include <glmmd/render/Lighting.h>
+#include <glmmd/core/Camera.h>
+#include <glmmd/core/Lighting.h>
 
 namespace glmmd
 {

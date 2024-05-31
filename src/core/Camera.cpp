@@ -1,6 +1,6 @@
 #include <glm/gtc/matrix_transform.hpp>
 
-#include <glmmd/render/Camera.h>
+#include <glmmd/core/Camera.h>
 
 namespace glmmd
 {
@@ -35,12 +35,11 @@ glm::mat4 Camera::proj() const
 
 void Camera::rotate(float dy, float dp)
 {
+    constexpr float limit = glm::radians(89.f);
+
     yaw += dy;
     pitch += dp;
-
-    constexpr float limit = glm::radians(89.f);
-    glm::clamp(pitch, -limit, limit);
-
+    pitch = glm::clamp(pitch, -limit, limit);
     update();
 }
 
