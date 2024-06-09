@@ -177,3 +177,32 @@ const char *defaultShadowMapFragShaderSrc =
     void main() {
     }
     )";
+
+const char *defaultGroundShadowVertShaderSrc =
+    R"(
+    #version 330 core
+    layout(location = 0) in vec3 aPos;
+    uniform mat4 u_MVP;
+    uniform vec3 u_lightDir;
+    out float worldY;
+    void main() {
+        worldY = aPos.y;
+        const float offset = 1e-3;
+        float t = (offset - aPos.y) / u_lightDir.y;
+        vec3 proj = aPos + t * u_lightDir;
+        gl_Position = u_MVP * vec4(proj, 1.0);
+    }
+    )";
+
+const char *defaultGroundShadowFragShaderSrc =
+    R"(
+    #version 330 core
+    in float worldY;
+    out vec4 FragColor;
+    void main() {
+        const float offset = 1e-3;
+        if (worldY < offset)
+            discard;
+        FragColor = vec4(0.0, 0.0, 0.0, 1.0);
+    }
+    )";

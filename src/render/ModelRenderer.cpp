@@ -37,6 +37,8 @@ ModelRenderer::ModelRenderer(const std::shared_ptr<const ModelData> &data,
                         shaderSources.edgeFragShaderSrc);
     m_shadowMapShader.create(shaderSources.shadowMapVertShaderSrc,
                              shaderSources.shadowMapFragShaderSrc);
+    m_groundShadowShader.create(shaderSources.groundShadowVertShaderSrc,
+                                shaderSources.groundShadowFragShaderSrc);
 }
 
 void ModelRenderer::initBuffers()
@@ -139,6 +141,9 @@ void ModelRenderer::render(const Camera &camera, const Lighting &lighting,
 
     if (m_renderFlag & MODEL_RENDER_FLAG_EDGE)
         renderEdge(camera);
+
+    if (m_renderFlag & MODEL_RENDER_FLAG_GROUND_SHADOW)
+        renderGroundShadow(camera, lighting);
 }
 
 void ModelRenderer::renderMesh(const Camera &camera, const Lighting &lighting,
@@ -293,6 +298,39 @@ void ModelRenderer::renderEdge(const Camera &camera) const
 
         m_edgeShader.setUniform1f("u_edgeSize", mat.edgeSize);
         m_edgeShader.setUniform4fv("u_edgeColor", &mat.edgeColor[0]);
+        m_IBOs[i].bind();
+        glDrawElements(GL_TRIANGLES, m_IBOs[i].getCount(), GL_UNSIGNED_INT,
+                       nullptr);
+    }
+}
+
+void ModelRenderer::renderGroundShadow(const Camera   &camera,
+                                       const Lighting &lighting) const
+{
+    glEnable(GL_DEPTH_TEST);
+    glDepthFunc(GL_LEQUAL);
+    glEnable(GL_BLEND);
+    glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ONE,
+                        GL_ONE_MINUS_SRC_ALPHA);
+    glDisable(GL_CULL_FACE);
+    glDisable(GL_POLYGON_OFFSET_FILL);
+
+    glm::mat4 model = glm::mat4(1.f);
+    glm::mat4 proj  = camera.proj();
+    glm::mat4 view  = camera.view();
+    glm::mat4 MV    = view * model;
+    glm::mat4 MVP   = proj * MV;
+
+    m_groundShadowShader.use();
+    m_groundShadowShader.setUniformMatrix4fv("u_MVP", &MVP[0][0]);
+    m_groundShadowShader.setUniform3fv("u_lightDir", &lighting.direction[0]);
+
+    for (size_t i = 0; i < m_IBOs.size(); ++i)
+    {
+        if (!m_modelData->materials[i].groundShadow() ||
+            m_renderData.materials[i].diffuse.a == 0.f)
+            continue;
+
         m_IBOs[i].bind();
         glDrawElements(GL_TRIANGLES, m_IBOs[i].getCount(), GL_UNSIGNED_INT,
                        nullptr);

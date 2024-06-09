@@ -168,6 +168,19 @@ void Context::loadResources()
             std::cout << "Name: " << modelData->info.modelName << '\n';
             std::cout << "Comment: " << modelData->info.comment << '\n';
             std::cout << std::endl;
+
+            for (const auto &tex : modelData->textures)
+            {
+                if (!tex.exists)
+                    std::cout
+                        << "Failed to load texture: "
+                        << (modelData->info.internalEncodingMethod ==
+                                    glmmd::EncodingMethod::UTF16_LE
+                                ? glmmd::codeCvt<glmmd::UTF16_LE, glmmd::UTF8>(
+                                      tex.path)
+                                : tex.path)
+                        << '\n';
+            }
         }
         catch (const std::exception &e)
         {
@@ -335,7 +348,7 @@ void Context::run()
         ImGui_ImplGlfw_NewFrame();
         ImGui::NewFrame();
 
-        glClearColor(0.f, 0.f, 0.f, 1.f);
+        glClearColor(0.f, 0.f, 0.f, 0.5f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
         float deltaTime = io.DeltaTime;
@@ -514,6 +527,18 @@ void Context::run()
                     renderer.renderFlag() |= glmmd::MODEL_RENDER_FLAG_EDGE;
                 else
                     renderer.renderFlag() &= ~glmmd::MODEL_RENDER_FLAG_EDGE;
+        }
+
+        static bool renderGroundShadow = true;
+        if (ImGui::Checkbox("Render ground shadow", &renderGroundShadow))
+        {
+            for (auto &renderer : m_modelRenderers)
+                if (renderGroundShadow)
+                    renderer.renderFlag() |=
+                        glmmd::MODEL_RENDER_FLAG_GROUND_SHADOW;
+                else
+                    renderer.renderFlag() &=
+                        ~glmmd::MODEL_RENDER_FLAG_GROUND_SHADOW;
         }
 
         ImGui::Checkbox("Render shadow", &renderShadow);
