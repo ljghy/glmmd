@@ -246,10 +246,8 @@ void ModelPoseSolver::solveIK(ModelPose &pose) const
                 glm::vec3 localAxis = localAxes * axis;
 
                 float angle = glm::clamp(
-                    glm::asin(glm::clamp(axisLength /
-                                             (glm::length(linkToEndEffector) *
-                                              glm::length(linkToTarget)),
-                                         -1.f, 1.f)),
+                    glm::atan(axisLength,
+                              glm::dot(linkToTarget, linkToEndEffector)),
                     -ik.limitAngle, ik.limitAngle);
 
                 auto &rot = pose.m_localBoneRotations[link.boneIndex];
