@@ -182,7 +182,7 @@ void PmxFileLoader::loadTextures(ModelData &data)
 #if __cplusplus < 202002L
             std::filesystem::u8path(u8path);
 #else
-            reinterpret_cast<const char8_t *>(u8path.c_str());
+            std::u8string(u8path.begin(), u8path.end());
 #endif
         path = m_modelDir / path.make_preferred();
 
