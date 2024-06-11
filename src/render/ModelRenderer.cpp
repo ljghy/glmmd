@@ -24,28 +24,21 @@ void ModelRenderer::releaseSharedToonTextures()
 }
 
 ModelRenderer::ModelRenderer(const std::shared_ptr<const ModelData> &data,
-                             ModelRendererShaderSources shaderSources)
+                             const ModelRendererShaderSources &shaderSources)
     : m_modelData(data)
     , m_renderData(data)
 {
     initBuffers();
     initTextures();
     initSharedToonTextures();
-
-    m_shader.create(shaderSources.vertShaderSrc, shaderSources.fragShaderSrc);
-    m_edgeShader.create(shaderSources.edgeVertShaderSrc,
-                        shaderSources.edgeFragShaderSrc);
-    m_shadowMapShader.create(shaderSources.shadowMapVertShaderSrc,
-                             shaderSources.shadowMapFragShaderSrc);
-    m_groundShadowShader.create(shaderSources.groundShadowVertShaderSrc,
-                                shaderSources.groundShadowFragShaderSrc);
+    initShaders(shaderSources);
 }
 
 void ModelRenderer::initBuffers()
 {
     m_VBO.create(nullptr,
-                 static_cast<unsigned int>((3 + 3 + 2) * sizeof(float) *
-                                           m_modelData->vertices.size()),
+                 static_cast<unsigned int>(sizeof(float) *
+                                           m_renderData.vertexBuffer.size()),
                  GL_DYNAMIC_DRAW);
     m_VBO.bind();
 
@@ -53,6 +46,8 @@ void ModelRenderer::initBuffers()
     layout.push(GL_FLOAT, 3);
     layout.push(GL_FLOAT, 3);
     layout.push(GL_FLOAT, 2);
+    for (uint8_t i = 0; i < m_modelData->info.additionalUVNum; ++i)
+        layout.push(GL_FLOAT, 4);
 
     m_VAO.create();
     m_VAO.bind();
@@ -118,12 +113,57 @@ void ModelRenderer::initSharedToonTextures()
     }
 }
 
+void ModelRenderer::initShaders(const ModelRendererShaderSources &shaderSources)
+{
+    std::string vertShaderSrc = shaderSources.vertShaderSrc;
+    std::string fragShaderSrc = shaderSources.fragShaderSrc;
+
+    if (m_modelData->info.additionalUVNum > 0)
+    {
+        std::string vertShaderAdditionalUVLayout;
+        std::string vertShaderAdditionalUVOut;
+        std::string vertShaderAdditionalUVV2F;
+        std::string fragShaderAdditionalUVIn = "#define USE_ADDITIONAL_UV\n";
+        for (uint8_t i = 0; i < m_modelData->info.additionalUVNum; ++i)
+        {
+            auto j = std::to_string(i + 1);
+            vertShaderAdditionalUVLayout +=
+                "layout(location = " + std::to_string(i + 3) +
+                ") in vec4 aAdditionalUV" + j + ";\n";
+            vertShaderAdditionalUVOut += "out vec4 additionalUV" + j + ";\n";
+            vertShaderAdditionalUVV2F +=
+                "additionalUV" + j + " = aAdditionalUV" + j + ";\n";
+            fragShaderAdditionalUVIn += "in vec4 additionalUV" + j + ";\n";
+        }
+        vertShaderSrc.replace(vertShaderSrc.find("///ADDITIONAL_UV_LAYOUT///"),
+                              sizeof("///ADDITIONAL_UV_LAYOUT///") - 1,
+                              vertShaderAdditionalUVLayout);
+        vertShaderSrc.replace(vertShaderSrc.find("///ADDITIONAL_UV_OUT///"),
+                              sizeof("///ADDITIONAL_UV_OUT///") - 1,
+                              vertShaderAdditionalUVOut);
+        vertShaderSrc.replace(vertShaderSrc.find("///ADDITIONAL_UV_V2F///"),
+                              sizeof("///ADDITIONAL_UV_V2F///") - 1,
+                              vertShaderAdditionalUVV2F);
+        fragShaderSrc.replace(fragShaderSrc.find("///ADDITIONAL_UV_IN///"),
+                              sizeof("///ADDITIONAL_UV_IN///") - 1,
+                              fragShaderAdditionalUVIn);
+    }
+
+    m_shader.create(vertShaderSrc.c_str(), fragShaderSrc.c_str());
+    m_edgeShader.create(shaderSources.edgeVertShaderSrc,
+                        shaderSources.edgeFragShaderSrc);
+    m_shadowMapShader.create(shaderSources.shadowMapVertShaderSrc,
+                             shaderSources.shadowMapFragShaderSrc);
+    m_groundShadowShader.create(shaderSources.groundShadowVertShaderSrc,
+                                shaderSources.groundShadowFragShaderSrc);
+}
+
 void ModelRenderer::fillBuffers() const
 {
     m_VBO.bind();
     m_VAO.bind();
     glBufferData(GL_ARRAY_BUFFER,
-                 (3 + 3 + 2) * sizeof(float) * m_renderData.vertexBuffer.size(),
+                 sizeof(float) * m_renderData.vertexBuffer.size(),
                  m_renderData.vertexBuffer.data(), GL_DYNAMIC_DRAW);
 }
 

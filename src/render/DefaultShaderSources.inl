@@ -4,16 +4,19 @@ const char *defaultVertShaderSrc =
     layout(location = 0) in vec3 aPos;
     layout(location = 1) in vec3 aNormal;
     layout(location = 2) in vec2 aUV;
+    ///ADDITIONAL_UV_LAYOUT///
     uniform mat4 u_model;
     uniform mat4 u_MVP;
     uniform mat4 u_lightVP;
     out vec3 normal;
     out vec2 uv;
+    ///ADDITIONAL_UV_OUT///
     out vec3 fragPos;
     out vec4 fragPosLightSpace;
     void main() {
         normal = normalize(mat3(transpose(inverse(u_model))) * aNormal);
         uv = aUV;
+        ///ADDITIONAL_UV_V2F///
         gl_Position = u_MVP * vec4(aPos, 1.0);
         fragPos = vec3(u_model * vec4(aPos, 1.0));
         fragPosLightSpace = u_lightVP * vec4(fragPos, 1.0);
@@ -25,6 +28,7 @@ const char *defaultFragShaderSrc =
     #version 330 core
     in vec3 normal;
     in vec2 uv;
+    ///ADDITIONAL_UV_IN///
     in vec3 fragPos;
     in vec4 fragPosLightSpace;
     struct Material {
@@ -117,6 +121,18 @@ const char *defaultFragShaderSrc =
             else
                 color = vec4(spColor.rgb + color.rgb, color.a);
         }
+        else if (u_mat.sphereTextureMode == 3) {
+        #ifdef USE_ADDITIONAL_UV
+            vec2 spUV = additionalUV1.xy;
+        #else
+            vec2 spUV = uv;
+        #endif
+            vec4 spColor = texture(u_mat.sphereTexture, spUV);
+            spColor = applyMul(spColor, u_mat.sphereTextureMul);
+            spColor = applyAdd(spColor, u_mat.sphereTextureAdd);
+            color *= spColor;
+        }
+
         float visibility = 0.5 * dot(norm, lightDir) + 0.5;
         if (u_hasShadowMap * u_receiveShadow > 0) 
             visibility = min(visibility, 1.0 - shadow(fragPosLightSpace));

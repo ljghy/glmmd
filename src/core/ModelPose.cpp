@@ -112,9 +112,11 @@ void ModelPose::applyMorphsToRenderData(RenderData &renderData) const
                 std::execution::par,
 #endif
                 morph.vertex, morph.vertex + morph.count,
-                [&](const VertexMorph &data) {
-                    renderData.vertexBuffer[data.index].position +=
-                        ratio * data.offset;
+                [&](const VertexMorph &data)
+                {
+                    renderData.setVertexPosition(
+                        data.index, renderData.getVertexPosition(data.index) +
+                                        ratio * data.offset);
                 });
             break;
         case MorphType::Material:
@@ -161,28 +163,28 @@ void ModelPose::applyMorphsToRenderData(RenderData &renderData) const
             for (int32_t j = 0; j < morph.count; ++j)
             {
                 const auto &data = morph.uv[j];
-                renderData.vertexBuffer[data.index].uv +=
-                    ratio * glm::vec2(data.offset[0]);
+                renderData.setVertexUV(data.index,
+                                       renderData.getVertexUV(data.index) +
+                                           ratio * glm::vec2(data.offset[0]));
             }
             break;
-#if 0
-            // TODO:
         case MorphType::UV1:
         case MorphType::UV2:
         case MorphType::UV3:
         case MorphType::UV4:
         {
-            auto uvChannel = static_cast<uint8_t>(morph.type) -
-                             static_cast<uint8_t>(MorphType::UV1);
-            for (const auto &d : morph.data)
+            auto uvIndex = static_cast<uint8_t>(morph.type) -
+                           static_cast<uint8_t>(MorphType::UV1);
+            for (int32_t j = 0; j < morph.count; ++j)
             {
-                const auto &data = std::get<1>(d);
-                renderData.additionalUVs[uvChannel][data.index] +=
-                    ratio * data.offset[uvChannel];
+                const auto &data = morph.uv[j];
+                renderData.setVertexAdditionalUV(
+                    data.index, uvIndex,
+                    renderData.getVertexAdditionalUV(data.index, uvIndex) +
+                        ratio * data.offset[1 + uvIndex]);
             }
         }
         break;
-#endif
         default:
             break;
         }
@@ -204,9 +206,9 @@ void ModelPose::applyBoneTransformsToRenderData(RenderData &renderData) const
         m_modelData->vertices.cbegin(), m_modelData->vertices.cend(),
         [&](const Vertex &vert)
         {
-            auto  i = static_cast<uint32_t>(&vert - &m_modelData->vertices[0]);
-            auto &pos  = renderData.vertexBuffer[i].position;
-            auto &norm = renderData.vertexBuffer[i].normal;
+            auto i   = static_cast<uint32_t>(&vert - &m_modelData->vertices[0]);
+            auto pos = renderData.getVertexPosition(i);
+            auto norm = renderData.getVertexNormal(i);
 
             glm::mat4 vertMatrix;
 
@@ -289,6 +291,8 @@ void ModelPose::applyBoneTransformsToRenderData(RenderData &renderData) const
                 pos  = glm::vec3(vertMatrix * glm::vec4(pos, 1.f));
                 norm = glm::mat3(vertMatrix) * norm;
             }
+            renderData.setVertexPosition(i, pos);
+            renderData.setVertexNormal(i, norm);
         });
 }
 

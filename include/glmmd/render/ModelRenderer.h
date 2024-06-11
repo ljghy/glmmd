@@ -46,7 +46,7 @@ class ModelRenderer
 {
 public:
     ModelRenderer(const std::shared_ptr<const ModelData> &data,
-                  ModelRendererShaderSources              shaderSources = {});
+                  const ModelRendererShaderSources       &shaderSources = {});
 
     void fillBuffers() const;
 
@@ -65,6 +65,7 @@ private:
     void initBuffers();
     void initTextures();
     void initSharedToonTextures();
+    void initShaders(const ModelRendererShaderSources &shaderSources);
 
     void renderMesh(const Camera &camera, const Lighting &lighting,
                     const ogl::Texture2D *shadowMap) const;

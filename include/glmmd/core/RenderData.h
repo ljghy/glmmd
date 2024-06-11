@@ -34,20 +34,26 @@ struct MaterialRenderData
 
 struct RenderData
 {
-    struct Vertex
-    {
-        glm::vec3 position;
-        glm::vec3 normal;
-        glm::vec2 uv;
-    };
-
     RenderData(const std::shared_ptr<const ModelData> &data);
 
     void init();
 
     void applyMaterialFactors();
 
-    std::vector<Vertex> vertexBuffer;
+    glm::vec3 getVertexPosition(size_t index) const;
+    glm::vec3 getVertexNormal(size_t index) const;
+    glm::vec2 getVertexUV(size_t index) const;
+    glm::vec4 getVertexAdditionalUV(size_t index, size_t uvIndex) const;
+
+    void setVertexPosition(size_t index, const glm::vec3 &position);
+    void setVertexNormal(size_t index, const glm::vec3 &normal);
+    void setVertexUV(size_t index, const glm::vec2 &uv);
+    void setVertexAdditionalUV(size_t index, size_t uvIndex,
+                               const glm::vec4 &additionalUV);
+
+    size_t stride;
+
+    std::vector<float> vertexBuffer;
 
     std::vector<MaterialFactors>    materialAdd;
     std::vector<MaterialFactors>    materialMul;
@@ -56,7 +62,7 @@ struct RenderData
 private:
     std::shared_ptr<const ModelData> m_data;
 
-    std::vector<Vertex> m_initialVertexBuffer;
+    std::vector<float> m_initialVertexBuffer;
 };
 
 } // namespace glmmd
