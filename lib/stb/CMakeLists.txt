@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.12)
 
-project(stb LANGUAGES C VERSION 2.27)
+project(stb LANGUAGES C VERSION 2.30)
 
 add_library(stb INTERFACE)
 add_library(stb::stb ALIAS stb)

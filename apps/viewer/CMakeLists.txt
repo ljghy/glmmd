@@ -13,13 +13,13 @@ set(FETCHCONTENT_QUIET OFF)
 
 option(GLMMD_APPS_USE_SYSTEM_GLFW "Use system glfw library" ON)
 if (GLMMD_APPS_USE_SYSTEM_GLFW)
-    find_package(glfw3 3.3)
+    find_package(glfw3)
 endif()
 
 if (NOT GLMMD_APPS_USE_SYSTEM_GLFW OR NOT glfw3_FOUND)
     FetchContent_Declare(glfw
         GIT_REPOSITORY https://github.com/glfw/glfw.git
-        GIT_TAG        3.3.8
+        GIT_TAG        3.4
     )
 
     set(GLFW_BUILD_DOCS OFF CACHE BOOL "" FORCE)
@@ -30,7 +30,7 @@ endif()
 
 FetchContent_Declare(imgui
     GIT_REPOSITORY https://github.com/ocornut/imgui.git
-    GIT_TAG        v1.90-docking
+    GIT_TAG        v1.90.8-docking
 )
 FetchContent_MakeAvailable(imgui)
 
