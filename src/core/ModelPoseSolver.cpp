@@ -60,9 +60,11 @@ void ModelPoseSolver::sortBoneDeformOrder()
         m_updateBeforePhysicsRanges.emplace_back(offset, last);
         offset = last;
         if (it != m_boneDeformOrder.end())
+        {
             currentLayer = m_modelData->bones[*it].deformLayer;
-        if (m_modelData->bones[*it].deformAfterPhysics())
-            break;
+            if (m_modelData->bones[*it].deformAfterPhysics())
+                break;
+        }
     }
     while (it != m_boneDeformOrder.end())
     {
