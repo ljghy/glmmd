@@ -5,10 +5,12 @@
 #include <cstddef>
 #include <cstdint>
 #include <cstdlib>
+#include <exception>
 #include <filesystem>
 #include <fstream>
 #include <initializer_list>
 #include <iomanip>
+#include <limits>
 #include <locale>
 #include <map>
 #include <sstream>
@@ -20,11 +22,15 @@
 #include <utility>
 #include <vector>
 
-// #define JSON_ENABLE_EMPTY_NODE
-// If JSON_ENABLE_EMPTY_NODE is defined, JsonNode can be empty to distinguish
-// from null. Otherwise, JsonNode is null by default.
-// Note that empty values are not valid json values and need to be cleared
-// manually before calling size() in order to get correct results.
+#ifdef __cpp_lib_format
+#define JSON_PARSER_USE_FORMAT 1
+#else
+#define JSON_PARSER_USE_FORMAT 0
+#endif
+
+#if JSON_PARSER_USE_FORMAT
+#include <format>
+#endif
 
 /*
 clang-format off
@@ -103,9 +109,6 @@ public:
   JsonType type() const;
   std::string typeStr() const;
 
-#ifdef JSON_ENABLE_EMPTY_NODE
-  bool isEmpty() const;
-#endif
   bool isNull() const;
   bool isBool() const;
   bool isNum() const;
@@ -141,11 +144,35 @@ public:
   JsonNode parse(std::string_view, size_t *offset = nullptr);
   JsonNode parse(std::ifstream &, bool checkEnd = true);
   JsonNode parse(std::istream &, bool checkEnd = true);
+  JsonNode streamParse(std::string_view, size_t *offset = nullptr, bool *isComplete = nullptr);
+  JsonNode streamParse(std::ifstream &, bool *isComplete = nullptr);
+  JsonNode streamParse(std::istream &, bool *isComplete = nullptr);
+
+  template <typename Derived> class JsonInputStreamBase {
+  public:
+    char ch() const;
+    void next();
+    char get();
+    bool eoi() const;
+  };
+
+  template <typename Derived>
+  JsonNode parse(JsonInputStreamBase<Derived> &, bool checkEnd = true);
+
+  template <typename Derived>
+  JsonNode streamParse(JsonInputStreamBase<Derived> &, bool *isComplete = nullptr);
+
 };
 
 JsonNode parseJsonString(std::string_view inputView, size_t *offset = nullptr);
-JsonNode parseJsonFile(std::string_view filename, bool checkEnd = true);
-JsonNode parseJsonFile(std::istream &is, bool checkEnd = true);
+JsonNode parseJsonFile(const std::filesystem::path &filename, bool checkEnd = true);
+JsonNode parseJsonFile(std::ifstream &is, bool checkEnd = true);
+
+JsonNode parseStreamJsonString(std::string_view inputView, size_t *offset = nullptr, bool *isComplete = nullptr);
+JsonNode parseStreamJsonFile(const std::filesystem::path &filename, bool *isComplete = nullptr);
+JsonNode parseStreamJsonFile(std::ifstream &is, bool *isComplete = nullptr);
+
+std::istream &operator>>(std::ifstream &, JsonNode &);
 std::istream &operator>>(std::istream &, JsonNode &);
 std::ostream &operator<<(std::ostream &, const JsonNode &);
 std::ostream &operator<<(std::ostream &, JsonNode::Serializer &);
@@ -171,12 +198,7 @@ inline JsonKeyLiteral_t operator""_key(const char *key, size_t len) {
 }
 
 enum class JsonType : uint8_t {
-#ifdef JSON_ENABLE_EMPTY_NODE
-  Empty = 0,
-  Null,
-#else
   Null = 0,
-#endif
   Bool,
   Num,
   Str,
@@ -317,7 +339,8 @@ private:
 
   template <typename T>
   static constexpr bool is_resizable_sequence_container_v =
-      has_subscript_op_v<T> && has_resize_op_v<T> && !std::is_pointer_v<T>;
+      has_subscript_op_v<T> && has_resize_op_v<T> && !std::is_pointer_v<T> &&
+      !std::is_same_v<T, std::string>;
 
   template <typename T, typename = void>
   struct is_associative_container : std::false_type {};
@@ -510,10 +533,9 @@ public:
   // Destructor
 public:
   ~JsonNode() {
-#ifdef JSON_ENABLE_EMPTY_NODE
-    if (isEmpty())
+    if (!isInternalPtr())
       return;
-#endif
+
     std::stack<TraverseState> stateStack;
     stateStack.emplace(this);
     while (!stateStack.empty()) {
@@ -523,9 +545,11 @@ public:
         auto &arr = node->val_.a;
         auto &it = stateStack.top().arrIt;
         if (it != arr->cend()) {
-          const auto child = &(*it);
+          if (it->isInternalPtr()) {
+            const auto child = &(*it);
+            stateStack.emplace(child);
+          }
           ++it;
-          stateStack.emplace(child);
         } else {
           delete arr;
           node->ty_ = {};
@@ -536,9 +560,11 @@ public:
         auto &obj = node->val_.o;
         auto &it = stateStack.top().objIt;
         if (it != obj->cend()) {
-          const auto child = &(it->second);
+          if (it->second.isInternalPtr()) {
+            const auto child = &(it->second);
+            stateStack.emplace(child);
+          }
           ++it;
-          stateStack.emplace(child);
         } else {
           delete obj;
           node->ty_ = {};
@@ -551,8 +577,8 @@ public:
         stateStack.pop();
         break;
       default:
-        node->ty_ = {};
-        stateStack.pop();
+        // should not reach here
+        break;
       }
     }
   }
@@ -712,29 +738,24 @@ public:
   }
 
   // Type and getter
+private:
+  bool isInternalPtr() const {
+    return ty_ == StrType_ || ty_ == ArrType_ || ty_ == ObjType_;
+  }
+
 public:
   JsonType type() const {
-    constexpr JsonType types[]{
-#ifdef JSON_ENABLE_EMPTY_NODE
-        JsonType::Empty,
-#endif
-        JsonType::Null,  JsonType::Bool, JsonType::Num, JsonType::Num,
-        JsonType::Num,   JsonType::Str,  JsonType::Arr, JsonType::Obj};
+    constexpr JsonType types[]{JsonType::Null, JsonType::Bool, JsonType::Num,
+                               JsonType::Num,  JsonType::Num,  JsonType::Str,
+                               JsonType::Arr,  JsonType::Obj};
 
     return types[ty_];
   }
   std::string typeStr() const {
-    constexpr const char *types[]{
-#ifdef JSON_ENABLE_EMPTY_NODE
-        "empty",
-#endif
-        "null",  "bool", "num", "num", "num", "str", "arr", "obj"};
+    constexpr const char *types[]{"null", "bool", "num", "num",
+                                  "num",  "str",  "arr", "obj"};
     return types[ty_];
   }
-
-#ifdef JSON_ENABLE_EMPTY_NODE
-  bool isEmpty() const { return type() == JsonType::Empty; }
-#endif
 
   bool isNull() const { return type() == JsonType::Null; }
   bool isBool() const { return type() == JsonType::Bool; }
@@ -831,6 +852,36 @@ public:
     return ret;
   }
 
+  template <typename T>
+  typename std::enable_if_t<std::is_same_v<std::string, T>, T> get() const {
+    switch (ty_) {
+    case NullType_:
+      return "null";
+    case BoolType_:
+      return val_.b ? "true" : "false";
+    case DoubleType_:
+#if JSON_PARSER_USE_FORMAT
+      return std::format("{}", val_.d);
+#else
+    {
+      std::stringstream ss;
+      ss.precision(std::numeric_limits<double>::max_digits10);
+      ss << val_.d;
+      return ss.str();
+    }
+#endif
+    case IntType_:
+      return std::to_string(val_.i);
+    case UintType_:
+      return std::to_string(val_.u);
+    case StrType_:
+      return *val_.s;
+    default:
+      throw std::runtime_error(
+          getJsonErrorMsg(detail::JsonErrorCode::InvalidJsonAccess));
+    }
+  }
+
   template <typename T> auto get(const std::string &key) const {
     requireType(ObjType_);
     return val_.o->at(key).get<T>();
@@ -871,12 +922,26 @@ public:
     }
 
     Serializer &dump(std::ostream &os) {
+#if !JSON_PARSER_USE_FORMAT
       size_t prec = os.precision();
-      os.precision(m_precision);
+      os.precision(m_precision == static_cast<size_t>(-1)
+                       ? std::numeric_limits<double>::max_digits10
+                       : m_precision);
+#endif
       auto loc = os.getloc();
       os.imbue(std::locale::classic());
+      char fill = os.fill();
+      os.fill(' ');
+
+#if JSON_PARSER_USE_FORMAT
+      const std::string floatingPointFormatString =
+          m_precision == static_cast<size_t>(-1)
+              ? "{}"
+              : "{:." + std::to_string(m_precision) + "}";
+#endif
 
       bool formatted = (m_indent != static_cast<size_t>(-1));
+      const char *colon = formatted ? ": " : ":";
 
       std::stack<ConstTraverseState> stateStack;
       stateStack.emplace(&m_node);
@@ -893,7 +958,12 @@ public:
           stateStack.pop();
           break;
         case DoubleType_:
+#if JSON_PARSER_USE_FORMAT
+          os << std::vformat(std::locale::classic(), floatingPointFormatString,
+                             std::make_format_args(node->val_.d));
+#else
           os << node->val_.d;
+#endif
           stateStack.pop();
           break;
         case IntType_:
@@ -963,9 +1033,9 @@ public:
           }
 
           if (it != obj.cend()) {
-            os << "\"";
+            os << '"';
             toJsonString(os, it->first, m_ascii);
-            os << "\":";
+            os << '"' << colon;
             const auto child = &(it->second);
             ++it;
             stateStack.emplace(child);
@@ -983,9 +1053,11 @@ public:
           break;
         }
       }
-
+#if !JSON_PARSER_USE_FORMAT
       os << std::setprecision(prec);
+#endif
       os.imbue(loc);
+      os.fill(fill);
 
       return *this;
     }
@@ -1068,7 +1140,7 @@ public:
 
   private:
     const JsonNode &m_node;
-    size_t m_precision = 16;
+    size_t m_precision = static_cast<size_t>(-1);
     size_t m_indent = static_cast<size_t>(-1);
     bool m_ascii = true;
   };
@@ -1078,12 +1150,7 @@ public:
 
 private:
   enum JsonInternalTypeId : size_t {
-#ifdef JSON_ENABLE_EMPTY_NODE
-    EmptyType_ = 0,
-    NullType_,
-#else
     NullType_ = 0,
-#endif
     BoolType_,
     DoubleType_,
     IntType_,
@@ -1114,7 +1181,11 @@ public:
   JsonNode parse(std::ifstream &, bool checkEnd = true);
   JsonNode parse(std::istream &, bool checkEnd = true);
 
-private:
+  JsonNode streamParse(std::string_view, size_t *offset = nullptr,
+                       bool *isComplete = nullptr);
+  JsonNode streamParse(std::ifstream &, bool *isComplete = nullptr);
+  JsonNode streamParse(std::istream &, bool *isComplete = nullptr);
+
   template <typename Derived> class JsonInputStreamBase {
   public:
     char ch() const {
@@ -1127,6 +1198,14 @@ private:
     } // end of input
   };
 
+  template <typename Derived>
+  JsonNode parse(JsonInputStreamBase<Derived> &, bool checkEnd = true);
+
+  template <typename Derived>
+  JsonNode streamParse(JsonInputStreamBase<Derived> &,
+                       bool *isComplete = nullptr);
+
+private:
   template <size_t BufSize>
   class JsonFileInputStream
       : public JsonInputStreamBase<JsonFileInputStream<BufSize>> {
@@ -1194,8 +1273,7 @@ private:
   };
 
 private:
-  template <typename Derived>
-  JsonNode parse(JsonInputStreamBase<Derived> &, bool checkEnd);
+  template <typename Derived> void parseLoop(JsonInputStreamBase<Derived> &);
 
   template <typename Derived> void skipSpace(JsonInputStreamBase<Derived> &);
 
@@ -1255,14 +1333,7 @@ private:
 };
 
 template <typename Derived>
-inline JsonNode JsonParser::parse(JsonInputStreamBase<Derived> &is,
-                                  bool checkEnd) {
-  m_nodeStack = {};
-
-  JsonNode ret;
-
-  m_nodeStack.push(&ret);
-
+inline void JsonParser::parseLoop(JsonInputStreamBase<Derived> &is) {
   while (!m_nodeStack.empty()) {
     skipSpace(is);
     if (is.eoi())
@@ -1280,7 +1351,8 @@ inline JsonNode JsonParser::parse(JsonInputStreamBase<Derived> &is,
       break;
     case '"':
       is.next();
-      *node = parseString(is);
+      *node = JsonStr_t{};
+      *node->val_.s = parseString(is);
       popStack();
       break;
     case '[':
@@ -1319,11 +1391,42 @@ inline JsonNode JsonParser::parse(JsonInputStreamBase<Derived> &is,
       }
     }
   }
+}
+
+template <typename Derived>
+inline JsonNode JsonParser::parse(JsonInputStreamBase<Derived> &is,
+                                  bool checkEnd) {
+  JsonNode ret;
+
+  m_nodeStack = {};
+  m_nodeStack.push(&ret);
+
+  parseLoop(is);
 
   skipSpace(is);
   if (checkEnd && !is.eoi())
     throw std::runtime_error(
         getJsonErrorMsg(detail::JsonErrorCode::InvalidJson));
+
+  return ret;
+}
+
+template <typename Derived>
+inline JsonNode JsonParser::streamParse(JsonInputStreamBase<Derived> &is,
+                                        bool *isComplete) {
+  JsonNode ret;
+
+  m_nodeStack = {};
+  m_nodeStack.push(&ret);
+
+  if (isComplete != nullptr)
+    *isComplete = true;
+  try {
+    parseLoop(is);
+  } catch (const std::exception &) {
+    if (isComplete != nullptr)
+      *isComplete = false;
+  }
 
   return ret;
 }
@@ -1345,6 +1448,26 @@ inline JsonNode JsonParser::parse(std::ifstream &is, bool checkEnd) {
 inline JsonNode JsonParser::parse(std::istream &is, bool checkEnd) {
   auto fileInputStream = JsonFileInputStream<1>(is);
   return parse(fileInputStream, checkEnd);
+}
+
+inline JsonNode JsonParser::streamParse(std::string_view inputView,
+                                        size_t *offset, bool *isComplete) {
+  auto stringViewInputStream =
+      JsonStringViewInputStream(inputView, offset == nullptr ? 0 : *offset);
+  auto ret = streamParse(stringViewInputStream, isComplete);
+  if (offset != nullptr)
+    *offset = stringViewInputStream.pos();
+  return ret;
+}
+
+inline JsonNode JsonParser::streamParse(std::ifstream &is, bool *isComplete) {
+  auto fileInputStream = JsonFileInputStream<64>(is);
+  return streamParse(fileInputStream, isComplete);
+}
+
+inline JsonNode JsonParser::streamParse(std::istream &is, bool *isComplete) {
+  auto fileInputStream = JsonFileInputStream<1>(is);
+  return streamParse(fileInputStream, isComplete);
 }
 
 template <typename Derived>
@@ -1557,13 +1680,14 @@ JsonParser::parseKeyWithColon(JsonInputStreamBase<Derived> &is) {
 
 template <typename Derived>
 inline void JsonParser::beginArray(JsonInputStreamBase<Derived> &is) {
+  auto *node = m_nodeStack.top();
+  *node = JsonArr_t{};
+
   skipSpace(is);
   if (is.eoi())
     throw std::runtime_error(
         getJsonErrorMsg(detail::JsonErrorCode::UnexpectedEndOfInput));
 
-  auto *node = m_nodeStack.top();
-  *node = JsonArr_t{};
   if (is.ch() == ']') {
     is.next();
     popStack();
@@ -1574,13 +1698,14 @@ inline void JsonParser::beginArray(JsonInputStreamBase<Derived> &is) {
 
 template <typename Derived>
 inline void JsonParser::beginObject(JsonInputStreamBase<Derived> &is) {
+  auto *node = m_nodeStack.top();
+  *node = JsonObj_t{};
+
   skipSpace(is);
   if (is.eoi())
     throw std::runtime_error(
         getJsonErrorMsg(detail::JsonErrorCode::UnexpectedEndOfInput));
 
-  auto *node = m_nodeStack.top();
-  *node = JsonObj_t{};
   if (is.ch() == '}') {
     is.next();
     popStack();
@@ -1725,13 +1850,36 @@ inline JsonNode parseJsonString(std::string_view inputView,
   return JsonParser{}.parse(inputView, offset);
 }
 
-inline JsonNode parseJsonFile(std::string_view filename, bool checkEnd = true) {
-  std::ifstream ifs(filename.data());
+inline JsonNode parseJsonFile(const std::filesystem::path &filename,
+                              bool checkEnd = true) {
+  std::ifstream ifs(filename);
   return JsonParser{}.parse(ifs, checkEnd);
 }
 
 inline JsonNode parseJsonFile(std::ifstream &is, bool checkEnd = true) {
   return JsonParser{}.parse(is, checkEnd);
+}
+
+inline JsonNode parseStreamJsonString(std::string_view inputView,
+                                      size_t *offset = nullptr,
+                                      bool *isComplete = nullptr) {
+  return JsonParser{}.streamParse(inputView, offset, isComplete);
+}
+
+inline JsonNode parseStreamJsonFile(const std::filesystem::path &filename,
+                                    bool *isComplete = nullptr) {
+  std::ifstream ifs(filename);
+  return JsonParser{}.streamParse(ifs, isComplete);
+}
+
+inline JsonNode parseStreamJsonFile(std::ifstream &is,
+                                    bool *isComplete = nullptr) {
+  return JsonParser{}.streamParse(is, isComplete);
+}
+
+inline std::ifstream &operator>>(std::ifstream &is, JsonNode &node) {
+  node = JsonParser{}.parse(is, true);
+  return is;
 }
 
 inline std::istream &operator>>(std::istream &is, JsonNode &node) {

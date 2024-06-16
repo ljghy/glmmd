@@ -61,7 +61,7 @@ struct Vertex
 
     VertexSkinningType     skinningType;
     std::array<int32_t, 4> boneIndices;
-    std::array<float, 4>   boneWeights;
+    glm::vec4              boneWeights;
     glm::vec3              sdefC;
     glm::vec3              sdefR0;
     glm::vec3              sdefR1;
@@ -72,7 +72,6 @@ struct Vertex
 struct Texture
 {
     std::string path;
-    bool        exists;
     int         width;
     int         height;
     int         channels;

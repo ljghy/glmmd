@@ -191,11 +191,10 @@ void PmxFileLoader::loadTextures(ModelData &data)
                       &texture.width, &texture.height, nullptr, 4);
         if (!pixels)
         {
-            texture.exists = false;
+            texture.data.reset();
         }
         else
         {
-            texture.exists   = true;
             texture.channels = 4;
             texture.data.reset(pixels, stbi_image_free);
         }

@@ -171,7 +171,7 @@ void Context::loadResources()
 
             for (const auto &tex : modelData->textures)
             {
-                if (!tex.exists)
+                if (!tex.data)
                     std::cout
                         << "Failed to load texture: "
                         << (modelData->info.internalEncodingMethod ==

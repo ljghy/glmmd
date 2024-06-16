@@ -70,7 +70,7 @@ void ModelRenderer::initTextures()
     for (size_t i = 0; i < m_modelData->textures.size(); ++i)
     {
         const auto &tex = m_modelData->textures[i];
-        if (!tex.exists)
+        if (!tex.data)
             continue;
 
         ogl::Texture2DCreateInfo info;

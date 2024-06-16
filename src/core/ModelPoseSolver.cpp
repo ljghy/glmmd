@@ -14,7 +14,6 @@ ModelPoseSolver::ModelPoseSolver(
     : m_modelData(modelData)
     , m_boneChildren(modelData->bones.size())
     , m_boneDeformOrder(modelData->bones.size())
-    , m_afterPhysicsStartIndex(static_cast<uint32_t>(modelData->bones.size()))
 {
     for (uint32_t i = 0; i < modelData->bones.size(); ++i)
     {
@@ -44,11 +43,38 @@ void ModelPoseSolver::sortBoneDeformOrder()
             return a < b;
         });
 
-    m_afterPhysicsStartIndex = static_cast<uint32_t>(std::distance(
-        m_boneDeformOrder.begin(),
-        std::find_if(m_boneDeformOrder.begin(), m_boneDeformOrder.end(),
-                     [&](uint32_t i)
-                     { return m_modelData->bones[i].deformAfterPhysics(); })));
+    auto currentLayer = m_modelData->bones[m_boneDeformOrder[0]].deformLayer;
+    uint32_t offset   = 0;
+    auto     it       = m_boneDeformOrder.begin();
+    while (it != m_boneDeformOrder.end())
+    {
+        it = std::find_if(
+            m_boneDeformOrder.begin() + offset, m_boneDeformOrder.end(),
+            [&](uint32_t i)
+            {
+                return m_modelData->bones[i].deformLayer != currentLayer ||
+                       m_modelData->bones[i].deformAfterPhysics();
+            });
+        auto last = std::distance(m_boneDeformOrder.begin(), it);
+        m_updateBeforePhysicsRanges.emplace_back(offset, last);
+        offset = last;
+        if (it != m_boneDeformOrder.end())
+            currentLayer = m_modelData->bones[*it].deformLayer;
+        if (m_modelData->bones[*it].deformAfterPhysics())
+            break;
+    }
+    while (it != m_boneDeformOrder.end())
+    {
+        it = std::find_if(
+            m_boneDeformOrder.begin() + offset, m_boneDeformOrder.end(),
+            [&](uint32_t i)
+            { return m_modelData->bones[i].deformLayer != currentLayer; });
+        auto last = std::distance(m_boneDeformOrder.begin(), it);
+        m_updateAfterPhysicsRanges.emplace_back(offset, last);
+        offset = last;
+        if (it != m_boneDeformOrder.end())
+            currentLayer = m_modelData->bones[*it].deformLayer;
+    }
 }
 
 void ModelPoseSolver::solveBeforePhysics(ModelPose &pose) const
@@ -56,16 +82,24 @@ void ModelPoseSolver::solveBeforePhysics(ModelPose &pose) const
     applyGroupMorphs(pose);
     applyBoneMorphs(pose);
 
-    solveGlobalBoneTransformsRange(pose, 0u, m_afterPhysicsStartIndex);
-    solveIK(pose);
-    updateInheritedBoneTransforms(pose);
-    solveGlobalBoneTransformsRange(pose, 0u, m_afterPhysicsStartIndex);
+    for (const auto &[first, last] : m_updateBeforePhysicsRanges)
+    {
+        solveGlobalBoneTransforms(pose, first, last);
+        solveIK(pose, first, last);
+        updateInheritedBoneTransforms(pose, first, last);
+        solveGlobalBoneTransforms(pose, first, last);
+    }
 }
 
 void ModelPoseSolver::solveAfterPhysics(ModelPose &pose) const
 {
-    solveGlobalBoneTransformsRange(pose, m_afterPhysicsStartIndex,
-                                   m_modelData->bones.size());
+    for (const auto &[first, last] : m_updateAfterPhysicsRanges)
+    {
+        solveGlobalBoneTransforms(pose, first, last);
+        solveIK(pose, first, last);
+        updateInheritedBoneTransforms(pose, first, last);
+        solveGlobalBoneTransforms(pose, first, last);
+    }
 }
 
 void ModelPoseSolver::syncStaticRigidBodyTransforms(const ModelPose     &pose,
@@ -184,18 +218,25 @@ void ModelPoseSolver::applyBoneMorphs(ModelPose &pose) const
                 pose.m_localBoneTranslations[transform.index] +=
                     pose.m_morphRatios[i] * transform.translation;
                 pose.m_localBoneRotations[transform.index] =
-                    glm::slerp(glm::quat(1.f, 0.f, 0.f, 0.f),
-                               transform.rotation, pose.m_morphRatios[i]) *
+                    glm::slerp(glm::identity<glm::quat>(), transform.rotation,
+                               pose.m_morphRatios[i]) *
                     pose.m_localBoneRotations[transform.index];
             }
         }
     }
 }
 
-void ModelPoseSolver::solveIK(ModelPose &pose) const
+void ModelPoseSolver::solveIK(ModelPose &pose, uint32_t first,
+                              uint32_t last) const
 {
-    for (const auto &ik : m_modelData->ikData)
+    // for (const auto &ik : m_modelData->ikData)
+    for (; first != last; ++first)
     {
+        const auto &bone = m_modelData->bones[m_boneDeformOrder[first]];
+        if (!bone.isIK())
+            continue;
+        const auto &ik = m_modelData->ikData[bone.ikDataIndex];
+
         glm::vec3 targetPos =
             pose.getGlobalBonePosition(ik.realTargetBoneIndex);
 
@@ -303,13 +344,12 @@ void ModelPoseSolver::solveChildGlobalBoneTransforms(ModelPose &pose,
     }
 }
 
-void ModelPoseSolver::solveGlobalBoneTransformsRange(ModelPose &pose,
-                                                     uint32_t   start,
-                                                     uint32_t   end) const
+void ModelPoseSolver::solveGlobalBoneTransforms(ModelPose &pose, uint32_t first,
+                                                uint32_t last) const
 {
-    for (uint32_t j = start; j < end; ++j)
+    for (; first < last; ++first)
     {
-        uint32_t i = m_boneDeformOrder[j];
+        uint32_t i = m_boneDeformOrder[first];
 
         const auto &bone = m_modelData->bones[i];
 
@@ -330,22 +370,30 @@ void ModelPoseSolver::solveGlobalBoneTransformsRange(ModelPose &pose,
     }
 }
 
-void ModelPoseSolver::updateInheritedBoneTransforms(ModelPose &pose) const
+void ModelPoseSolver::updateInheritedBoneTransforms(ModelPose &pose,
+                                                    uint32_t   first,
+                                                    uint32_t   last) const
 {
-    for (uint32_t j = 0; j < m_modelData->bones.size(); ++j)
+    for (; first != last; ++first)
     {
-        uint32_t    i    = m_boneDeformOrder[j];
+        uint32_t    i    = m_boneDeformOrder[first];
         const auto &bone = m_modelData->bones[i];
+
+        glm::quat inheritedRotation = glm::identity<glm::quat>();
         if (bone.inheritRotation() && bone.inheritParentIndex != -1)
-            pose.m_localBoneRotations[i] =
-                glm::slerp(glm::quat(1.f, 0.f, 0.f, 0.f),
+        {
+            inheritedRotation =
+                glm::slerp(inheritedRotation,
                            pose.m_localBoneRotations[bone.inheritParentIndex],
-                           bone.inheritWeight) *
-                pose.m_localBoneRotations[i];
+                           bone.inheritWeight);
+            pose.m_localBoneRotations[i] =
+                inheritedRotation * pose.m_localBoneRotations[i];
+        }
         if (bone.inheritTranslation() && bone.inheritParentIndex != -1)
-            pose.m_localBoneTranslations[i] +=
+            pose.m_localBoneTranslations[i] =
+                inheritedRotation * pose.m_localBoneTranslations[i] +
                 pose.m_localBoneTranslations[bone.inheritParentIndex] *
-                bone.inheritWeight;
+                    bone.inheritWeight;
     }
 }
 

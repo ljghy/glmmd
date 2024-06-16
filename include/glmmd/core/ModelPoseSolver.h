@@ -27,9 +27,9 @@ private:
     void applyBoneMorphs(ModelPose &) const;
 
     void solveChildGlobalBoneTransforms(ModelPose &, uint32_t boneIndex) const;
-    void solveGlobalBoneTransformsRange(ModelPose &, uint32_t, uint32_t) const;
-    void solveIK(ModelPose &) const;
-    void updateInheritedBoneTransforms(ModelPose &) const;
+    void solveGlobalBoneTransforms(ModelPose &, uint32_t, uint32_t) const;
+    void solveIK(ModelPose &, uint32_t, uint32_t) const;
+    void updateInheritedBoneTransforms(ModelPose &, uint32_t, uint32_t) const;
 
     void syncStaticRigidBodyTransforms(const ModelPose     &pose,
                                        const RigidBodyData &rb,
@@ -45,9 +45,11 @@ private:
 private:
     std::shared_ptr<const ModelData> m_modelData;
 
+    std::vector<std::pair<uint32_t, uint32_t>> m_updateBeforePhysicsRanges;
+    std::vector<std::pair<uint32_t, uint32_t>> m_updateAfterPhysicsRanges;
+
     std::vector<std::vector<uint32_t>> m_boneChildren;
     std::vector<uint32_t>              m_boneDeformOrder;
-    uint32_t                           m_afterPhysicsStartIndex;
 };
 
 } // namespace glmmd
