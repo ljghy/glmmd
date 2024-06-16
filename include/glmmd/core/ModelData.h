@@ -266,8 +266,35 @@ struct Morph
         m_buffer.resize((dataSize[static_cast<uint8_t>(type)] * count +
                          sizeof(AlignedStorageType) - 1) /
                         sizeof(AlignedStorageType));
-        group = reinterpret_cast<GroupMorph *>(m_buffer.data());
+        if (!m_buffer.empty())
+        {
+            switch (type)
+            {
+            case MorphType::Group:
+                group = reinterpret_cast<GroupMorph *>(data());
+                break;
+            case MorphType::Vertex:
+                vertex = reinterpret_cast<VertexMorph *>(data());
+                break;
+            case MorphType::Bone:
+                bone = reinterpret_cast<BoneMorph *>(data());
+                break;
+            case MorphType::UV:
+            case MorphType::UV1:
+            case MorphType::UV2:
+            case MorphType::UV3:
+            case MorphType::UV4:
+                uv = reinterpret_cast<UVMorph *>(data());
+                break;
+            case MorphType::Material:
+                material = reinterpret_cast<MaterialMorph *>(data());
+                break;
+            }
+        }
     }
+
+private:
+    char *data() { return m_buffer.empty() ? nullptr : m_buffer[0].data; }
 
 private:
     template <size_t... N>
