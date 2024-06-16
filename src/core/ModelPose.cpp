@@ -196,7 +196,7 @@ void ModelPose::applyMorphsToRenderData(RenderData &renderData) const
 void ModelPose::applyBoneTransformsToRenderData(RenderData &renderData) const
 {
     std::vector<glm::mat4> finalBoneTransforms(m_globalBoneTransforms.size());
-    for (size_t i = 0; i < finalBoneTransforms.size(); ++i)
+    for (uint32_t i = 0; i < finalBoneTransforms.size(); ++i)
         finalBoneTransforms[i] = getFinalBoneTransform(i);
 
     std::for_each(

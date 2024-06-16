@@ -55,7 +55,8 @@ void ModelPoseSolver::sortBoneDeformOrder()
                 return m_modelData->bones[i].deformLayer != currentLayer ||
                        m_modelData->bones[i].deformAfterPhysics();
             });
-        auto last = std::distance(m_boneDeformOrder.begin(), it);
+        auto last =
+            static_cast<uint32_t>(std::distance(m_boneDeformOrder.begin(), it));
         m_updateBeforePhysicsRanges.emplace_back(offset, last);
         offset = last;
         if (it != m_boneDeformOrder.end())
@@ -69,7 +70,8 @@ void ModelPoseSolver::sortBoneDeformOrder()
             m_boneDeformOrder.begin() + offset, m_boneDeformOrder.end(),
             [&](uint32_t i)
             { return m_modelData->bones[i].deformLayer != currentLayer; });
-        auto last = std::distance(m_boneDeformOrder.begin(), it);
+        auto last =
+            static_cast<uint32_t>(std::distance(m_boneDeformOrder.begin(), it));
         m_updateAfterPhysicsRanges.emplace_back(offset, last);
         offset = last;
         if (it != m_boneDeformOrder.end())
