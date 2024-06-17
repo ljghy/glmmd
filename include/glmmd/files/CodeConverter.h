@@ -1,6 +1,8 @@
 #ifndef GLMMD_FILES_CODE_CONVERTER_H_
 #define GLMMD_FILES_CODE_CONVERTER_H_
 
+#include <cstdint>
+
 #include <string>
 #include <string_view>
 
