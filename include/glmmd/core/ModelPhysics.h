@@ -8,14 +8,14 @@
 #include <btBulletDynamicsCommon.h>
 
 #include <glmmd/core/ModelPose.h>
+#include <glmmd/core/Transform.h>
 
 namespace glmmd
 {
 
 struct RigidBodyData
 {
-    glm::vec3                             translationOffset;
-    glm::quat                             rotationOffset;
+    Transform                             offset;
     std::unique_ptr<btCollisionShape>     shape;
     std::unique_ptr<btDefaultMotionState> motionState;
     std::unique_ptr<btRigidBody>          rigidBody;

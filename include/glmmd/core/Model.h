@@ -27,7 +27,8 @@ public:
     Model(const Model &other)            = delete;
     Model &operator=(const Model &other) = delete;
 
-    Model(Model &&other) = default;
+    Model(Model &&other) noexcept            = default;
+    Model &operator=(Model &&other) noexcept = default;
 
     ModelData       &data() { return *m_data; }
     const ModelData &data() const { return *m_data; }

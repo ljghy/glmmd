@@ -23,7 +23,8 @@ public:
 
     Shader(const Shader &)            = delete;
     Shader &operator=(const Shader &) = delete;
-    Shader(Shader &&other);
+    Shader(Shader &&other) noexcept;
+    Shader &operator=(Shader &&other) noexcept;
 
     unsigned int getId() const;
 

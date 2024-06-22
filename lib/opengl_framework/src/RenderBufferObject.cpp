@@ -19,10 +19,23 @@ RenderBufferObject::RenderBufferObject(const RenderBufferObjectCreateInfo &info)
 
 RenderBufferObject::~RenderBufferObject() { destroy(); }
 
-RenderBufferObject::RenderBufferObject(RenderBufferObject &&other)
+RenderBufferObject::RenderBufferObject(RenderBufferObject &&other) noexcept
     : m_id(other.m_id)
 {
     other.m_id = 0;
+}
+
+RenderBufferObject &
+RenderBufferObject::operator=(RenderBufferObject &&other) noexcept
+{
+    if (this != &other)
+    {
+        destroy();
+        m_id       = other.m_id;
+        m_info     = other.m_info;
+        other.m_id = 0;
+    }
+    return *this;
 }
 
 void RenderBufferObject::create(const RenderBufferObjectCreateInfo &info)

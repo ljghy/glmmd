@@ -37,7 +37,8 @@ public:
 
     Texture2D(const Texture2D &)            = delete;
     Texture2D &operator=(const Texture2D &) = delete;
-    Texture2D(Texture2D &&other);
+    Texture2D(Texture2D &&other) noexcept;
+    Texture2D &operator=(Texture2D &&other) noexcept;
 
     void create(const Texture2DCreateInfo &info);
     void destroy();

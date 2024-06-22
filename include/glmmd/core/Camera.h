@@ -1,5 +1,5 @@
-#ifndef GLMMD_VIEWER_CAMERA_H_
-#define GLMMD_VIEWER_CAMERA_H_
+#ifndef GLMMD_CORE_CAMERA_H_
+#define GLMMD_CORE_CAMERA_H_
 
 #include <glm/glm.hpp>
 

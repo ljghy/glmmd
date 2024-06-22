@@ -13,11 +13,24 @@ IndexBufferObject::IndexBufferObject()
 }
 IndexBufferObject::~IndexBufferObject() { destroy(); }
 
-IndexBufferObject::IndexBufferObject(IndexBufferObject &&other)
+IndexBufferObject::IndexBufferObject(IndexBufferObject &&other) noexcept
     : m_id(other.m_id)
     , m_count(other.m_count)
 {
     other.m_id = other.m_count = 0;
+}
+
+IndexBufferObject &
+IndexBufferObject::operator=(IndexBufferObject &&other) noexcept
+{
+    if (this != &other)
+    {
+        destroy();
+        m_id       = other.m_id;
+        m_count    = other.m_count;
+        other.m_id = other.m_count = 0;
+    }
+    return *this;
 }
 
 void IndexBufferObject::create(const unsigned int *data, unsigned int size,

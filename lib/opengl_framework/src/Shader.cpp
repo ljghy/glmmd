@@ -16,10 +16,21 @@ Shader::Shader()
 {
 }
 
-Shader::Shader(Shader &&other)
+Shader::Shader(Shader &&other) noexcept
     : m_id(other.m_id)
 {
     other.m_id = 0;
+}
+
+Shader &Shader::operator=(Shader &&other) noexcept
+{
+    if (this != &other)
+    {
+        destroy();
+        m_id       = other.m_id;
+        other.m_id = 0;
+    }
+    return *this;
 }
 
 void Shader::create(const char *vertSrc, const char *fragSrc,

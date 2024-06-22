@@ -14,6 +14,7 @@ public:
     Animator()
         : m_startTime(std::chrono::high_resolution_clock::now())
     {
+        reset();
     }
 
     virtual ~Animator() = default;
@@ -54,7 +55,7 @@ public:
 protected:
     std::chrono::time_point<std::chrono::high_resolution_clock> m_startTime;
     std::chrono::time_point<std::chrono::high_resolution_clock> m_pauseTime;
-    bool m_paused = false;
+    bool                                                        m_paused = true;
 };
 
 } // namespace glmmd

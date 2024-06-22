@@ -20,12 +20,25 @@ Texture2D::Texture2D(const Texture2DCreateInfo &info)
 
 Texture2D::~Texture2D() { destroy(); }
 
-Texture2D::Texture2D(Texture2D &&other)
+Texture2D::Texture2D(Texture2D &&other) noexcept
     : m_id(other.m_id)
     , m_target(other.m_target)
     , m_info(other.m_info)
 {
     other.m_id = 0;
+}
+
+Texture2D &Texture2D::operator=(Texture2D &&other) noexcept
+{
+    if (this != &other)
+    {
+        destroy();
+        m_id       = other.m_id;
+        m_target   = other.m_target;
+        m_info     = other.m_info;
+        other.m_id = 0;
+    }
+    return *this;
 }
 
 void Texture2D::create(const Texture2DCreateInfo &info)

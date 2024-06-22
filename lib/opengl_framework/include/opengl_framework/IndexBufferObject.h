@@ -14,9 +14,10 @@ public:
     IndexBufferObject();
     ~IndexBufferObject();
 
-    IndexBufferObject(const IndexBufferObject &) = delete;
-    IndexBufferObject(IndexBufferObject &&);
+    IndexBufferObject(const IndexBufferObject &)            = delete;
     IndexBufferObject &operator=(const IndexBufferObject &) = delete;
+    IndexBufferObject(IndexBufferObject &&) noexcept;
+    IndexBufferObject &operator=(IndexBufferObject &&) noexcept;
 
     void                create(const unsigned int *data, unsigned int size,
                                GLenum drawType = GL_STATIC_DRAW);

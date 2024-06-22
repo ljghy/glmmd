@@ -1,5 +1,4 @@
 #include <algorithm>
-#include <numeric>
 #ifndef GLMMD_DO_NOT_USE_STD_EXECUTION
 #include <execution>
 #endif
@@ -18,29 +17,38 @@ namespace glmmd
 
 ModelPose::ModelPose(const std::shared_ptr<const ModelData> &modelData)
     : m_modelData(modelData)
-    , m_localBoneTranslations(modelData->bones.size(), glm::vec3(0.f))
-    , m_localBoneRotations(modelData->bones.size(),
-                           glm::quat(1.f, 0.f, 0.f, 0.f))
+    , m_localBoneTransforms(modelData->bones.size(), identityTransform)
     , m_morphRatios(modelData->morphs.size(), 0.f)
-    , m_globalBoneTransforms(modelData->bones.size(), glm::mat4(1.f))
+    , m_globalBoneTransforms(modelData->bones.size(), identityTransform)
 {
+}
+
+const Transform &ModelPose::getGlobalBoneTransform(uint32_t boneIndex) const
+{
+    return m_globalBoneTransforms[boneIndex];
 }
 
 glm::vec3 ModelPose::getGlobalBonePosition(uint32_t boneIndex) const
 {
-    return glm::vec3(m_globalBoneTransforms[boneIndex][3]);
+    return m_globalBoneTransforms[boneIndex].translation;
+}
+
+void ModelPose::setLocalBoneTransform(uint32_t         boneIndex,
+                                      const Transform &transform)
+{
+    m_localBoneTransforms[boneIndex] = transform;
 }
 
 void ModelPose::setLocalBoneTranslation(uint32_t         boneIndex,
                                         const glm::vec3 &translation)
 {
-    m_localBoneTranslations[boneIndex] = translation;
+    m_localBoneTransforms[boneIndex].translation = translation;
 }
 
 void ModelPose::setLocalBoneRotation(uint32_t         boneIndex,
                                      const glm::quat &rotation)
 {
-    m_localBoneRotations[boneIndex] = rotation;
+    m_localBoneTransforms[boneIndex].rotation = rotation;
 }
 
 void ModelPose::setMorphRatio(uint32_t morphIndex, float ratio)
@@ -48,31 +56,20 @@ void ModelPose::setMorphRatio(uint32_t morphIndex, float ratio)
     m_morphRatios[morphIndex] = ratio;
 }
 
-void ModelPose::setGlobalBoneTransform(uint32_t         boneIndex,
-                                       const glm::mat4 &transform)
-{
-    m_globalBoneTransforms[boneIndex] = transform;
-}
-
-const glm::mat4 &ModelPose::getGlobalBoneTransform(uint32_t boneIndex) const
-{
-    return m_globalBoneTransforms[boneIndex];
-}
-
 glm::mat4 ModelPose::getFinalBoneTransform(uint32_t boneIndex) const
 {
-    return glm::translate(m_globalBoneTransforms[boneIndex],
+    return glm::translate(m_globalBoneTransforms[boneIndex].toMatrix(),
                           -m_modelData->bones[boneIndex].position);
 }
 
 const glm::vec3 &ModelPose::getLocalBoneTranslation(uint32_t boneIndex) const
 {
-    return m_localBoneTranslations[boneIndex];
+    return m_localBoneTransforms[boneIndex].translation;
 }
 
 const glm::quat &ModelPose::getLocalBoneRotation(uint32_t boneIndex) const
 {
-    return m_localBoneRotations[boneIndex];
+    return m_localBoneTransforms[boneIndex].rotation;
 }
 
 float ModelPose::getMorphRatio(uint32_t morphIndex) const
@@ -82,10 +79,8 @@ float ModelPose::getMorphRatio(uint32_t morphIndex) const
 
 void ModelPose::resetLocal()
 {
-    std::fill(m_localBoneTranslations.begin(), m_localBoneTranslations.end(),
-              glm::vec3(0.f));
-    std::fill(m_localBoneRotations.begin(), m_localBoneRotations.end(),
-              glm::quat(1.f, 0.f, 0.f, 0.f));
+    std::fill(m_localBoneTransforms.begin(), m_localBoneTransforms.end(),
+              identityTransform);
     std::fill(m_morphRatios.begin(), m_morphRatios.end(), 0.f);
 }
 
@@ -237,11 +232,9 @@ void ModelPose::applyBoneTransformsToRenderData(RenderData &renderData) const
             {
                 float w0 = vert.boneWeights[0];
                 float w1 = 1.f - w0;
-                auto  q0 =
-                    glm::quat_cast(m_globalBoneTransforms[vert.boneIndices[0]]);
-                auto q1 =
-                    glm::quat_cast(m_globalBoneTransforms[vert.boneIndices[1]]);
-                auto rot = glm::mat3_cast(glm::slerp(q0, q1, w1));
+                auto  q0 = m_globalBoneTransforms[vert.boneIndices[0]].rotation;
+                auto  q1 = m_globalBoneTransforms[vert.boneIndices[1]].rotation;
+                auto  rot = glm::mat3_cast(glm::slerp(q0, q1, w1));
 
                 const auto &c = vert.sdefC;
                 auto        r = 0.5f * (vert.sdefR0 - vert.sdefR1);
@@ -298,13 +291,9 @@ void ModelPose::applyBoneTransformsToRenderData(RenderData &renderData) const
 
 void ModelPose::blendWith(const ModelPose &other, float t)
 {
-    for (size_t i = 0; i < m_localBoneTranslations.size(); ++i)
-    {
-        m_localBoneTranslations[i] = glm::mix(
-            m_localBoneTranslations[i], other.m_localBoneTranslations[i], t);
-        m_localBoneRotations[i] = glm::slerp(m_localBoneRotations[i],
-                                             other.m_localBoneRotations[i], t);
-    }
+    for (size_t i = 0; i < m_localBoneTransforms.size(); ++i)
+        m_localBoneTransforms[i] = ((1.f - t) * m_localBoneTransforms[i]) *
+                                   (t * other.m_localBoneTransforms[i]);
 
     for (size_t i = 0; i < m_morphRatios.size(); ++i)
         m_morphRatios[i] =
@@ -313,13 +302,9 @@ void ModelPose::blendWith(const ModelPose &other, float t)
 
 void ModelPose::operator+=(const ModelPose &other)
 {
-    for (size_t i = 0; i < m_localBoneTranslations.size(); ++i)
-    {
-        m_localBoneTranslations[i] =
-            other.m_localBoneTranslations[i] + m_localBoneTranslations[i];
-        m_localBoneRotations[i] =
-            other.m_localBoneRotations[i] * m_localBoneRotations[i];
-    }
+    for (size_t i = 0; i < m_localBoneTransforms.size(); ++i)
+        m_localBoneTransforms[i] =
+            m_localBoneTransforms[i] * other.m_localBoneTransforms[i];
 
     for (size_t i = 0; i < m_morphRatios.size(); ++i)
         m_morphRatios[i] = other.m_morphRatios[i] + m_morphRatios[i];
@@ -327,12 +312,8 @@ void ModelPose::operator+=(const ModelPose &other)
 
 void ModelPose::operator*=(float t)
 {
-    for (size_t i = 0; i < m_localBoneTranslations.size(); ++i)
-    {
-        m_localBoneTranslations[i] *= t;
-        m_localBoneRotations[i] = glm::slerp(glm::quat(1.f, 0.f, 0.f, 0.f),
-                                             m_localBoneRotations[i], t);
-    }
+    for (size_t i = 0; i < m_localBoneTransforms.size(); ++i)
+        m_localBoneTransforms[i] *= t;
 
     for (size_t i = 0; i < m_morphRatios.size(); ++i)
         m_morphRatios[i] *= t;

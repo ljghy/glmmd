@@ -5,6 +5,7 @@
 
 #include <glmmd/core/ModelData.h>
 #include <glmmd/core/RenderData.h>
+#include <glmmd/core/Transform.h>
 
 namespace glmmd
 {
@@ -27,13 +28,13 @@ public:
     void operator+=(const ModelPose &other);
     void operator*=(float t);
 
+    void setLocalBoneTransform(uint32_t boneIndex, const Transform &transform);
     void setLocalBoneTranslation(uint32_t         boneIndex,
                                  const glm::vec3 &translation);
     void setLocalBoneRotation(uint32_t boneIndex, const glm::quat &rotation);
     void setMorphRatio(uint32_t morphIndex, float ratio);
 
-    void setGlobalBoneTransform(uint32_t boneIndex, const glm::mat4 &transform);
-    const glm::mat4 &getGlobalBoneTransform(uint32_t boneIndex) const;
+    const Transform &getGlobalBoneTransform(uint32_t boneIndex) const;
     glm::vec3        getGlobalBonePosition(uint32_t boneIndex) const;
 
     glm::mat4 getFinalBoneTransform(uint32_t boneIndex) const;
@@ -45,11 +46,10 @@ public:
 private:
     std::shared_ptr<const ModelData> m_modelData;
 
-    std::vector<glm::vec3> m_localBoneTranslations;
-    std::vector<glm::quat> m_localBoneRotations;
+    std::vector<Transform> m_localBoneTransforms;
     std::vector<float>     m_morphRatios;
 
-    std::vector<glm::mat4> m_globalBoneTransforms;
+    std::vector<Transform> m_globalBoneTransforms;
 };
 
 } // namespace glmmd

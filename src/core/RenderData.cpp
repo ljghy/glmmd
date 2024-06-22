@@ -1,3 +1,8 @@
+#include <algorithm>
+#ifndef GLMMD_DO_NOT_USE_STD_EXECUTION
+#include <execution>
+#endif
+
 #include <glmmd/core/RenderData.h>
 
 namespace glmmd
@@ -34,7 +39,12 @@ RenderData::RenderData(const std::shared_ptr<const ModelData> &data)
 
 void RenderData::init()
 {
-    vertexBuffer = m_initialVertexBuffer;
+    std::copy(
+#ifndef GLMMD_DO_NOT_USE_STD_EXECUTION
+        std::execution::par,
+#endif
+        m_initialVertexBuffer.begin(), m_initialVertexBuffer.end(),
+        vertexBuffer.begin());
 
     for (size_t i = 0; i < m_data->materials.size(); ++i)
     {

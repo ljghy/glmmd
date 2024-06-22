@@ -12,10 +12,30 @@ FrameBufferObject::FrameBufferObject()
 
 FrameBufferObject::~FrameBufferObject() { destroy(); }
 
-FrameBufferObject::FrameBufferObject(FrameBufferObject &&other)
+FrameBufferObject::FrameBufferObject(FrameBufferObject &&other) noexcept
     : m_id(other.m_id)
+    , m_colorTextureAttachment(std::move(other.m_colorTextureAttachment))
+    , m_depthTextureAttachment(std::move(other.m_depthTextureAttachment))
+    , m_depthRenderBufferAttachment(
+          std::move(other.m_depthRenderBufferAttachment))
 {
     other.m_id = 0;
+}
+
+FrameBufferObject &
+FrameBufferObject::operator=(FrameBufferObject &&other) noexcept
+{
+    if (this != &other)
+    {
+        destroy();
+        m_id                     = other.m_id;
+        m_colorTextureAttachment = std::move(other.m_colorTextureAttachment);
+        m_depthTextureAttachment = std::move(other.m_depthTextureAttachment);
+        m_depthRenderBufferAttachment =
+            std::move(other.m_depthRenderBufferAttachment);
+        other.m_id = 0;
+    }
+    return *this;
 }
 
 void FrameBufferObject::create()

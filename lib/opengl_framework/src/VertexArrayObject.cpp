@@ -9,10 +9,22 @@ VertexArrayObject::VertexArrayObject()
 {
 }
 
-VertexArrayObject::VertexArrayObject(VertexArrayObject &&other)
+VertexArrayObject::VertexArrayObject(VertexArrayObject &&other) noexcept
     : m_id(other.m_id)
 {
     other.m_id = 0;
+}
+
+VertexArrayObject &
+VertexArrayObject::operator=(VertexArrayObject &&other) noexcept
+{
+    if (this != &other)
+    {
+        destroy();
+        m_id       = other.m_id;
+        other.m_id = 0;
+    }
+    return *this;
 }
 
 VertexArrayObject::~VertexArrayObject() { destroy(); }

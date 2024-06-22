@@ -7,7 +7,6 @@ endif()
 
 if(GLMMD_IS_TOPLEVEL)
     cmake_minimum_required(VERSION 3.14)
-    set(CMAKE_CXX_STANDARD 17)
     if(NOT CMAKE_BUILD_TYPE)
         set(CMAKE_BUILD_TYPE
             "Release"

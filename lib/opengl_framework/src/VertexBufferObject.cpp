@@ -10,10 +10,22 @@ VertexBufferObject::VertexBufferObject()
 {
 }
 VertexBufferObject::~VertexBufferObject() { destroy(); }
-VertexBufferObject::VertexBufferObject(VertexBufferObject &&other)
+VertexBufferObject::VertexBufferObject(VertexBufferObject &&other) noexcept
     : m_id(other.m_id)
 {
     other.m_id = 0;
+}
+
+VertexBufferObject &
+VertexBufferObject::operator=(VertexBufferObject &&other) noexcept
+{
+    if (this != &other)
+    {
+        destroy();
+        m_id       = other.m_id;
+        other.m_id = 0;
+    }
+    return *this;
 }
 
 void VertexBufferObject::create(const void *data, unsigned int size,
@@ -44,7 +56,7 @@ void VertexBufferObject::unbind() const
     GL_CHECK(glBindBuffer(GL_ARRAY_BUFFER, 0));
 }
 
-void VertexBufferObject::uploadSubData(const void* data, unsigned int offset,
+void VertexBufferObject::uploadSubData(const void *data, unsigned int offset,
                                        unsigned int size)
 {
     GL_CHECK(glBindBuffer(GL_ARRAY_BUFFER, m_id));

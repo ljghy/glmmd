@@ -4,8 +4,8 @@
 #include <memory>
 
 #include <opengl_framework/APIConfig.h>
-#include <opengl_framework/Texture2D.h>
 #include <opengl_framework/RenderBufferObject.h>
+#include <opengl_framework/Texture2D.h>
 
 namespace ogl
 {
@@ -18,7 +18,8 @@ public:
 
     FrameBufferObject(const FrameBufferObject &)            = delete;
     FrameBufferObject &operator=(const FrameBufferObject &) = delete;
-    FrameBufferObject(FrameBufferObject &&);
+    FrameBufferObject(FrameBufferObject &&) noexcept;
+    FrameBufferObject &operator=(FrameBufferObject &&) noexcept;
 
     void create();
     void destroy();

@@ -1,5 +1,5 @@
+#include "glmmd/core/FixedMotionClip.h"
 #include <iostream>
-#include <fstream>
 #include <algorithm>
 
 #ifndef GLMMD_DO_NOT_USE_STD_EXECUTION
@@ -19,10 +19,28 @@
 #include <glmmd/files/VmdFileLoader.h>
 
 #include "Context.h"
+#include "Profiler.h"
 
-inline void framebufferSizeCallback(GLFWwindow *, int width, int height)
+void framebufferSizeCallback(GLFWwindow *, int width, int height)
 {
     glViewport(0, 0, width, height);
+}
+
+void dropCallback(GLFWwindow *window, int count, const char **paths)
+{
+    Context *context = (Context *)glfwGetWindowUserPointer(window);
+    for (int i = 0; i < count; ++i)
+    {
+        std::filesystem::path path(paths[i]);
+        if (path.extension() == ".pmx")
+        {
+            if (context->loadModel(path))
+                context->m_selectedModelIndex = context->m_modelData.size() - 1;
+        }
+        else if (path.extension() == ".vmd")
+            context->loadMotion(path, context->m_selectedModelIndex,
+                                JsonObj_t{});
+    }
 }
 
 Context::Context(const std::string &initFile)
@@ -50,12 +68,15 @@ void Context::initWindow()
     }
 
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 0);
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
+    glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
     glfwWindowHint(GLFW_TRANSPARENT_FRAMEBUFFER, GLFW_TRUE);
 
     m_window = glfwCreateWindow(1600, 900, "Viewer", NULL, NULL);
     glfwSetFramebufferSizeCallback(m_window, framebufferSizeCallback);
+    glfwSetDropCallback(m_window, dropCallback);
+    glfwSetWindowUserPointer(m_window, this);
     if (m_window == nullptr)
     {
         throw std::runtime_error("Failed to create window.");
@@ -94,6 +115,14 @@ void Context::initImGui()
 
     ImGui_ImplGlfw_InitForOpenGL(m_window, true);
     ImGui_ImplOpenGL3_Init(glsl_version);
+
+    if (m_initData.contains("font"))
+    {
+        io.Fonts->AddFontFromFileTTF(
+            m_initData["font"].get<std::filesystem::path>("path").c_str(),
+            m_initData["font"].get<float>("size", 14.f), nullptr,
+            io.Fonts->GetGlyphRangesJapanese());
+    }
 }
 
 void Context::initFBO()
@@ -152,79 +181,101 @@ void Context::initFBO()
         throw std::runtime_error("Failed to create shadow map FBO.");
 }
 
+bool Context::loadModel(const std::filesystem::path &path)
+{
+    m_modelIndexMap.push_back(m_modelData.size());
+    std::shared_ptr<glmmd::ModelData> modelData(nullptr);
+    try
+    {
+        modelData = glmmd::loadPmxFile(path);
+    }
+    catch (const std::exception &e)
+    {
+        std::cerr << e.what() << '\n';
+    }
+    if (!modelData)
+        return false;
+
+    m_modelData.push_back(modelData);
+    m_models.emplace_back(modelData);
+    m_modelRenderers.emplace_back(modelData);
+    m_animators.emplace_back(std::make_unique<SimpleAnimator>());
+
+    std::cout << "Model loaded from: " << path.u8string() << '\n';
+    std::cout << "Name: " << modelData->info.modelName << '\n';
+    std::cout << "Comment: " << modelData->info.comment << '\n';
+    std::cout << std::endl;
+
+    for (const auto &tex : modelData->textures)
+    {
+        if (!tex.data)
+            std::cout << "Failed to load texture: "
+                      << (modelData->info.internalEncodingMethod ==
+                                  glmmd::EncodingMethod::UTF16_LE
+                              ? glmmd::codeCvt<glmmd::UTF16_LE, glmmd::UTF8>(
+                                    tex.path)
+                              : tex.path)
+                      << '\n';
+    }
+    return true;
+}
+
+void Context::removeModel(size_t i)
+{
+    m_physicsWorld.clearModelPhysics(m_models[i]);
+    m_animators.erase(m_animators.begin() + i);
+    m_modelRenderers.erase(m_modelRenderers.begin() + i);
+    m_models.erase(m_models.begin() + i);
+    m_modelData.erase(m_modelData.begin() + m_modelIndexMap[i]);
+    for (size_t j = i + 1; j < m_modelIndexMap.size(); ++j)
+        --m_modelIndexMap[j];
+    m_modelIndexMap.erase(m_modelIndexMap.begin() + i);
+}
+
+void Context::loadMotion(const std::filesystem::path &path, size_t modelIndex,
+                         const JsonNode &config)
+{
+    if (modelIndex >= m_modelIndexMap.size())
+    {
+        std::cerr << "Invalid model index.\n";
+        return;
+    }
+    modelIndex = m_modelIndexMap[modelIndex];
+    std::shared_ptr<glmmd::VmdData> vmdData(nullptr);
+    try
+    {
+        vmdData = glmmd::loadVmdFile(path);
+    }
+    catch (const std::exception &e)
+    {
+        std::cerr << e.what() << '\n';
+    }
+    if (!vmdData)
+        return;
+
+    bool loop = config.get<bool>("loop", false);
+    auto clip = std::make_shared<glmmd::FixedMotionClip>(
+        vmdData->toFixedMotionClip(m_models[modelIndex].data(), loop));
+
+    m_animators[modelIndex]->addMotion(clip);
+
+    std::cout << "Motion data loaded from: " << path.u8string() << '\n';
+    std::cout << "Created on: "
+              << glmmd::codeCvt<glmmd::ShiftJIS, glmmd::UTF8>(
+                     vmdData->modelName)
+              << '\n';
+    std::cout << "Duration: " << clip->duration() << " s\n";
+    std::cout << std::endl;
+}
+
 void Context::loadResources()
 {
     for (const auto &modelNode : m_initData["models"].arr())
-    {
-        try
-        {
-            auto filename = modelNode.get<std::filesystem::path>("filename");
-            m_modelData.push_back(glmmd::loadPmxFile(filename));
-            auto modelData = m_modelData.back();
-            m_models.emplace_back(modelData);
-            m_modelRenderers.emplace_back(modelData);
-
-            std::cout << "Model loaded from: " << filename.u8string() << '\n';
-            std::cout << "Name: " << modelData->info.modelName << '\n';
-            std::cout << "Comment: " << modelData->info.comment << '\n';
-            std::cout << std::endl;
-
-            for (const auto &tex : modelData->textures)
-            {
-                if (!tex.data)
-                    std::cout
-                        << "Failed to load texture: "
-                        << (modelData->info.internalEncodingMethod ==
-                                    glmmd::EncodingMethod::UTF16_LE
-                                ? glmmd::codeCvt<glmmd::UTF16_LE, glmmd::UTF8>(
-                                      tex.path)
-                                : tex.path)
-                        << '\n';
-            }
-        }
-        catch (const std::exception &e)
-        {
-            std::cerr << e.what() << '\n';
-        }
-    }
-
-    std::vector<std::vector<std::shared_ptr<glmmd::Motion>>> motions(
-        m_models.size());
+        loadModel(modelNode.get<std::filesystem::path>("filename"));
 
     for (const auto &motionNode : m_initData["motions"].arr())
-    {
-        try
-        {
-            auto modelIndex = motionNode.get<size_t>("model");
-            if (modelIndex >= m_models.size())
-                throw std::runtime_error("Invalid model index.");
-
-            auto filename = motionNode.get<std::filesystem::path>("filename");
-            auto vmdData  = glmmd::loadVmdFile(filename);
-
-            bool loop = motionNode.get<bool>("loop", false);
-            auto clip = std::make_shared<glmmd::FixedMotionClip>(
-                vmdData->toFixedMotionClip(m_models[modelIndex].data(), loop));
-
-            std::cout << "Motion data loaded from: " << filename.u8string()
-                      << '\n';
-            std::cout << "Created on: "
-                      << glmmd::codeCvt<glmmd::ShiftJIS, glmmd::UTF8>(
-                             vmdData->modelName)
-                      << '\n';
-            std::cout << "Length: " << clip->duration() << " s\n";
-            std::cout << std::endl;
-
-            motions[modelIndex].emplace_back(clip);
-        }
-        catch (const std::exception &e)
-        {
-            std::cerr << e.what() << '\n';
-        }
-    }
-
-    for (const auto &m : motions)
-        m_animators.emplace_back(std::make_unique<SimpleAnimator>(m));
+        loadMotion(motionNode.get<std::filesystem::path>("filename"),
+                   motionNode.get<size_t>("model"), motionNode);
 }
 
 void Context::updateCamera(float deltaTime)
@@ -330,16 +381,15 @@ void Context::updateModelPose(size_t i)
 
 void Context::run()
 {
-    for (size_t i = 0; i < m_models.size(); ++i)
-    {
-        m_animators[i]->reset();
-        updateModelPose(i);
-        m_physicsWorld.setupModelPhysics(m_models[i], true);
-    }
-
     auto &io = ImGui::GetIO();
 
     ImVec4 clearColor = ImVec4(0.2f, 0.2f, 0.2f, 1.0f);
+
+    Profiler<float, 256> profiler;
+    profiler.push("Physics");
+    profiler.push("Model update");
+    profiler.push("Render");
+
     while (!glfwWindowShouldClose(m_window))
     {
         glfwPollEvents();
@@ -353,15 +403,13 @@ void Context::run()
 
         float deltaTime = io.DeltaTime;
 
-        auto physicsStart = std::chrono::high_resolution_clock::now();
-        m_physicsWorld.update(deltaTime, 10, 1.f / 240.f);
-        auto physicsEnd = std::chrono::high_resolution_clock::now();
-        auto physicsDur =
-            std::chrono::duration_cast<std::chrono::duration<float>>(
-                physicsEnd - physicsStart)
-                .count();
+        profiler.startFrame();
 
-        auto modelUpdateStart = std::chrono::high_resolution_clock::now();
+        profiler.start("Physics");
+        m_physicsWorld.update(deltaTime, 10, 1.f / 240.f);
+        profiler.stop("Physics");
+
+        profiler.start("Model update");
 
 #ifndef GLMMD_DO_NOT_USE_STD_EXECUTION
         std::vector<size_t> modelIndices(m_models.size());
@@ -382,13 +430,9 @@ void Context::run()
         );
 #endif
 
-        auto modelUpdateEnd = std::chrono::high_resolution_clock::now();
-        auto modelUpdateDur =
-            std::chrono::duration_cast<std::chrono::duration<float>>(
-                modelUpdateEnd - modelUpdateStart)
-                .count();
+        profiler.stop("Model update");
 
-        auto renderStart = std::chrono::high_resolution_clock::now();
+        profiler.start("Render");
 
         for (const auto &renderer : m_modelRenderers)
             renderer.fillBuffers();
@@ -458,24 +502,43 @@ void Context::run()
         ImGui::End();
         ImGui::PopStyleVar();
 
-        auto renderEnd = std::chrono::high_resolution_clock::now();
-        auto renderDur =
-            std::chrono::duration_cast<std::chrono::duration<float>>(
-                renderEnd - renderStart)
-                .count();
+        profiler.stop("Render");
 
         if (io.WantCaptureKeyboard)
             if (ImGui::IsKeyPressed(ImGuiKey_F2))
                 saveScreenshot();
 
-        ImGui::Text("FPS: %.1f", io.Framerate);
-        ImGui::Text("Physics: %.3f ms", physicsDur * 1000.f);
-        ImGui::Text("Model update: %.3f ms", modelUpdateDur * 1000.f);
-        ImGui::Text("Render: %.3f ms", renderDur * 1000.f);
-        ImGui::Text("Total: %.3f ms",
-                    (physicsDur + modelUpdateDur + renderDur) * 1000.f);
+        if (ImGui::BeginListBox("Models"))
+        {
+            for (int i = 0; i < static_cast<int>(m_models.size()); ++i)
+            {
+                ImGui::PushID(i);
+                if (ImGui::Selectable(
+                        m_modelData[m_modelIndexMap[i]]->info.modelName.c_str(),
+                        m_selectedModelIndex == i))
+                    m_selectedModelIndex = i;
+                ImGui::PopID();
+            }
+            ImGui::EndListBox();
+        }
 
-        static bool pause = false;
+        if (m_selectedModelIndex != -1)
+        {
+            if (ImGui::Button("Remove"))
+            {
+                removeModel(m_selectedModelIndex);
+                m_selectedModelIndex = -1;
+            }
+        }
+
+        ImGui::Text("FPS: %.1f", io.Framerate);
+        ImGui::Text("Physics: %.3f ms", profiler.query("Physics") * 1000.f);
+        ImGui::Text("Model update: %.3f ms",
+                    profiler.query("Model update") * 1000.f);
+        ImGui::Text("Render: %.3f ms", profiler.query("Render") * 1000.f);
+        ImGui::Text("Total: %.3f ms", profiler.queryTotal() * 1000.f);
+
+        static bool pause = true;
         if (ImGui::Button(pause ? "Resume" : "Pause"))
         {
             if (pause)
@@ -487,7 +550,7 @@ void Context::run()
             pause = !pause;
         }
 
-        static bool physics = true;
+        static bool physics = false;
         if (ImGui::Checkbox("Physics", &physics))
         {
             if (physics)

@@ -16,7 +16,8 @@ public:
 
     VertexBufferObject(const VertexBufferObject &)            = delete;
     VertexBufferObject &operator=(const VertexBufferObject &) = delete;
-    VertexBufferObject(VertexBufferObject &&);
+    VertexBufferObject(VertexBufferObject &&) noexcept;
+    VertexBufferObject &operator=(VertexBufferObject &&) noexcept;
 
     void create(const void *data, unsigned int size,
                 GLenum drawType = GL_STATIC_DRAW);

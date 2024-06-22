@@ -9,18 +9,19 @@
 class SimpleAnimator : public glmmd::Animator
 {
 public:
-    SimpleAnimator(const std::vector<std::shared_ptr<glmmd::Motion>> &motions)
+    SimpleAnimator()
         : glmmd::Animator()
-        , m_motions(motions)
+        , m_duration(0.f)
     {
-        m_duration = 0.0f;
-        for (const auto &motion : m_motions)
-        {
-            m_duration = std::max(m_duration, motion->duration());
-        }
     }
 
     virtual ~SimpleAnimator() override = default;
+
+    void addMotion(const std::shared_ptr<glmmd::Motion> &motion)
+    {
+        m_motions.push_back(motion);
+        m_duration = std::max(m_duration, motion->duration());
+    }
 
     virtual bool isFinished() const override
     {

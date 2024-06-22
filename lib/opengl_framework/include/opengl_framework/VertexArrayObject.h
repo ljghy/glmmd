@@ -85,7 +85,8 @@ public:
     VertexArrayObject(const VertexArrayObject &)            = delete;
     VertexArrayObject &operator=(const VertexArrayObject &) = delete;
 
-    VertexArrayObject(VertexArrayObject &&other);
+    VertexArrayObject(VertexArrayObject &&other) noexcept;
+    VertexArrayObject &operator=(VertexArrayObject &&other) noexcept;
 
     void create();
     void addBuffer(const VertexBufferObject &vbo,

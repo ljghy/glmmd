@@ -16,6 +16,8 @@
 
 class Context
 {
+    friend void dropCallback(GLFWwindow *window, int count, const char **paths);
+
 public:
     Context(const std::string &initFile);
     ~Context();
@@ -27,6 +29,12 @@ private:
     void initImGui();
     void initFBO();
     void loadResources();
+
+    bool loadModel(const std::filesystem::path &path);
+    void removeModel(size_t i);
+
+    void loadMotion(const std::filesystem::path &path, size_t modelIndex,
+                    const JsonNode &config);
 
     void updateModelPose(size_t i);
 
@@ -46,11 +54,14 @@ private:
     int m_shadowMapHeight = 1024;
 
     std::vector<std::shared_ptr<glmmd::ModelData>> m_modelData;
+    std::vector<size_t>                            m_modelIndexMap;
 
     std::vector<glmmd::Model>         m_models;
     std::vector<glmmd::ModelRenderer> m_modelRenderers;
 
     std::vector<std::unique_ptr<SimpleAnimator>> m_animators;
+
+    int m_selectedModelIndex = -1;
 
     glm::vec3       m_cameraTarget;
     glmmd::Camera   m_camera;

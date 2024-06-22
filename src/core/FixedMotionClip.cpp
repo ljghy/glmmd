@@ -1,3 +1,5 @@
+#include <cmath>
+
 #include <glmmd/core/FixedMotionClip.h>
 
 namespace glmmd
@@ -37,8 +39,6 @@ float FixedMotionClip::evalCurve(const InterpolationCurve &curve, float x)
 
 void FixedMotionClip::getLocalPose(float time, ModelPose &pose) const
 {
-    constexpr glm::quat identityRot(1.f, 0.f, 0.f, 0.f);
-
     if (m_frameCount == 0)
         return;
 
@@ -55,34 +55,29 @@ void FixedMotionClip::getLocalPose(float time, ModelPose &pose) const
         const auto &boneFrameMap = m_boneFrameIndex[i];
         if (boneFrameMap.empty())
         {
-            pose.setLocalBoneTranslation(i, glm::vec3(0.f));
-            pose.setLocalBoneRotation(i, identityRot);
+            pose.setLocalBoneTransform(i, identityTransform);
             continue;
         }
 
-        float t;
-        auto  iter = boneFrameMap.upper_bound(frameNumber);
+        auto iter = boneFrameMap.upper_bound(frameNumber);
         if (iter == boneFrameMap.begin())
         {
             const auto &frame = m_boneFrames[iter->second];
 
-            t = frameTime / iter->first;
+            float     t = frameTime / iter->first;
             glm::vec3 tt{evalCurve(frame.xCurve, t), evalCurve(frame.yCurve, t),
                          evalCurve(frame.zCurve, t)};
             float     tr = evalCurve(frame.rCurve, t);
 
-            pose.setLocalBoneTranslation(i, tt * frame.translation);
-            pose.setLocalBoneRotation(
-                i, glm::slerp(identityRot, frame.rotation, tr));
+            pose.setLocalBoneTranslation(i, tt * frame.transform.translation);
+            pose.setLocalBoneRotation(i,
+                                      glm::slerp(glm::identity<glm::quat>(),
+                                                 frame.transform.rotation, tr));
         }
         else if (iter == boneFrameMap.end())
         {
             const auto &frame = m_boneFrames[boneFrameMap.rbegin()->second];
-
-            t = (frameTime - boneFrameMap.rbegin()->first) /
-                (m_frameCount - boneFrameMap.rbegin()->first);
-            pose.setLocalBoneTranslation(i, frame.translation);
-            pose.setLocalBoneRotation(i, frame.rotation);
+            pose.setLocalBoneTransform(i, frame.transform);
         }
         else
         {
@@ -90,16 +85,18 @@ void FixedMotionClip::getLocalPose(float time, ModelPose &pose) const
             const auto &leftFrame  = m_boneFrames[iter->second],
                        &rightFrame = m_boneFrames[succ->second];
 
-            t = (frameTime - iter->first) / (succ->first - iter->first);
+            float t = (frameTime - iter->first) / (succ->first - iter->first);
             glm::vec3 tt{evalCurve(leftFrame.xCurve, t),
                          evalCurve(leftFrame.yCurve, t),
                          evalCurve(leftFrame.zCurve, t)};
             float     tr = evalCurve(leftFrame.rCurve, t);
 
-            pose.setLocalBoneTranslation(i, (1.f - tt) * leftFrame.translation +
-                                                tt * rightFrame.translation);
+            pose.setLocalBoneTranslation(
+                i, (1.f - tt) * leftFrame.transform.translation +
+                       tt * rightFrame.transform.translation);
             pose.setLocalBoneRotation(
-                i, glm::slerp(leftFrame.rotation, rightFrame.rotation, tr));
+                i, glm::slerp(leftFrame.transform.rotation,
+                              rightFrame.transform.rotation, tr));
         }
     }
 
@@ -112,28 +109,24 @@ void FixedMotionClip::getLocalPose(float time, ModelPose &pose) const
             continue;
         }
 
-        float t;
-        auto  iter = morphFrameMap.upper_bound(frameNumber);
+        auto iter = morphFrameMap.upper_bound(frameNumber);
 
         if (iter == morphFrameMap.begin())
         {
-            t = frameTime / iter->first;
+            float t = frameTime / iter->first;
             pose.setMorphRatio(i, t * m_morphFrames[iter->second].ratio);
         }
         else if (iter == morphFrameMap.end())
         {
-            t = (frameTime - morphFrameMap.rbegin()->first) /
-                (m_frameCount - morphFrameMap.rbegin()->first);
             pose.setMorphRatio(
-                i, (1.f - t) *
-                       m_morphFrames[morphFrameMap.rbegin()->second].ratio);
+                i, m_morphFrames[morphFrameMap.rbegin()->second].ratio);
         }
         else
         {
             auto        succ       = iter--;
             const auto &leftFrame  = m_morphFrames[iter->second],
                        &rightFrame = m_morphFrames[succ->second];
-            t = (frameTime - iter->first) / (succ->first - iter->first);
+            float t = (frameTime - iter->first) / (succ->first - iter->first);
             pose.setMorphRatio(i,
                                glm::mix(leftFrame.ratio, rightFrame.ratio, t));
         }

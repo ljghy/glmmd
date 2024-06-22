@@ -34,9 +34,8 @@ FixedMotionClip VmdData::toFixedMotionClip(const ModelData &modelData,
             continue;
         auto boneIndex = it->second;
 
-        auto &mbf       = clip.m_boneFrames.emplace_back();
-        mbf.translation = vbf.translation;
-        mbf.rotation    = vbf.rotation;
+        auto &mbf     = clip.m_boneFrames.emplace_back();
+        mbf.transform = {vbf.translation, vbf.rotation};
 
         for (int i = 0; i < 4; ++i)
             mbf.xCurve[i] = vbf.interpolation[i * 4 + 0] / 127.f;

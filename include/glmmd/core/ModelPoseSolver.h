@@ -26,7 +26,8 @@ private:
     void applyGroupMorphs(ModelPose &) const;
     void applyBoneMorphs(ModelPose &) const;
 
-    void solveChildGlobalBoneTransforms(ModelPose &, uint32_t boneIndex) const;
+    void solveChildGlobalBoneTransforms(ModelPose &, uint32_t boneIndex,
+                                        int32_t stop = -1) const;
     void solveGlobalBoneTransforms(ModelPose &, uint32_t, uint32_t) const;
     void solveIK(ModelPose &, uint32_t, uint32_t) const;
     void updateInheritedBoneTransforms(ModelPose &, uint32_t, uint32_t) const;

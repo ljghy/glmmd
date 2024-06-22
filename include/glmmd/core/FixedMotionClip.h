@@ -6,6 +6,7 @@
 #include <limits>
 
 #include <glmmd/core/Motion.h>
+#include <glmmd/core/Transform.h>
 
 namespace glmmd
 {
@@ -19,8 +20,7 @@ private:
 
     struct BoneKeyFrame
     {
-        glm::vec3 translation;
-        glm::quat rotation;
+        Transform transform;
 
         InterpolationCurve xCurve;
         InterpolationCurve yCurve;

@@ -18,12 +18,11 @@ inline static btQuaternion glm2btQuaternion(const glm::quat &q)
     return btQuaternion(q.x, q.y, q.z, q.w);
 }
 
-inline static btTransform glm2btTransform(const glm::vec3 &translation,
-                                          const glm::quat &rotation)
+inline static btTransform glm2btTransform(const Transform &transform)
 {
     btTransform t;
-    t.setOrigin(glm2btVector3(translation));
-    t.setRotation(glm2btQuaternion(rotation));
+    t.setOrigin(glm2btVector3(transform.translation));
+    t.setRotation(glm2btQuaternion(transform.rotation));
     return t;
 }
 
@@ -118,31 +117,24 @@ void PhysicsWorld::setupModelRigidBodies(Model &model,
 
         glm::mat4 rot = glm::eulerAngleYXZ(
             rigidBody.rotation.y, rigidBody.rotation.x, rigidBody.rotation.z);
-        body.rotationOffset = glm::quat_cast(rot);
+        body.offset.rotation = glm::quat_cast(rot);
         btMatrix3x3 m;
         m.setIdentity();
         m.setFromOpenGLSubMatrix(&rot[0][0]);
         offset.setBasis(m);
-        body.translationOffset = rigidBody.position;
+        body.offset.translation = rigidBody.position;
         offset.setOrigin(glm2btVector3(rigidBody.position));
 
         if (applyCurrentTransforms && rigidBody.boneIndex >= 0)
         {
             int32_t j = rigidBody.boneIndex;
 
-            glm::vec3 translation =
-                glm::vec3(model.pose().getGlobalBoneTransform(j) *
-                          glm::translate(glm::mat4(1.f),
-                                         -model.data().bones[j].position) *
-                          glm::vec4(body.translationOffset, 1.f));
+            Transform t = body.offset;
+            t.translation -= model.data().bones[j].position;
+            t *= model.pose().getGlobalBoneTransform(j);
 
-            glm::quat rotation =
-                glm::quat_cast(model.pose().getGlobalBoneTransform(j)) *
-                body.rotationOffset;
-
-            auto transform = glm2btTransform(translation, rotation);
             body.motionState =
-                std::make_unique<btDefaultMotionState>(transform);
+                std::make_unique<btDefaultMotionState>(glm2btTransform(t));
         }
         else
             body.motionState = std::make_unique<btDefaultMotionState>(offset);
@@ -197,10 +189,8 @@ void PhysicsWorld::setupModelJoints(Model &model)
         transform.setOrigin(glm2btVector3(joint.position));
         transform.setBasis(eulerAnglesToMatrix(joint.rotation));
 
-        auto invA = glm2btTransform(a.translationOffset, a.rotationOffset)
-                        .inverseTimes(transform);
-        auto invB = glm2btTransform(b.translationOffset, b.rotationOffset)
-                        .inverseTimes(transform);
+        auto invA = glm2btTransform(a.offset).inverseTimes(transform);
+        auto invB = glm2btTransform(b.offset).inverseTimes(transform);
 
         constraint = std::make_unique<btGeneric6DofSpringConstraint>(
             *a.rigidBody, *b.rigidBody, invA, invB, true);
