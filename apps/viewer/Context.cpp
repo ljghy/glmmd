@@ -1,4 +1,3 @@
-#include "glmmd/core/FixedMotionClip.h"
 #include <iostream>
 #include <algorithm>
 
@@ -31,7 +30,12 @@ void dropCallback(GLFWwindow *window, int count, const char **paths)
     Context *context = (Context *)glfwGetWindowUserPointer(window);
     for (int i = 0; i < count; ++i)
     {
-        std::filesystem::path path(paths[i]);
+        std::filesystem::path path =
+#if __cplusplus >= 202002L
+            std::u8string(paths[i], paths[i] + strlen(paths[i]));
+#else
+            std::filesystem::u8path(paths[i]);
+#endif
         if (path.extension() == ".pmx")
         {
             if (context->loadModel(path))

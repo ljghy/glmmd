@@ -7,7 +7,7 @@ target_compile_options(
     glmmd_compiler_flags
     INTERFACE
         "$<${gcc_like_cxx}:$<BUILD_INTERFACE:-Wall;-Wshadow;-Wformat=2;-Wunused>>"
-        "$<${msvc_cxx}:$<BUILD_INTERFACE:-W3>>")
+        "$<${msvc_cxx}:$<BUILD_INTERFACE:/W3;/MP;/wd4996;/Zc:__cplusplus>>")
 
 target_compile_features(glmmd_compiler_flags INTERFACE cxx_std_17)
 
