@@ -15,27 +15,29 @@ if(NOT CMAKE_BUILD_TYPE)
         CACHE STRING "" FORCE)
 endif()
 
-if(MSVC)
-    add_compile_options(/W4 /MP /wd4251)
-else() # GCC
-    add_compile_options(-Wall -Wextra -fPIC)
-endif()
-
-set(CMAKE_CXX_STANDARD 17)
-
 file(GLOB SOURCES src/*.c src/*.cpp)
 
 add_library(opengl_framework_config INTERFACE)
 
-option(BUILD_SHARED_LIBS "Build shared libraries" ON)
+option(OPENGL_FRAMEWORK_BUILD_SHARED_LIBS "Build shared libraries" OFF)
 
-if(BUILD_SHARED_LIBS)
+if(BUILD_SHARED_LIBS OR OPENGL_FRAMEWORK_BUILD_SHARED_LIBS)
     target_compile_definitions(
         opengl_framework_config INTERFACE OPENGL_FRAMEWORK_EXPORTS_BUILD_DLL
                                           GLAD_GLAPI_EXPORT)
+    add_library(opengl_framework SHARED ${SOURCES})
+else()
+    add_library(opengl_framework STATIC ${SOURCES})
 endif()
 
-add_library(opengl_framework ${SOURCES})
+if(MSVC)
+    target_compile_options(opengl_framework PRIVATE /W4 /MP /wd4251)
+else() # GCC
+    target_compile_options(opengl_framework PRIVATE -Wall -Wextra -fPIC)
+endif()
+
+target_compile_features(opengl_framework PUBLIC cxx_std_11)
+
 add_library(opengl_framework::opengl_framework ALIAS opengl_framework)
 
 target_include_directories(

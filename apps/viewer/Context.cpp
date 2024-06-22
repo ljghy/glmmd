@@ -35,7 +35,8 @@ void dropCallback(GLFWwindow *window, int count, const char **paths)
         if (path.extension() == ".pmx")
         {
             if (context->loadModel(path))
-                context->m_selectedModelIndex = context->m_modelData.size() - 1;
+                context->m_selectedModelIndex =
+                    static_cast<int>(context->m_modelData.size()) - 1;
         }
         else if (path.extension() == ".vmd")
             context->loadMotion(path, context->m_selectedModelIndex,
@@ -118,10 +119,12 @@ void Context::initImGui()
 
     if (m_initData.contains("font"))
     {
-        io.Fonts->AddFontFromFileTTF(
-            m_initData["font"].get<std::filesystem::path>("path").c_str(),
+        auto font = io.Fonts->AddFontFromFileTTF(
+            m_initData["font"]["path"].c_str(),
             m_initData["font"].get<float>("size", 14.f), nullptr,
             io.Fonts->GetGlyphRangesJapanese());
+        if (font == nullptr)
+            std::cerr << "Failed to load font.\n";
     }
 }
 
