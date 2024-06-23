@@ -55,6 +55,7 @@ Context::Context(const std::string &initFile)
     initWindow();
     initImGui();
     initFBO();
+    initRenderers();
     loadResources();
 
     m_cameraTarget          = glm::vec3(0.f);
@@ -78,7 +79,10 @@ void Context::initWindow()
 
     glfwWindowHint(GLFW_TRANSPARENT_FRAMEBUFFER, GLFW_TRUE);
 
-    m_window = glfwCreateWindow(1600, 900, "Viewer", NULL, NULL);
+    int initWidth  = m_initData.get<int>("WindowWidth", 1600);
+    int initHeight = m_initData.get<int>("WindowHeight", 900);
+
+    m_window = glfwCreateWindow(initWidth, initHeight, "Viewer", NULL, NULL);
     glfwSetFramebufferSizeCallback(m_window, framebufferSizeCallback);
     glfwSetDropCallback(m_window, dropCallback);
     glfwSetWindowUserPointer(m_window, this);
@@ -188,6 +192,12 @@ void Context::initFBO()
         throw std::runtime_error("Failed to create shadow map FBO.");
 }
 
+void Context::initRenderers()
+{
+    m_axesRenderer = std::make_unique<AxesRenderer>(50.f);
+    m_gridRenderer = std::make_unique<GridRenderer>(10, 5.f);
+}
+
 bool Context::loadModel(const std::filesystem::path &path)
 {
     m_modelIndexMap.push_back(m_modelData.size());
@@ -291,55 +301,48 @@ void Context::updateCamera(float deltaTime)
 
     m_camera.resize(m_viewportWidth, m_viewportHeight);
 
-    if (io.WantCaptureMouse)
+    ImVec2          mouseDelta  = io.MouseDelta;
+    constexpr float sensitivity = glm::radians(0.1f);
+
+    if (io.MouseDown[1])
+        m_camera.rotateAround(m_cameraTarget, -mouseDelta.x * sensitivity,
+                              -mouseDelta.y * sensitivity);
+
+    if (io.MouseDown[2])
     {
-        ImVec2          mouseDelta  = io.MouseDelta;
-        constexpr float sensitivity = glm::radians(0.1f);
-
-        if (io.MouseDown[1])
-            m_camera.rotateAround(m_cameraTarget, -mouseDelta.x * sensitivity,
-                                  -mouseDelta.y * sensitivity);
-
-        if (io.MouseDown[2])
-        {
-            float     vel = 5.f * glm::tan(m_camera.fovy * 0.5f);
-            glm::vec3 translation =
-                -vel * mouseDelta.x * deltaTime * m_camera.right +
-                vel * mouseDelta.y * deltaTime * m_camera.up;
-            m_camera.position += translation;
-            m_cameraTarget += translation;
-        }
-
-        if (m_camera.projType == glmmd::CameraProjectionType::Perspective)
-        {
-            m_camera.fovy -= glm::radians(5.f) * io.MouseWheel;
-            m_camera.fovy = glm::clamp(m_camera.fovy, glm::radians(1.f),
-                                       glm::radians(120.f));
-        }
-        else
-        {
-            m_camera.width -= 5.f * io.MouseWheel;
-            m_camera.width = glm::clamp(m_camera.width, 1.f, 100.f);
-        }
-    }
-
-    if (io.WantCaptureKeyboard)
-    {
-        constexpr float vel = 25.f;
-
-        glm::vec3 translation(0.f);
-        if (io.KeysDown[GLFW_KEY_W])
-            translation += vel * deltaTime * m_camera.front;
-        if (io.KeysDown[GLFW_KEY_S])
-            translation -= vel * deltaTime * m_camera.front;
-        if (io.KeysDown[GLFW_KEY_A])
-            translation -= vel * deltaTime * m_camera.right;
-        if (io.KeysDown[GLFW_KEY_D])
-            translation += vel * deltaTime * m_camera.right;
-
+        float     vel = 5.f * glm::tan(m_camera.fovy * 0.5f);
+        glm::vec3 translation =
+            -vel * mouseDelta.x * deltaTime * m_camera.right +
+            vel * mouseDelta.y * deltaTime * m_camera.up;
         m_camera.position += translation;
         m_cameraTarget += translation;
     }
+
+    if (m_camera.projType == glmmd::CameraProjectionType::Perspective)
+    {
+        m_camera.fovy -= glm::radians(5.f) * io.MouseWheel;
+        m_camera.fovy =
+            glm::clamp(m_camera.fovy, glm::radians(1.f), glm::radians(120.f));
+    }
+    else
+    {
+        m_camera.width -= 5.f * io.MouseWheel;
+        m_camera.width = glm::clamp(m_camera.width, 1.f, 100.f);
+    }
+    constexpr float vel = 25.f;
+
+    glm::vec3 translation(0.f);
+    if (io.KeysDown[GLFW_KEY_W])
+        translation += vel * deltaTime * m_camera.front;
+    if (io.KeysDown[GLFW_KEY_S])
+        translation -= vel * deltaTime * m_camera.front;
+    if (io.KeysDown[GLFW_KEY_A])
+        translation -= vel * deltaTime * m_camera.right;
+    if (io.KeysDown[GLFW_KEY_D])
+        translation += vel * deltaTime * m_camera.right;
+
+    m_camera.position += translation;
+    m_cameraTarget += translation;
 }
 
 void Context::saveScreenshot()
@@ -486,7 +489,16 @@ void Context::run()
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         glViewport(0, 0, m_viewportWidth, m_viewportHeight);
 
-        updateCamera(deltaTime);
+        if (ImGui::IsWindowFocused())
+            updateCamera(deltaTime);
+
+        static bool renderAxes = true;
+        if (renderAxes)
+            m_axesRenderer->render(m_camera);
+        static bool renderGrid = true;
+        if (renderGrid)
+            m_gridRenderer->render(m_camera);
+
         for (const auto &renderer : m_modelRenderers)
             renderer.render(m_camera, m_lighting,
                             renderShadow
@@ -514,6 +526,8 @@ void Context::run()
         if (io.WantCaptureKeyboard)
             if (ImGui::IsKeyPressed(ImGuiKey_F2))
                 saveScreenshot();
+
+        ImGui::Begin("Control");
 
         if (ImGui::BeginListBox("Models"))
         {
@@ -612,9 +626,15 @@ void Context::run()
         }
 
         ImGui::Checkbox("Render shadow", &renderShadow);
+
+        ImGui::Checkbox("Render axes", &renderAxes);
+        ImGui::Checkbox("Render grid", &renderGrid);
+
         if (ImGui::SliderFloat3("Light direction", &m_lighting.direction.x,
                                 -1.f, 1.f))
             m_lighting.direction = glm::normalize(m_lighting.direction);
+
+        ImGui::End();
 
         ImGui::Render();
         ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
@@ -633,6 +653,9 @@ void Context::run()
 
 Context::~Context()
 {
+    m_axesRenderer.reset();
+    m_gridRenderer.reset();
+
     glmmd::ModelRenderer::releaseSharedToonTextures();
 
     m_modelRenderers.clear();

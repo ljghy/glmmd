@@ -59,7 +59,11 @@ target_link_libraries(imgui PUBLIC glfw)
 
 add_executable(viewer)
 
-target_sources(viewer PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/Context.cpp
-                              ${CMAKE_CURRENT_SOURCE_DIR}/main.cpp)
+target_sources(
+    viewer
+    PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/AxesRenderer.cpp
+            ${CMAKE_CURRENT_SOURCE_DIR}/GridRenderer.cpp
+            ${CMAKE_CURRENT_SOURCE_DIR}/Context.cpp
+            ${CMAKE_CURRENT_SOURCE_DIR}/main.cpp)
 
 target_link_libraries(viewer PRIVATE glmmd::glmmd imgui)

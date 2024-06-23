@@ -13,6 +13,8 @@
 
 #include "JsonParser.hpp"
 #include "SimpleAnimator.h"
+#include "AxesRenderer.h"
+#include "GridRenderer.h"
 
 class Context
 {
@@ -28,6 +30,7 @@ private:
     void initWindow();
     void initImGui();
     void initFBO();
+    void initRenderers();
     void loadResources();
 
     bool loadModel(const std::filesystem::path &path);
@@ -62,6 +65,9 @@ private:
     std::vector<std::unique_ptr<SimpleAnimator>> m_animators;
 
     int m_selectedModelIndex = -1;
+
+    std::unique_ptr<AxesRenderer> m_axesRenderer;
+    std::unique_ptr<GridRenderer> m_gridRenderer;
 
     glm::vec3       m_cameraTarget;
     glmmd::Camera   m_camera;
