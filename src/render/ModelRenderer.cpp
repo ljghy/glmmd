@@ -56,7 +56,8 @@ void ModelRenderer::initBuffers()
     m_VAO.bind();
     m_VAO.addBuffer(m_VBO, layout);
     m_IBO.create(m_modelData->indices.data(),
-                 sizeof(GLuint) * m_modelData->indices.size());
+                 static_cast<unsigned int>(sizeof(GLuint) *
+                                           m_modelData->indices.size()));
 }
 
 void ModelRenderer::setTexture(size_t i, ogl::Texture2D &&tex)

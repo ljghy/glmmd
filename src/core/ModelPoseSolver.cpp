@@ -1,5 +1,4 @@
 #include <algorithm>
-#include <queue>
 #include <numeric>
 
 #include <glmmd/core/ModelPoseSolver.h>
@@ -318,40 +317,29 @@ void ModelPoseSolver::solveIK(ModelPose &pose, uint32_t first,
     }
 }
 
-void ModelPoseSolver::solveChildGlobalBoneTransforms(ModelPose &pose,
+bool ModelPoseSolver::solveChildGlobalBoneTransforms(ModelPose &pose,
                                                      uint32_t   boneIndex,
                                                      int32_t    stop) const
 {
-    std::queue<uint32_t> que;
+    const auto &bone                   = m_modelData->bones[boneIndex];
+    glm::vec3   localTranslationOffset = bone.position;
+    if (bone.parentIndex != -1)
+        localTranslationOffset -= m_modelData->bones[bone.parentIndex].position;
+    Transform localTransform = pose.m_localBoneTransforms[boneIndex];
+    localTransform.translation += localTranslationOffset;
+    if (bone.parentIndex != -1)
+        pose.m_globalBoneTransforms[boneIndex] =
+            localTransform * pose.m_globalBoneTransforms[bone.parentIndex];
+    else
+        pose.m_globalBoneTransforms[boneIndex] = localTransform;
 
-    que.push(boneIndex);
+    if (boneIndex == static_cast<uint32_t>(stop))
+        return false;
 
-    while (!que.empty())
-    {
-        uint32_t i = que.front();
-        que.pop();
-
-        const auto &bone = m_modelData->bones[i];
-
-        glm::vec3 localTranslationOffset = bone.position;
-        if (bone.parentIndex != -1)
-            localTranslationOffset -=
-                m_modelData->bones[bone.parentIndex].position;
-
-        Transform localTransform = pose.m_localBoneTransforms[i];
-        localTransform.translation += localTranslationOffset;
-        if (bone.parentIndex != -1)
-            pose.m_globalBoneTransforms[i] =
-                localTransform * pose.m_globalBoneTransforms[bone.parentIndex];
-        else
-            pose.m_globalBoneTransforms[i] = localTransform;
-
-        if (i == static_cast<uint32_t>(stop))
-            return;
-
-        for (int32_t j : m_boneChildren[i])
-            que.push(j);
-    }
+    for (auto i : m_boneChildren[boneIndex])
+        if (!solveChildGlobalBoneTransforms(pose, i, stop))
+            return false;
+    return true;
 }
 
 void ModelPoseSolver::solveGlobalBoneTransforms(ModelPose &pose, uint32_t first,
