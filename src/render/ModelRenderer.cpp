@@ -24,12 +24,15 @@ void ModelRenderer::releaseSharedToonTextures()
 }
 
 ModelRenderer::ModelRenderer(const std::shared_ptr<const ModelData> &data,
+                             bool                              loadTextures,
                              const ModelRendererShaderSources &shaderSources)
     : m_modelData(data)
     , m_renderData(data)
 {
     initBuffers();
-    initTextures();
+    m_textures.resize(m_modelData->textures.size());
+    if (loadTextures)
+        initTextures();
     initSharedToonTextures();
     initShaders(shaderSources);
 }
@@ -37,7 +40,7 @@ ModelRenderer::ModelRenderer(const std::shared_ptr<const ModelData> &data,
 void ModelRenderer::initBuffers()
 {
     m_VBO.create(nullptr,
-                 static_cast<unsigned int>(sizeof(float) *
+                 static_cast<unsigned int>(sizeof(GLfloat) *
                                            m_renderData.vertexBuffer.size()),
                  GL_DYNAMIC_DRAW);
     m_VBO.bind();
@@ -52,21 +55,17 @@ void ModelRenderer::initBuffers()
     m_VAO.create();
     m_VAO.bind();
     m_VAO.addBuffer(m_VBO, layout);
+    m_IBO.create(m_modelData->indices.data(),
+                 sizeof(GLuint) * m_modelData->indices.size());
+}
 
-    m_IBOs.resize(m_modelData->materials.size());
-    size_t indexOffset = 0;
-    for (size_t i = 0; i < m_IBOs.size(); ++i)
-    {
-        m_IBOs[i].create(&m_modelData->indices[indexOffset],
-                         sizeof(uint32_t) *
-                             m_modelData->materials[i].indicesCount);
-        indexOffset += m_modelData->materials[i].indicesCount;
-    }
+void ModelRenderer::setTexture(size_t i, ogl::Texture2D &&tex)
+{
+    m_textures[i] = std::move(tex);
 }
 
 void ModelRenderer::initTextures()
 {
-    m_textures.resize(m_modelData->textures.size());
     for (size_t i = 0; i < m_modelData->textures.size(); ++i)
     {
         const auto &tex = m_modelData->textures[i];
@@ -163,7 +162,7 @@ void ModelRenderer::fillBuffers() const
     m_VBO.bind();
     m_VAO.bind();
     glBufferData(GL_ARRAY_BUFFER,
-                 sizeof(float) * m_renderData.vertexBuffer.size(),
+                 sizeof(GLfloat) * m_renderData.vertexBuffer.size(),
                  m_renderData.vertexBuffer.data(), GL_DYNAMIC_DRAW);
 }
 
@@ -175,6 +174,7 @@ void ModelRenderer::render(const Camera &camera, const Lighting &lighting,
 
     m_VBO.bind();
     m_VAO.bind();
+    m_IBO.bind();
 
     if (m_renderFlag & MODEL_RENDER_FLAG_MESH)
         renderMesh(camera, lighting, shadowMap);
@@ -222,7 +222,8 @@ void ModelRenderer::renderMesh(const Camera &camera, const Lighting &lighting,
         m_shader.setUniform1i("u_shadowMap", 3);
     }
 
-    for (size_t i = 0; i < m_IBOs.size(); ++i)
+    for (size_t i = 0, indexOffset = 0; i < m_modelData->materials.size();
+         indexOffset += m_modelData->materials[i++].indicesCount)
     {
         const auto &mat    = m_renderData.materials[i];
         const auto &matAdd = m_renderData.materialAdd[i];
@@ -297,9 +298,9 @@ void ModelRenderer::renderMesh(const Camera &camera, const Lighting &lighting,
         m_shader.setUniform1i("u_receiveShadow",
                               m_modelData->materials[i].receiveShadow());
 
-        m_IBOs[i].bind();
-        glDrawElements(GL_TRIANGLES, m_IBOs[i].getCount(), GL_UNSIGNED_INT,
-                       nullptr);
+        glDrawElements(GL_TRIANGLES, m_modelData->materials[i].indicesCount,
+                       GL_UNSIGNED_INT,
+                       (const void *)(uintptr_t)(indexOffset * sizeof(GLuint)));
     }
 }
 
@@ -328,7 +329,8 @@ void ModelRenderer::renderEdge(const Camera &camera) const
         "u_viewportSize",
         &glm::vec2(camera.viewportWidth, camera.viewportHeight)[0]);
 
-    for (size_t i = 0; i < m_IBOs.size(); ++i)
+    for (size_t i = 0, indexOffset = 0; i < m_modelData->materials.size();
+         indexOffset += m_modelData->materials[i++].indicesCount)
     {
         const auto &mat = m_renderData.materials[i];
 
@@ -338,9 +340,10 @@ void ModelRenderer::renderEdge(const Camera &camera) const
 
         m_edgeShader.setUniform1f("u_edgeSize", mat.edgeSize);
         m_edgeShader.setUniform4fv("u_edgeColor", &mat.edgeColor[0]);
-        m_IBOs[i].bind();
-        glDrawElements(GL_TRIANGLES, m_IBOs[i].getCount(), GL_UNSIGNED_INT,
-                       nullptr);
+
+        glDrawElements(GL_TRIANGLES, m_modelData->materials[i].indicesCount,
+                       GL_UNSIGNED_INT,
+                       (const void *)(uintptr_t)(indexOffset * sizeof(GLuint)));
     }
 }
 
@@ -365,15 +368,16 @@ void ModelRenderer::renderGroundShadow(const Camera   &camera,
     m_groundShadowShader.setUniformMatrix4fv("u_MVP", &MVP[0][0]);
     m_groundShadowShader.setUniform3fv("u_lightDir", &lighting.direction[0]);
 
-    for (size_t i = 0; i < m_IBOs.size(); ++i)
+    for (size_t i = 0, indexOffset = 0; i < m_modelData->materials.size();
+         indexOffset += m_modelData->materials[i++].indicesCount)
     {
         if (!m_modelData->materials[i].groundShadow() ||
             m_renderData.materials[i].diffuse.a == 0.f)
             continue;
 
-        m_IBOs[i].bind();
-        glDrawElements(GL_TRIANGLES, m_IBOs[i].getCount(), GL_UNSIGNED_INT,
-                       nullptr);
+        glDrawElements(GL_TRIANGLES, m_modelData->materials[i].indicesCount,
+                       GL_UNSIGNED_INT,
+                       (const void *)(uintptr_t)(indexOffset * sizeof(GLuint)));
     }
 }
 
@@ -381,6 +385,7 @@ void ModelRenderer::renderShadowMap(const Lighting &lighting) const
 {
     m_VBO.bind();
     m_VAO.bind();
+    m_IBO.bind();
 
     glEnable(GL_DEPTH_TEST);
 
@@ -390,7 +395,8 @@ void ModelRenderer::renderShadowMap(const Lighting &lighting) const
     glm::mat4 model = glm::mat4(1.f);
     m_shadowMapShader.setUniformMatrix4fv("u_model", &model[0][0]);
 
-    for (size_t i = 0; i < m_IBOs.size(); ++i)
+    for (size_t i = 0, indexOffset = 0; i < m_modelData->materials.size();
+         indexOffset += m_modelData->materials[i++].indicesCount)
     {
         const auto &mat = m_modelData->materials[i];
 
@@ -405,9 +411,9 @@ void ModelRenderer::renderShadowMap(const Lighting &lighting) const
             glCullFace(GL_BACK);
         }
 
-        m_IBOs[i].bind();
-        glDrawElements(GL_TRIANGLES, m_IBOs[i].getCount(), GL_UNSIGNED_INT,
-                       nullptr);
+        glDrawElements(GL_TRIANGLES, m_modelData->materials[i].indicesCount,
+                       GL_UNSIGNED_INT,
+                       (const void *)(uintptr_t)(indexOffset * sizeof(GLuint)));
     }
 }
 

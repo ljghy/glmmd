@@ -12,7 +12,8 @@ namespace glmmd
 {
 
 std::shared_ptr<ModelData>
-PmxFileLoader::load(const std::filesystem::path &path)
+PmxFileLoader::load(const std::filesystem::path          &path,
+                    const std::function<void(Texture &)> &loadTextureCallback)
 {
     m_fin.open(path, std::ios::binary);
     if (!m_fin)
@@ -26,7 +27,7 @@ PmxFileLoader::load(const std::filesystem::path &path)
     loadInfo(*data);
     loadVertices(*data);
     loadIndices(*data);
-    loadTextures(*data);
+    loadTextures(*data, loadTextureCallback);
     loadMaterials(*data);
     loadBones(*data);
     loadMorphs(*data);
@@ -156,7 +157,8 @@ void PmxFileLoader::loadIndices(ModelData &data)
         readUInt(index, data.info.vertexIndexSize);
 }
 
-void PmxFileLoader::loadTextures(ModelData &data)
+void PmxFileLoader::loadTextures(ModelData                            &data,
+                                 const std::function<void(Texture &)> &callback)
 {
     int32_t count;
     readInt(count);
@@ -198,6 +200,8 @@ void PmxFileLoader::loadTextures(ModelData &data)
             texture.channels = 4;
             texture.data.reset(pixels, stbi_image_free);
         }
+        if (callback)
+            callback(texture);
     }
 }
 

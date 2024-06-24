@@ -202,9 +202,34 @@ bool Context::loadModel(const std::filesystem::path &path)
 {
     m_modelIndexMap.push_back(m_modelData.size());
     std::shared_ptr<glmmd::ModelData> modelData(nullptr);
+    std::vector<ogl::Texture2D>       gpuTextures;
     try
     {
-        modelData = glmmd::loadPmxFile(path);
+        modelData = glmmd::loadPmxFile(
+            path,
+            [&](glmmd::Texture &tex)
+            {
+                auto &gpuTex = gpuTextures.emplace_back();
+                if (!tex.data)
+                {
+                    std::cout << "Failed to load texture: " << tex.path << '\n';
+                    return;
+                }
+                ogl::Texture2DCreateInfo info;
+                info.width         = tex.width;
+                info.height        = tex.height;
+                info.data          = tex.data.get();
+                info.genMipmaps    = true;
+                info.internalFmt   = GL_SRGB_ALPHA;
+                info.dataFmt       = GL_RGBA;
+                info.dataType      = GL_UNSIGNED_BYTE;
+                info.wrapModeS     = GL_CLAMP_TO_EDGE;
+                info.wrapModeT     = GL_CLAMP_TO_EDGE;
+                info.minFilterMode = GL_LINEAR_MIPMAP_LINEAR;
+                info.magFilterMode = GL_LINEAR;
+                gpuTex.create(info);
+                tex.data.reset();
+            });
     }
     catch (const std::exception &e)
     {
@@ -213,27 +238,18 @@ bool Context::loadModel(const std::filesystem::path &path)
     if (!modelData)
         return false;
 
-    m_modelData.push_back(modelData);
-    m_models.emplace_back(modelData);
-    m_modelRenderers.emplace_back(modelData);
-    m_animators.emplace_back(std::make_unique<SimpleAnimator>());
-
     std::cout << "Model loaded from: " << path.u8string() << '\n';
     std::cout << "Name: " << modelData->info.modelName << '\n';
     std::cout << "Comment: " << modelData->info.comment << '\n';
     std::cout << std::endl;
 
-    for (const auto &tex : modelData->textures)
-    {
-        if (!tex.data)
-            std::cout << "Failed to load texture: "
-                      << (modelData->info.internalEncodingMethod ==
-                                  glmmd::EncodingMethod::UTF16_LE
-                              ? glmmd::codeCvt<glmmd::UTF16_LE, glmmd::UTF8>(
-                                    tex.path)
-                              : tex.path)
-                      << '\n';
-    }
+    m_modelData.push_back(modelData);
+    auto &renderer = m_modelRenderers.emplace_back(modelData, false);
+    for (size_t i = 0; i < gpuTextures.size(); ++i)
+        renderer.setTexture(i, std::move(gpuTextures[i]));
+    m_models.emplace_back(modelData);
+    m_animators.emplace_back(std::make_unique<SimpleAnimator>());
+
     return true;
 }
 

@@ -46,9 +46,12 @@ class ModelRenderer
 {
 public:
     ModelRenderer(const std::shared_ptr<const ModelData> &data,
+                  bool                                    loadTextures  = true,
                   const ModelRendererShaderSources       &shaderSources = {});
 
     void fillBuffers() const;
+
+    void setTexture(size_t i, ogl::Texture2D &&tex);
 
     void renderShadowMap(const Lighting &lighting) const;
     void render(const Camera &camera, const Lighting &lighting,
@@ -78,9 +81,9 @@ private:
 
     RenderData m_renderData;
 
-    ogl::VertexBufferObject             m_VBO;
-    ogl::VertexArrayObject              m_VAO;
-    std::vector<ogl::IndexBufferObject> m_IBOs;
+    ogl::VertexBufferObject m_VBO;
+    ogl::VertexArrayObject  m_VAO;
+    ogl::IndexBufferObject  m_IBO;
 
     ogl::Shader m_shader;
     ogl::Shader m_edgeShader;
