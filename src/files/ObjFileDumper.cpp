@@ -76,7 +76,7 @@ void dumpObjFile(const std::filesystem::path &path, const ModelData &modelData,
     }
     objFile.close();
 
-    std::ofstream mtlFile(mtlPath, std::ios::binary);
+    std::ofstream mtlFile(mtlPath);
     if (!mtlFile)
         throw std::runtime_error("Failed to open file: " + mtlPath.string());
 
