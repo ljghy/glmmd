@@ -14,7 +14,7 @@
 #include "JsonParser.hpp"
 #include "SimpleAnimator.h"
 #include "AxesRenderer.h"
-#include "GridRenderer.h"
+#include "InfiniteGridRenderer.h"
 
 class Context
 {
@@ -67,7 +67,7 @@ private:
     int m_selectedModelIndex = -1;
 
     std::unique_ptr<AxesRenderer> m_axesRenderer;
-    std::unique_ptr<GridRenderer> m_gridRenderer;
+    std::unique_ptr<InfiniteGridRenderer> m_gridRenderer;
 
     glm::vec3       m_cameraTarget;
     glmmd::Camera   m_camera;

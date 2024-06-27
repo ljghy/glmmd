@@ -351,6 +351,9 @@ void ModelRenderer::renderEdge(const Camera &camera) const
 void ModelRenderer::renderGroundShadow(const Camera   &camera,
                                        const Lighting &lighting) const
 {
+    if (lighting.direction.y == 0.f)
+        return;
+
     glEnable(GL_DEPTH_TEST);
     glDepthFunc(GL_LEQUAL);
     glEnable(GL_BLEND);
@@ -359,11 +362,12 @@ void ModelRenderer::renderGroundShadow(const Camera   &camera,
     glDisable(GL_CULL_FACE);
     glDisable(GL_POLYGON_OFFSET_FILL);
 
+    glm::vec3 d     = lighting.direction / lighting.direction.y;
     glm::mat4 model = glm::mat4(1.f);
-    glm::mat4 proj  = camera.proj();
-    glm::mat4 view  = camera.view();
-    glm::mat4 MV    = view * model;
-    glm::mat4 MVP   = proj * MV;
+    model[1][0]     = -d.x;
+    model[1][1]     = 0.f;
+    model[1][2]     = -d.z;
+    glm::mat4 MVP   = camera.proj() * camera.view() * model;
 
     m_groundShadowShader.use();
     m_groundShadowShader.setUniformMatrix4fv("u_MVP", &MVP[0][0]);

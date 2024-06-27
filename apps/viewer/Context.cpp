@@ -194,8 +194,8 @@ void Context::initFBO()
 
 void Context::initRenderers()
 {
-    m_axesRenderer = std::make_unique<AxesRenderer>(50.f);
-    m_gridRenderer = std::make_unique<GridRenderer>(10, 5.f);
+    m_axesRenderer = std::make_unique<AxesRenderer>();
+    m_gridRenderer = std::make_unique<InfiniteGridRenderer>();
 }
 
 bool Context::loadModel(const std::filesystem::path &path)
@@ -508,6 +508,12 @@ void Context::run()
         if (ImGui::IsWindowFocused())
             updateCamera(deltaTime);
 
+        for (const auto &renderer : m_modelRenderers)
+            renderer.render(m_camera, m_lighting,
+                            renderShadow
+                                ? m_shadowMapFBO.depthTextureAttachment()
+                                : nullptr);
+
         static bool renderAxes = true;
         if (renderAxes)
             m_axesRenderer->render(m_camera);
@@ -515,11 +521,6 @@ void Context::run()
         if (renderGrid)
             m_gridRenderer->render(m_camera);
 
-        for (const auto &renderer : m_modelRenderers)
-            renderer.render(m_camera, m_lighting,
-                            renderShadow
-                                ? m_shadowMapFBO.depthTextureAttachment()
-                                : nullptr);
         m_FBO.unbind();
 
         m_FBO.bindRead();

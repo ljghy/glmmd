@@ -8,15 +8,17 @@
 class AxesRenderer
 {
 public:
-    AxesRenderer(float axisLength);
+    AxesRenderer();
 
     void render(const glmmd::Camera &camera);
 
+public:
+    float length    = 100.f;
+    float lineWidth = 2.f;
+
 private:
-    float                   m_axisLength;
-    ogl::VertexBufferObject m_VBO;
-    ogl::VertexArrayObject  m_VAO;
-    ogl::Shader             m_shader;
+    ogl::VertexArrayObject m_dummyVAO;
+    ogl::Shader            m_shader;
 };
 
 #endif
