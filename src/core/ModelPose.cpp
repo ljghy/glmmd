@@ -77,6 +77,11 @@ float ModelPose::getMorphRatio(uint32_t morphIndex) const
     return m_morphRatios[morphIndex];
 }
 
+float &ModelPose::getMorphRatio(uint32_t morphIndex)
+{
+    return m_morphRatios[morphIndex];
+}
+
 void ModelPose::resetLocal()
 {
     std::fill(m_localBoneTransforms.begin(), m_localBoneTransforms.end(),
@@ -117,40 +122,52 @@ void ModelPose::applyMorphsToRenderData(RenderData &renderData) const
         case MorphType::Material:
             for (int32_t j = 0; j < morph.count; ++j)
             {
-                const auto &data = morph.material[j];
+                const auto &data  = morph.material[j];
+                size_t      first = 0, last = renderData.materialMul.size();
+                if (data.index >= 0)
+                {
+                    first = data.index;
+                    last  = first + 1;
+                }
                 if (data.operation == 0) // multiply
                 {
-                    auto &mat = renderData.materialMul[data.index];
-                    mat.diffuse *=
-                        glm::mix(glm::vec4(1.f), data.diffuse, ratio);
-                    mat.specular *=
-                        glm::mix(glm::vec3(1.f), data.specular, ratio);
-                    mat.specularPower *=
-                        glm::mix(1.f, data.specularPower, ratio);
-                    mat.ambient *=
-                        glm::mix(glm::vec3(1.f), data.ambient, ratio);
-                    mat.edgeColor *=
-                        glm::mix(glm::vec4(1.f), data.edgeColor, ratio);
-                    mat.edgeSize *= glm::mix(1.f, data.edgeSize, ratio);
-                    mat.texture *=
-                        glm::mix(glm::vec4(1.f), data.texture, ratio);
-                    mat.sphereTexture *=
-                        glm::mix(glm::vec4(1.f), data.sphereTexture, ratio);
-                    mat.toonTexture *=
-                        glm::mix(glm::vec4(1.f), data.toonTexture, ratio);
+                    for (; first != last; ++first)
+                    {
+                        auto &mul = renderData.materialMul[first];
+                        mul.diffuse *=
+                            glm::mix(glm::vec4(1.f), data.diffuse, ratio);
+                        mul.specular *=
+                            glm::mix(glm::vec3(1.f), data.specular, ratio);
+                        mul.specularPower *=
+                            glm::mix(1.f, data.specularPower, ratio);
+                        mul.ambient *=
+                            glm::mix(glm::vec3(1.f), data.ambient, ratio);
+                        mul.edgeColor *=
+                            glm::mix(glm::vec4(1.f), data.edgeColor, ratio);
+                        mul.edgeSize *= glm::mix(1.f, data.edgeSize, ratio);
+                        mul.texture *=
+                            glm::mix(glm::vec4(1.f), data.texture, ratio);
+                        mul.sphereTexture *=
+                            glm::mix(glm::vec4(1.f), data.sphereTexture, ratio);
+                        mul.toonTexture *=
+                            glm::mix(glm::vec4(1.f), data.toonTexture, ratio);
+                    }
                 }
                 else // add
                 {
-                    auto &mat = renderData.materialAdd[data.index];
-                    mat.diffuse += ratio * data.diffuse;
-                    mat.specular += ratio * data.specular;
-                    mat.specularPower += ratio * data.specularPower;
-                    mat.ambient += ratio * data.ambient;
-                    mat.edgeColor += ratio * data.edgeColor;
-                    mat.edgeSize += ratio * data.edgeSize;
-                    mat.texture += ratio * data.texture;
-                    mat.sphereTexture += ratio * data.sphereTexture;
-                    mat.toonTexture += ratio * data.toonTexture;
+                    for (; first != last; ++first)
+                    {
+                        auto &add = renderData.materialAdd[first];
+                        add.diffuse += ratio * data.diffuse;
+                        add.specular += ratio * data.specular;
+                        add.specularPower += ratio * data.specularPower;
+                        add.ambient += ratio * data.ambient;
+                        add.edgeColor += ratio * data.edgeColor;
+                        add.edgeSize += ratio * data.edgeSize;
+                        add.texture += ratio * data.texture;
+                        add.sphereTexture += ratio * data.sphereTexture;
+                        add.toonTexture += ratio * data.toonTexture;
+                    }
                 }
             }
             break;

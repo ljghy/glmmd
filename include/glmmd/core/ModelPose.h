@@ -42,6 +42,7 @@ public:
     const glm::vec3 &getLocalBoneTranslation(uint32_t boneIndex) const;
     const glm::quat &getLocalBoneRotation(uint32_t boneIndex) const;
     float            getMorphRatio(uint32_t morphIndex) const;
+    float           &getMorphRatio(uint32_t morphIndex);
 
 private:
     std::shared_ptr<const ModelData> m_modelData;

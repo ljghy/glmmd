@@ -50,7 +50,11 @@ void dropCallback(GLFWwindow *window, int count, const char **paths)
 
 Context::Context(const std::string &initFile)
 {
-    m_initData = parseJsonFile(initFile);
+
+    if (std::filesystem::exists(initFile))
+        m_initData = parseJsonFile(initFile);
+    else
+        m_initData = JsonNode{{"MSAA"_key, 4}};
 
     initWindow();
     initImGui();
@@ -140,7 +144,7 @@ void Context::initFBO()
 {
     m_viewportWidth  = 1600;
     m_viewportHeight = 900;
-    int samples      = m_initData.get<int>("MSAA", 1);
+    int samples      = m_initData.get<int>("MSAA", 4);
 
     m_FBO.create();
     ogl::Texture2DCreateInfo texInfo;
@@ -248,8 +252,7 @@ bool Context::loadModel(const std::filesystem::path &path)
     for (size_t i = 0; i < gpuTextures.size(); ++i)
         renderer.setTexture(i, std::move(gpuTextures[i]));
     m_models.emplace_back(modelData);
-    m_animators.emplace_back(std::make_unique<SimpleAnimator>());
-
+    m_animators.emplace_back(std::make_unique<SimpleAnimator>(modelData));
     return true;
 }
 
@@ -303,12 +306,14 @@ void Context::loadMotion(const std::filesystem::path &path, size_t modelIndex,
 
 void Context::loadResources()
 {
-    for (const auto &modelNode : m_initData["models"].arr())
-        loadModel(modelNode.get<std::filesystem::path>("filename"));
+    if (m_initData.contains("models"))
+        for (const auto &modelNode : m_initData["models"].arr())
+            loadModel(modelNode.get<std::filesystem::path>("filename"));
 
-    for (const auto &motionNode : m_initData["motions"].arr())
-        loadMotion(motionNode.get<std::filesystem::path>("filename"),
-                   motionNode.get<size_t>("model"), motionNode);
+    if (m_initData.contains("motions"))
+        for (const auto &motionNode : m_initData["motions"].arr())
+            loadMotion(motionNode.get<std::filesystem::path>("filename"),
+                       motionNode.get<size_t>("model"), motionNode);
 }
 
 void Context::updateCamera(float deltaTime)

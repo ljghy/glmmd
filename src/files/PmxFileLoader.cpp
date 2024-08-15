@@ -424,7 +424,7 @@ void PmxFileLoader::loadMaterialMorph(const ModelData &data, Morph &morph)
     for (int32_t i = 0; i < morph.count; ++i)
     {
         auto &mat = morph.material[i];
-        readUInt(mat.index, data.info.materialIndexSize);
+        readInt(mat.index, data.info.materialIndexSize);
         readUInt(mat.operation);
         readFloat<4>(mat.diffuse.x);
         readFloat<3>(mat.specular.x);
