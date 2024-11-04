@@ -38,6 +38,7 @@ InfiniteGridRenderer::InfiniteGridRenderer()
         uniform float u_lineWidth;
         uniform float u_falloffDepth;
         uniform vec3 u_color;
+        uniform int u_showAxes;
         in vec3 nearWorld;
         in vec3 farWorld;
         out vec4 FragColor;
@@ -57,9 +58,11 @@ InfiniteGridRenderer::InfiniteGridRenderer()
             vec2 diff = fwidth(worldPos.xz / u_gridSize);
             vec2 lineWidth = u_lineWidth * diff;
             float indX = worldPos.x / u_gridSize;
+            int offsetX = int(round(indX));
             indX -= floor(indX);
             indX = min(indX, 1.0 - indX) / lineWidth.x;
             float indZ = worldPos.z / u_gridSize;
+            int offsetZ = int(round(indZ));
             indZ -= floor(indZ);
             indZ = min(indZ, 1.0 - indZ) / lineWidth.y;
             if (indX > 1.0 && indZ > 1.0)
@@ -68,7 +71,16 @@ InfiniteGridRenderer::InfiniteGridRenderer()
             float alpha = smoothFunc(1.0 - ind);
             if (linearDepth > 0.0)
                 alpha *= smoothFunc(1.0 - linearDepth / u_falloffDepth);
-            FragColor = vec4(u_color, alpha);
+            vec3 color = u_color;
+            if ((indX < 1.0 && abs(offsetX) % 10 == 0) || (indZ < 1.0 && abs(offsetZ) % 10 == 0))
+                color *= 1.5;
+            if (u_showAxes > 0) {
+                if (indX < 1.0 && offsetX == 0 && worldPos.z > 0.0)
+                    color = vec3(0.0, 0.0, 1.0);
+                else if (indZ < 1.0 && offsetZ == 0 && worldPos.x > 0.0)
+                    color = vec3(1.0, 0.0, 0.0);
+            }
+            FragColor = vec4(color, alpha);
         }
     )";
     m_shader.create(vertShaderSrc, fragShaderSrc);
@@ -94,5 +106,6 @@ void InfiniteGridRenderer::render(const glmmd::Camera &camera)
     m_shader.setUniform1f("u_lineWidth", lineWidth);
     m_shader.setUniform1f("u_falloffDepth", falloffDepth);
     m_shader.setUniform3fv("u_color", &color[0]);
+    m_shader.setUniform1i("u_showAxes", showAxes);
     glDrawArrays(GL_TRIANGLES, 0, 6);
 }

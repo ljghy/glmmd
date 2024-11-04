@@ -13,7 +13,6 @@
 
 #include "JsonParser.hpp"
 #include "SimpleAnimator.h"
-#include "AxesRenderer.h"
 #include "InfiniteGridRenderer.h"
 #include "Profiler.h"
 
@@ -73,7 +72,6 @@ private:
 
     int m_selectedModelIndex = -1;
 
-    std::unique_ptr<AxesRenderer>         m_axesRenderer;
     std::unique_ptr<InfiniteGridRenderer> m_gridRenderer;
 
     glm::vec3       m_cameraTarget;

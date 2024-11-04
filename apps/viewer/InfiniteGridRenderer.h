@@ -17,6 +17,7 @@ public:
     float     lineWidth    = 1.f;
     float     falloffDepth = 200.f;
     glm::vec3 color        = glm::vec3(0.6, 0.6, 0.6);
+    int       showAxes     = 1;
 
 private:
     ogl::VertexArrayObject m_dummyVAO;

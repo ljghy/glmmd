@@ -61,8 +61,7 @@ add_executable(viewer)
 
 target_sources(
     viewer
-    PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/AxesRenderer.cpp
-            ${CMAKE_CURRENT_SOURCE_DIR}/InfiniteGridRenderer.cpp
+    PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/InfiniteGridRenderer.cpp
             ${CMAKE_CURRENT_SOURCE_DIR}/Context.cpp
             ${CMAKE_CURRENT_SOURCE_DIR}/main.cpp)
 

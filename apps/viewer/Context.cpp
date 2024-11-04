@@ -197,7 +197,6 @@ void Context::initFBO()
 
 void Context::initRenderers()
 {
-    m_axesRenderer = std::make_unique<AxesRenderer>();
     m_gridRenderer = std::make_unique<InfiniteGridRenderer>();
 }
 
@@ -522,8 +521,6 @@ void Context::render()
                             ? m_shadowMapFBO.depthTextureAttachment()
                             : nullptr);
 
-    if (m_state.renderAxes)
-        m_axesRenderer->render(m_camera);
     if (m_state.renderGrid)
         m_gridRenderer->render(m_camera);
 
@@ -636,7 +633,10 @@ void Context::controlPanel()
 
     ImGui::Checkbox("Render shadow", &m_state.renderShadow);
 
-    ImGui::Checkbox("Render axes", &m_state.renderAxes);
+    if (ImGui::Checkbox("Render axes", &m_state.renderAxes))
+    {
+        m_gridRenderer->showAxes = m_state.renderAxes;
+    }
     ImGui::Checkbox("Render grid", &m_state.renderGrid);
 
     if (ImGui::SliderFloat3("Light direction", &m_lighting.direction.x, -1.f,
@@ -732,7 +732,6 @@ void Context::run()
 
 Context::~Context()
 {
-    m_axesRenderer.reset();
     m_gridRenderer.reset();
 
     glmmd::ModelRenderer::releaseSharedToonTextures();
