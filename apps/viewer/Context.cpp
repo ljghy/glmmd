@@ -9,16 +9,13 @@
 #include <imgui.h>
 #include <imgui_impl_glfw.h>
 #include <imgui_impl_opengl3.h>
-
-#define STB_IMAGE_WRITE_IMPLEMENTATION
-#include <stb/stb_image_write.h>
+#include <imgui_internal.h>
 
 #include <glmmd/files/CodeConverter.h>
 #include <glmmd/files/PmxFileLoader.h>
 #include <glmmd/files/VmdFileLoader.h>
 
 #include "Context.h"
-#include "Profiler.h"
 
 void framebufferSizeCallback(GLFWwindow *, int width, int height)
 {
@@ -61,6 +58,8 @@ Context::Context(const std::string &initFile)
     initFBO();
     initRenderers();
     loadResources();
+
+    initState();
 
     m_cameraTarget          = glm::vec3(0.f);
     m_camera.projType       = glmmd::CameraProjectionType::Perspective;
@@ -316,11 +315,9 @@ void Context::loadResources()
                        motionNode.get<size_t>("model"), motionNode);
 }
 
-void Context::updateCamera(float deltaTime)
+void Context::handleInput(float deltaTime)
 {
     auto &io = ImGui::GetIO();
-
-    m_camera.resize(m_viewportWidth, m_viewportHeight);
 
     ImVec2          mouseDelta  = io.MouseDelta;
     constexpr float sensitivity = glm::radians(0.1f);
@@ -366,42 +363,6 @@ void Context::updateCamera(float deltaTime)
     m_cameraTarget += translation;
 }
 
-void Context::saveScreenshot()
-{
-    int channels = 3;
-
-    std::vector<float> screenshotBuffer(channels * m_viewportHeight *
-                                        m_viewportWidth);
-
-    m_intermediateFBO.readColorAttachment(screenshotBuffer.data(), GL_RGB,
-                                          GL_FLOAT);
-
-    std::vector<uint8_t> m_screenshotBuffer(channels * m_viewportHeight *
-                                            m_viewportWidth);
-
-    for (int i = 0; i < m_viewportHeight * m_viewportWidth * channels; ++i)
-    {
-        m_screenshotBuffer[i] =
-            static_cast<uint8_t>(glm::round(screenshotBuffer[i] * 255.f));
-    }
-
-    for (int row = 0; row != m_viewportHeight / 2; ++row)
-    {
-        std::swap_ranges(
-            m_screenshotBuffer.begin() + row * m_viewportWidth * channels,
-            m_screenshotBuffer.begin() + (row + 1) * m_viewportWidth * channels,
-            m_screenshotBuffer.begin() +
-                (m_viewportHeight - row - 1) * m_viewportWidth * channels);
-    }
-
-    static int  screenshotIndex = 0;
-    std::string filename =
-        "screenshot_" + std::to_string(screenshotIndex++) + ".png";
-    stbi_write_png(filename.c_str(), m_viewportWidth, m_viewportHeight,
-                   channels, m_screenshotBuffer.data(),
-                   m_viewportWidth * channels);
-}
-
 void Context::updateModelPose(size_t i)
 {
     auto &model = m_models[i];
@@ -410,16 +371,288 @@ void Context::updateModelPose(size_t i)
     model.solvePose();
 }
 
+void Context::initState()
+{
+    m_state.paused = true;
+
+    m_state.physicsEnabled      = false;
+    m_state.physicsFPSSelection = 1;
+
+    m_state.gravity = glm::vec3(0.f, -9.8f, 0.f);
+
+    m_state.clearColor = glm::vec4(0.2f, 0.2f, 0.2f, 1.0f);
+
+    m_state.ortho =
+        m_camera.projType == glmmd::CameraProjectionType::Orthographic;
+    m_state.renderEdge         = true;
+    m_state.renderShadow       = true;
+    m_state.renderGroundShadow = true;
+    m_state.renderAxes         = true;
+    m_state.renderGrid         = true;
+
+    m_state.shouldUpdateModels = true;
+}
+
+void Context::dockspace()
+{
+    ImGuiViewport *mainViewport = ImGui::GetMainViewport();
+    ImGui::SetNextWindowPos(mainViewport->WorkPos);
+    ImGui::SetNextWindowSize(mainViewport->WorkSize);
+    ImGui::SetNextWindowViewport(mainViewport->ID);
+
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.f);
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.f);
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.f, 0.f));
+    ImGui::Begin("Main", nullptr,
+                 ImGuiWindowFlags_MenuBar | ImGuiWindowFlags_NoResize |
+                     ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoCollapse |
+                     ImGuiWindowFlags_NoBringToFrontOnFocus |
+                     ImGuiWindowFlags_NoTitleBar |
+                     ImGuiWindowFlags_NoBackground);
+
+    if (ImGui::BeginMenuBar())
+    {
+        if (ImGui::BeginMenu("File"))
+        {
+            if (ImGui::MenuItem("Exit"))
+                glfwSetWindowShouldClose(m_window, true);
+            ImGui::EndMenu();
+        }
+        ImGui::EndMenuBar();
+    }
+
+    ImGuiID dockspaceId = ImGui::GetID("Dockspace");
+    ImGui::DockSpace(dockspaceId, ImVec2(0.f, 0.f),
+                     ImGuiDockNodeFlags_PassthruCentralNode);
+
+    static bool firstLoop = true;
+    if (firstLoop)
+    {
+        firstLoop = false;
+        ImGui::DockBuilderRemoveNode(dockspaceId);
+        ImGui::DockBuilderAddNode(dockspaceId, ImGuiDockNodeFlags_DockSpace);
+        ImGui::DockBuilderSetNodeSize(dockspaceId, mainViewport->Size);
+
+        ImGuiID controlDockId = ImGui::DockBuilderSplitNode(
+            dockspaceId, ImGuiDir_Left, 0.2f, nullptr, &dockspaceId);
+        ImGuiID viewportDockId = dockspaceId;
+
+        ImGui::DockBuilderDockWindow("Control", controlDockId);
+        ImGui::DockBuilderDockWindow("Viewport", viewportDockId);
+
+        ImGui::DockBuilderFinish(dockspaceId);
+    }
+
+    ImGui::End();
+    ImGui::PopStyleVar(3);
+}
+
+void Context::updateModels()
+{
+#ifndef GLMMD_DO_NOT_USE_STD_EXECUTION
+    std::vector<size_t> modelIndices(m_models.size());
+    std::iota(modelIndices.begin(), modelIndices.end(), 0);
+    std::for_each(std::execution::par, modelIndices.begin(), modelIndices.end(),
+                  [&](size_t i)
+#else
+    for (size_t i = 0; i < m_models.size(); ++i)
+#endif
+                  {
+                      updateModelPose(i);
+                      m_modelRenderers[i].renderData().init();
+                      m_models[i].pose().applyToRenderData(
+                          m_modelRenderers[i].renderData());
+                  }
+#ifndef GLMMD_DO_NOT_USE_STD_EXECUTION
+    );
+#endif
+}
+
+void Context::updateViewportSize()
+{
+    int currentViewportWidth =
+        static_cast<int>(std::round(ImGui::GetWindowWidth()));
+    int currentViewportHeight =
+        static_cast<int>(std::round(ImGui::GetWindowHeight()));
+    if (currentViewportWidth > 0 && currentViewportHeight > 0 &&
+        (m_viewportWidth != currentViewportWidth ||
+         m_viewportHeight != currentViewportHeight))
+    {
+        m_viewportWidth  = currentViewportWidth;
+        m_viewportHeight = currentViewportHeight;
+        m_FBO.resize(m_viewportWidth, m_viewportHeight);
+        m_intermediateFBO.resize(m_viewportWidth, m_viewportHeight);
+
+        m_camera.resize(m_viewportWidth, m_viewportHeight);
+    }
+}
+
+void Context::render()
+{
+    if (m_state.shouldUpdateModels)
+        for (const auto &renderer : m_modelRenderers)
+            renderer.fillBuffers();
+
+    // Render shadow map
+
+    if (m_state.renderShadow)
+    {
+        m_shadowMapFBO.bind();
+        glViewport(0, 0, m_shadowMapWidth, m_shadowMapHeight);
+        glClear(GL_DEPTH_BUFFER_BIT);
+        for (const auto &renderer : m_modelRenderers)
+            renderer.renderShadowMap(m_lighting);
+        m_shadowMapFBO.unbind();
+    }
+
+    // Render models
+
+    m_FBO.bind();
+
+    glClearColor(m_state.clearColor.x * m_state.clearColor.w,
+                 m_state.clearColor.y * m_state.clearColor.w,
+                 m_state.clearColor.z * m_state.clearColor.w,
+                 m_state.clearColor.w);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    glViewport(0, 0, m_viewportWidth, m_viewportHeight);
+
+    for (const auto &renderer : m_modelRenderers)
+        renderer.render(m_camera, m_lighting,
+                        m_state.renderShadow
+                            ? m_shadowMapFBO.depthTextureAttachment()
+                            : nullptr);
+
+    if (m_state.renderAxes)
+        m_axesRenderer->render(m_camera);
+    if (m_state.renderGrid)
+        m_gridRenderer->render(m_camera);
+
+    m_FBO.unbind();
+
+    m_FBO.bindRead();
+    m_intermediateFBO.bindDraw();
+    glBlitFramebuffer(0, 0, m_viewportWidth, m_viewportHeight, 0, 0,
+                      m_viewportWidth, m_viewportHeight, GL_COLOR_BUFFER_BIT,
+                      GL_NEAREST);
+    m_intermediateFBO.unbind();
+}
+
+void Context::controlPanel()
+{
+    ImGui::Begin("Control", nullptr, ImGuiWindowFlags_NoMove);
+
+    if (ImGui::BeginListBox("Models"))
+    {
+        for (int i = 0; i < static_cast<int>(m_models.size()); ++i)
+        {
+            ImGui::PushID(i);
+            if (ImGui::Selectable(
+                    m_modelData[m_modelIndexMap[i]]->info.modelName.c_str(),
+                    m_selectedModelIndex == i))
+                m_selectedModelIndex = i;
+            ImGui::PopID();
+        }
+        ImGui::EndListBox();
+    }
+
+    if (m_selectedModelIndex != -1)
+    {
+        if (ImGui::Button("Remove"))
+        {
+            removeModel(m_selectedModelIndex);
+            m_selectedModelIndex = -1;
+        }
+    }
+
+    ImGui::Text("FPS: %.1f", ImGui::GetIO().Framerate);
+    ImGui::Text("Physics: %.3f ms", m_profiler.query("Physics") * 1000.f);
+    ImGui::Text("Model update: %.3f ms",
+                m_profiler.query("Model update") * 1000.f);
+    ImGui::Text("Render: %.3f ms", m_profiler.query("Render") * 1000.f);
+    ImGui::Text("Total: %.3f ms", m_profiler.queryTotal() * 1000.f);
+
+    if (ImGui::Button(m_state.paused ? "Resume" : "Pause"))
+    {
+        if (m_state.paused)
+            for (auto &animator : m_animators)
+                animator->resume();
+        else
+            for (auto &animator : m_animators)
+                animator->pause();
+        m_state.paused = !m_state.paused;
+    }
+
+    if (ImGui::Checkbox("Physics", &m_state.physicsEnabled))
+    {
+        if (m_state.physicsEnabled)
+        {
+            for (auto &model : m_models)
+                m_physicsWorld.setupModelPhysics(model, true);
+        }
+        else
+        {
+            for (auto &model : m_models)
+                m_physicsWorld.clearModelPhysics(model);
+        }
+    }
+
+    ImGui::Combo("Physics FPS", &m_state.physicsFPSSelection,
+                 "60\000120\000240");
+
+    if (ImGui::Button("Reset"))
+    {
+        for (auto &animator : m_animators)
+            animator->reset();
+    }
+
+    if (ImGui::SliderFloat3("Gravity", &m_state.gravity.x, -10.f, 10.f))
+        m_physicsWorld.setGravity(m_state.gravity);
+
+    ImGui::ColorEdit4("Clear color", &m_state.clearColor.x);
+
+    if (ImGui::Checkbox("Ortho", &m_state.ortho))
+        m_camera.projType = m_state.ortho
+                                ? glmmd::CameraProjectionType::Orthographic
+                                : glmmd::CameraProjectionType::Perspective;
+
+    if (ImGui::Checkbox("Render edge", &m_state.renderEdge))
+    {
+        for (auto &renderer : m_modelRenderers)
+            if (m_state.renderEdge)
+                renderer.renderFlag() |= glmmd::MODEL_RENDER_FLAG_EDGE;
+            else
+                renderer.renderFlag() &= ~glmmd::MODEL_RENDER_FLAG_EDGE;
+    }
+
+    if (ImGui::Checkbox("Render ground shadow", &m_state.renderGroundShadow))
+    {
+        for (auto &renderer : m_modelRenderers)
+            if (m_state.renderGroundShadow)
+                renderer.renderFlag() |= glmmd::MODEL_RENDER_FLAG_GROUND_SHADOW;
+            else
+                renderer.renderFlag() &=
+                    ~glmmd::MODEL_RENDER_FLAG_GROUND_SHADOW;
+    }
+
+    ImGui::Checkbox("Render shadow", &m_state.renderShadow);
+
+    ImGui::Checkbox("Render axes", &m_state.renderAxes);
+    ImGui::Checkbox("Render grid", &m_state.renderGrid);
+
+    if (ImGui::SliderFloat3("Light direction", &m_lighting.direction.x, -1.f,
+                            1.f))
+        m_lighting.direction = glm::normalize(m_lighting.direction);
+
+    ImGui::End();
+}
+
 void Context::run()
 {
     auto &io = ImGui::GetIO();
 
-    ImVec4 clearColor = ImVec4(0.2f, 0.2f, 0.2f, 1.0f);
-
-    Profiler<float, 256> profiler;
-    profiler.push("Physics");
-    profiler.push("Model update");
-    profiler.push("Render");
+    m_profiler.push("Physics");
+    m_profiler.push("Model update");
+    m_profiler.push("Render");
 
     while (!glfwWindowShouldClose(m_window))
     {
@@ -432,231 +665,55 @@ void Context::run()
         glClearColor(0.f, 0.f, 0.f, 0.5f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
+        dockspace();
+
         float deltaTime = io.DeltaTime;
 
-        profiler.startFrame();
+        m_profiler.startFrame();
 
-        profiler.start("Physics");
-        m_physicsWorld.update(deltaTime, 10, 1.f / 240.f);
-        profiler.stop("Physics");
-
-        profiler.start("Model update");
-
-#ifndef GLMMD_DO_NOT_USE_STD_EXECUTION
-        std::vector<size_t> modelIndices(m_models.size());
-        std::iota(modelIndices.begin(), modelIndices.end(), 0);
-        std::for_each(std::execution::par, modelIndices.begin(),
-                      modelIndices.end(),
-                      [&](size_t i)
-#else
-        for (size_t i = 0; i < m_models.size(); ++i)
-#endif
-                      {
-                          updateModelPose(i);
-                          m_modelRenderers[i].renderData().init();
-                          m_models[i].pose().applyToRenderData(
-                              m_modelRenderers[i].renderData());
-                      }
-#ifndef GLMMD_DO_NOT_USE_STD_EXECUTION
-        );
-#endif
-
-        profiler.stop("Model update");
-
-        profiler.start("Render");
-
-        for (const auto &renderer : m_modelRenderers)
-            renderer.fillBuffers();
-
-        // Render shadow map
-
-        static bool renderShadow = true;
-
-        if (renderShadow)
         {
-            m_shadowMapFBO.bind();
-            glViewport(0, 0, m_shadowMapWidth, m_shadowMapHeight);
-            glClear(GL_DEPTH_BUFFER_BIT);
-            for (const auto &renderer : m_modelRenderers)
-                renderer.renderShadowMap(m_lighting);
-            m_shadowMapFBO.unbind();
+            m_profiler.start("Physics");
+            const int physicsFPS[3]{60, 120, 240};
+            m_physicsWorld.update(
+                deltaTime, 10, 1.f / physicsFPS[m_state.physicsFPSSelection]);
+            m_profiler.stop("Physics");
         }
 
-        // Render models
-
-        ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0, 0));
-        ImGui::Begin("Viewport", nullptr,
-                     ImGuiWindowFlags_NoScrollbar |
-                         ImGuiWindowFlags_NoScrollWithMouse);
-
-        m_FBO.bind();
-
-        int currentViewportWidth =
-            static_cast<int>(std::round(ImGui::GetWindowWidth()));
-        int currentViewportHeight =
-            static_cast<int>(std::round(ImGui::GetWindowHeight()));
-        if (currentViewportWidth > 0 && currentViewportHeight > 0 &&
-            (m_viewportWidth != currentViewportWidth ||
-             m_viewportHeight != currentViewportHeight))
         {
-            m_viewportWidth  = currentViewportWidth;
-            m_viewportHeight = currentViewportHeight;
-            m_FBO.resize(m_viewportWidth, m_viewportHeight);
-            m_intermediateFBO.resize(m_viewportWidth, m_viewportHeight);
+            m_profiler.start("Model update");
+            if (m_state.shouldUpdateModels)
+                updateModels();
+            m_profiler.stop("Model update");
         }
 
-        glClearColor(clearColor.x * clearColor.w, clearColor.y * clearColor.w,
-                     clearColor.z * clearColor.w, clearColor.w);
-        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-        glViewport(0, 0, m_viewportWidth, m_viewportHeight);
-
-        if (ImGui::IsWindowFocused())
-            updateCamera(deltaTime);
-
-        for (const auto &renderer : m_modelRenderers)
-            renderer.render(m_camera, m_lighting,
-                            renderShadow
-                                ? m_shadowMapFBO.depthTextureAttachment()
-                                : nullptr);
-
-        static bool renderAxes = true;
-        if (renderAxes)
-            m_axesRenderer->render(m_camera);
-        static bool renderGrid = true;
-        if (renderGrid)
-            m_gridRenderer->render(m_camera);
-
-        m_FBO.unbind();
-
-        m_FBO.bindRead();
-        m_intermediateFBO.bindDraw();
-        glBlitFramebuffer(0, 0, m_viewportWidth, m_viewportHeight, 0, 0,
-                          m_viewportWidth, m_viewportHeight,
-                          GL_COLOR_BUFFER_BIT, GL_NEAREST);
-        m_intermediateFBO.unbind();
-
-        ImGui::Image(
-            (void *)(uintptr_t)m_intermediateFBO.colorTextureAttachment()->id(),
-            ImVec2(static_cast<float>(m_viewportWidth),
-                   static_cast<float>(m_viewportHeight)),
-            ImVec2(0, 1), ImVec2(1, 0));
-        ImGui::End();
-        ImGui::PopStyleVar();
-
-        profiler.stop("Render");
-
-        if (io.WantCaptureKeyboard)
-            if (ImGui::IsKeyPressed(ImGuiKey_F2))
-                saveScreenshot();
-
-        ImGui::Begin("Control");
-
-        if (ImGui::BeginListBox("Models"))
         {
-            for (int i = 0; i < static_cast<int>(m_models.size()); ++i)
-            {
-                ImGui::PushID(i);
-                if (ImGui::Selectable(
-                        m_modelData[m_modelIndexMap[i]]->info.modelName.c_str(),
-                        m_selectedModelIndex == i))
-                    m_selectedModelIndex = i;
-                ImGui::PopID();
-            }
-            ImGui::EndListBox();
+            ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0, 0));
+            ImGui::Begin("Viewport", nullptr,
+                         ImGuiWindowFlags_NoScrollbar |
+                             ImGuiWindowFlags_NoScrollWithMouse |
+                             ImGuiWindowFlags_NoMove |
+                             ImGuiWindowFlags_NoBackground);
+
+            updateViewportSize();
+
+            if (ImGui::IsWindowFocused())
+                handleInput(deltaTime);
+
+            m_profiler.start("Render");
+            render();
+            m_profiler.stop("Render");
+
+            ImGui::Image(m_intermediateFBO.colorTextureAttachment()->id(),
+                         ImVec2(static_cast<float>(m_viewportWidth),
+                                static_cast<float>(m_viewportHeight)),
+                         ImVec2(0, 1), ImVec2(1, 0));
+            ImGui::End();
+            ImGui::PopStyleVar();
         }
 
-        if (m_selectedModelIndex != -1)
-        {
-            if (ImGui::Button("Remove"))
-            {
-                removeModel(m_selectedModelIndex);
-                m_selectedModelIndex = -1;
-            }
-        }
+        m_state.shouldUpdateModels = !m_state.paused || m_state.physicsEnabled;
 
-        ImGui::Text("FPS: %.1f", io.Framerate);
-        ImGui::Text("Physics: %.3f ms", profiler.query("Physics") * 1000.f);
-        ImGui::Text("Model update: %.3f ms",
-                    profiler.query("Model update") * 1000.f);
-        ImGui::Text("Render: %.3f ms", profiler.query("Render") * 1000.f);
-        ImGui::Text("Total: %.3f ms", profiler.queryTotal() * 1000.f);
-
-        static bool pause = true;
-        if (ImGui::Button(pause ? "Resume" : "Pause"))
-        {
-            if (pause)
-                for (auto &animator : m_animators)
-                    animator->resume();
-            else
-                for (auto &animator : m_animators)
-                    animator->pause();
-            pause = !pause;
-        }
-
-        static bool physics = false;
-        if (ImGui::Checkbox("Physics", &physics))
-        {
-            if (physics)
-            {
-                for (auto &model : m_models)
-                    m_physicsWorld.setupModelPhysics(model, true);
-            }
-            else
-            {
-                for (auto &model : m_models)
-                    m_physicsWorld.clearModelPhysics(model);
-            }
-        }
-
-        if (ImGui::Button("Reset"))
-        {
-            for (auto &animator : m_animators)
-                animator->reset();
-        }
-
-        static glm::vec3 gravity = glm::vec3(0.f, -9.8f, 0.f);
-        if (ImGui::SliderFloat3("Gravity", &gravity.x, -10.f, 10.f))
-            m_physicsWorld.setGravity(gravity);
-        ImGui::ColorEdit4("Clear Color", &clearColor.x);
-        static bool ortho =
-            m_camera.projType == glmmd::CameraProjectionType::Orthographic;
-        if (ImGui::Checkbox("Ortho", &ortho))
-            m_camera.projType = ortho
-                                    ? glmmd::CameraProjectionType::Orthographic
-                                    : glmmd::CameraProjectionType::Perspective;
-
-        static bool renderEdge = true;
-        if (ImGui::Checkbox("Render edge", &renderEdge))
-        {
-            for (auto &renderer : m_modelRenderers)
-                if (renderEdge)
-                    renderer.renderFlag() |= glmmd::MODEL_RENDER_FLAG_EDGE;
-                else
-                    renderer.renderFlag() &= ~glmmd::MODEL_RENDER_FLAG_EDGE;
-        }
-
-        static bool renderGroundShadow = true;
-        if (ImGui::Checkbox("Render ground shadow", &renderGroundShadow))
-        {
-            for (auto &renderer : m_modelRenderers)
-                if (renderGroundShadow)
-                    renderer.renderFlag() |=
-                        glmmd::MODEL_RENDER_FLAG_GROUND_SHADOW;
-                else
-                    renderer.renderFlag() &=
-                        ~glmmd::MODEL_RENDER_FLAG_GROUND_SHADOW;
-        }
-
-        ImGui::Checkbox("Render shadow", &renderShadow);
-
-        ImGui::Checkbox("Render axes", &renderAxes);
-        ImGui::Checkbox("Render grid", &renderGrid);
-
-        if (ImGui::SliderFloat3("Light direction", &m_lighting.direction.x,
-                                -1.f, 1.f))
-            m_lighting.direction = glm::normalize(m_lighting.direction);
-
-        ImGui::End();
+        controlPanel();
 
         ImGui::Render();
         ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());

@@ -15,6 +15,7 @@
 #include "SimpleAnimator.h"
 #include "AxesRenderer.h"
 #include "InfiniteGridRenderer.h"
+#include "Profiler.h"
 
 class Context
 {
@@ -41,9 +42,15 @@ private:
 
     void updateModelPose(size_t i);
 
-    void updateCamera(float deltaTime);
+    void handleInput(float deltaTime);
 
-    void saveScreenshot();
+    void initState();
+
+    void dockspace();
+    void updateModels();
+    void updateViewportSize();
+    void render();
+    void controlPanel();
 
 private:
     JsonNode m_initData;
@@ -66,7 +73,7 @@ private:
 
     int m_selectedModelIndex = -1;
 
-    std::unique_ptr<AxesRenderer> m_axesRenderer;
+    std::unique_ptr<AxesRenderer>         m_axesRenderer;
     std::unique_ptr<InfiniteGridRenderer> m_gridRenderer;
 
     glm::vec3       m_cameraTarget;
@@ -78,6 +85,29 @@ private:
     ogl::FrameBufferObject m_FBO;
     ogl::FrameBufferObject m_intermediateFBO;
     ogl::FrameBufferObject m_shadowMapFBO;
+
+    Profiler<float, 64> m_profiler;
+
+    struct State
+    {
+        bool paused;
+
+        bool physicsEnabled;
+        int  physicsFPSSelection;
+
+        glm::vec3 gravity;
+
+        glm::vec4 clearColor;
+
+        bool ortho;
+        bool renderEdge;
+        bool renderShadow;
+        bool renderGroundShadow;
+        bool renderAxes;
+        bool renderGrid;
+
+        bool shouldUpdateModels;
+    } m_state;
 };
 
 #endif
