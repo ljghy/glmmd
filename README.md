@@ -133,3 +133,5 @@ make [-j<N>]
 [Dear ImGui](https://github.com/ocornut/imgui)
 
 [GLFW](https://github.com/glfw/glfw)
+
+[Noto Sans CJK](https://github.com/notofonts/noto-cjk)

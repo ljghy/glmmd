@@ -7,13 +7,10 @@ InfiniteGridRenderer::InfiniteGridRenderer()
         #version 330 core
         uniform mat4 u_VP;
         uniform mat4 u_invVP;
-        vec2 ndcPos[6] = vec2[](
-            vec2( 1.0,  1.0),
-            vec2(-1.0,  1.0),
+        vec2 ndcPos[3] = vec2[](
             vec2(-1.0, -1.0),
-            vec2(-1.0, -1.0),
-            vec2( 1.0, -1.0),
-            vec2( 1.0,  1.0)
+            vec2( 3.0, -1.0),
+            vec2(-1.0,  3.0)
         );
         out vec3 nearWorld;
         out vec3 farWorld;
@@ -94,6 +91,7 @@ void InfiniteGridRenderer::render(const glmmd::Camera &camera)
     glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ONE,
                         GL_ONE_MINUS_SRC_ALPHA);
     glDisable(GL_CULL_FACE);
+    glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
     m_dummyVAO.bind();
     m_shader.use();
     glm::mat4 V     = camera.view();
@@ -107,5 +105,5 @@ void InfiniteGridRenderer::render(const glmmd::Camera &camera)
     m_shader.setUniform1f("u_falloffDepth", falloffDepth);
     m_shader.setUniform3fv("u_color", &color[0]);
     m_shader.setUniform1i("u_showAxes", showAxes);
-    glDrawArrays(GL_TRIANGLES, 0, 6);
+    glDrawArrays(GL_TRIANGLES, 0, 3);
 }

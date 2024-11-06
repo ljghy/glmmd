@@ -1,8 +1,7 @@
 #include <stdexcept>
+#include <fstream>
 #include <algorithm>
 
-#define STB_IMAGE_IMPLEMENTATION
-#define STBI_WINDOWS_UTF8
 #include <stb/stb_image.h>
 
 #include <glmmd/files/CodeConverter.h>
@@ -66,17 +65,11 @@ void PmxFileLoader::loadInfo(ModelData &data)
     readUInt(info.morphIndexSize);
     readUInt(info.rigidBodyIndexSize);
 
-#ifndef GLMMD_DO_NOT_FORCE_UTF8
-    info.internalEncodingMethod = EncodingMethod::UTF8; // UTF-8
-#else
-    info.internalEncodingMethod = info.encodingMethod;
-#endif
-
     readTextBuffer(info.modelName);
     readTextBuffer(info.modelNameEN);
     readTextBuffer(info.comment);
     readTextBuffer(info.commentEN);
-#ifndef GLMMD_DO_NOT_FORCE_UTF8
+
     if (info.encodingMethod == EncodingMethod::UTF16_LE)
     {
         info.modelName   = codeCvt<UTF16_LE, UTF8>(info.modelName);
@@ -84,7 +77,6 @@ void PmxFileLoader::loadInfo(ModelData &data)
         info.comment     = codeCvt<UTF16_LE, UTF8>(info.comment);
         info.commentEN   = codeCvt<UTF16_LE, UTF8>(info.commentEN);
     }
-#endif
 }
 
 void PmxFileLoader::loadVertices(ModelData &data)
@@ -157,6 +149,31 @@ void PmxFileLoader::loadIndices(ModelData &data)
         readUInt(index, data.info.vertexIndexSize);
 }
 
+static void loadTexture(const std::filesystem::path &path, Texture &tex)
+{
+    tex.data.reset();
+
+    if (!path.has_filename())
+        return;
+
+    std::ifstream fin(path, std::ios::binary);
+    if (!fin)
+        return;
+
+    std::vector<char> buffer(std::istreambuf_iterator<char>(fin),
+                             std::istreambuf_iterator<char>{});
+
+    stbi_uc *pixels = stbi_load_from_memory(
+        reinterpret_cast<const stbi_uc *>(buffer.data()),
+        static_cast<int>(buffer.size()), &tex.width, &tex.height, nullptr, 4);
+
+    if (pixels)
+    {
+        tex.channels = 4;
+        tex.data.reset(pixels, stbi_image_free);
+    }
+}
+
 void PmxFileLoader::loadTextures(ModelData                            &data,
                                  const std::function<void(Texture &)> &callback)
 {
@@ -173,9 +190,7 @@ void PmxFileLoader::loadTextures(ModelData                            &data,
                 ? codeCvt<UTF16_LE, UTF8>(texture.path)
                 : texture.path;
 
-#ifndef GLMMD_DO_NOT_FORCE_UTF8
         texture.path = u8path;
-#endif
 
 #ifndef _WIN32
         std::replace(u8path.begin(), u8path.end(), '\\', '/');
@@ -188,18 +203,7 @@ void PmxFileLoader::loadTextures(ModelData                            &data,
 #endif
         path = m_modelDir / path.make_preferred();
 
-        stbi_uc *pixels =
-            stbi_load(reinterpret_cast<const char *>(path.u8string().data()),
-                      &texture.width, &texture.height, nullptr, 4);
-        if (!pixels)
-        {
-            texture.data.reset();
-        }
-        else
-        {
-            texture.channels = 4;
-            texture.data.reset(pixels, stbi_image_free);
-        }
+        loadTexture(path, texture);
         if (callback)
             callback(texture);
     }
@@ -215,13 +219,11 @@ void PmxFileLoader::loadMaterials(ModelData &data)
     {
         readTextBuffer(mat.name);
         readTextBuffer(mat.nameEN);
-#ifndef GLMMD_DO_NOT_FORCE_UTF8
         if (data.info.encodingMethod == EncodingMethod::UTF16_LE)
         {
             mat.name   = codeCvt<UTF16_LE, UTF8>(mat.name);
             mat.nameEN = codeCvt<UTF16_LE, UTF8>(mat.nameEN);
         }
-#endif
 
         readFloat<4>(mat.diffuse.x);
         readFloat<3>(mat.specular.x);
@@ -240,10 +242,8 @@ void PmxFileLoader::loadMaterials(ModelData &data)
         else
             readInt(mat.toonTextureIndex, 1);
         readTextBuffer(mat.memo);
-#ifndef GLMMD_DO_NOT_FORCE_UTF8
         if (data.info.encodingMethod == EncodingMethod::UTF16_LE)
             mat.memo = codeCvt<UTF16_LE, UTF8>(mat.memo);
-#endif
         readInt(mat.indicesCount);
     }
 }
@@ -259,13 +259,11 @@ void PmxFileLoader::loadBones(ModelData &data)
     {
         readTextBuffer(bone.name);
         readTextBuffer(bone.nameEN);
-#ifndef GLMMD_DO_NOT_FORCE_UTF8
         if (data.info.encodingMethod == EncodingMethod::UTF16_LE)
         {
             bone.name   = codeCvt<UTF16_LE, UTF8>(bone.name);
             bone.nameEN = codeCvt<UTF16_LE, UTF8>(bone.nameEN);
         }
-#endif
         readFloat<3>(bone.position.x);
         readInt(bone.parentIndex, data.info.boneIndexSize);
         readInt(bone.deformLayer);
@@ -334,13 +332,11 @@ void PmxFileLoader::loadMorphs(ModelData &data)
     {
         readTextBuffer(morph.name);
         readTextBuffer(morph.nameEN);
-#ifndef GLMMD_DO_NOT_FORCE_UTF8
         if (data.info.encodingMethod == EncodingMethod::UTF16_LE)
         {
             morph.name   = codeCvt<UTF16_LE, UTF8>(morph.name);
             morph.nameEN = codeCvt<UTF16_LE, UTF8>(morph.nameEN);
         }
-#endif
         readUInt(morph.panel);
         readUInt(morph.type);
         readInt(morph.count);
@@ -448,13 +444,11 @@ void PmxFileLoader::loadDisplayFrames(ModelData &data)
     {
         readTextBuffer(frame.name);
         readTextBuffer(frame.nameEN);
-#ifndef GLMMD_DO_NOT_FORCE_UTF8
         if (data.info.encodingMethod == EncodingMethod::UTF16_LE)
         {
             frame.name   = codeCvt<UTF16_LE, UTF8>(frame.name);
             frame.nameEN = codeCvt<UTF16_LE, UTF8>(frame.nameEN);
         }
-#endif
 
         readUInt(frame.specialFlag);
 
@@ -481,13 +475,11 @@ void PmxFileLoader::loadRigidBodies(ModelData &data)
     {
         readTextBuffer(rigidBody.name);
         readTextBuffer(rigidBody.nameEN);
-#ifndef GLMMD_DO_NOT_FORCE_UTF8
         if (data.info.encodingMethod == EncodingMethod::UTF16_LE)
         {
             rigidBody.name   = codeCvt<UTF16_LE, UTF8>(rigidBody.name);
             rigidBody.nameEN = codeCvt<UTF16_LE, UTF8>(rigidBody.nameEN);
         }
-#endif
 
         readInt(rigidBody.boneIndex, data.info.boneIndexSize);
 
@@ -516,13 +508,11 @@ void PmxFileLoader::loadJoints(ModelData &data)
     {
         readTextBuffer(joint.name);
         readTextBuffer(joint.nameEN);
-#ifndef GLMMD_DO_NOT_FORCE_UTF8
         if (data.info.encodingMethod == EncodingMethod::UTF16_LE)
         {
             joint.name   = codeCvt<UTF16_LE, UTF8>(joint.name);
             joint.nameEN = codeCvt<UTF16_LE, UTF8>(joint.nameEN);
         }
-#endif
 
         readUInt(joint.type);
         readInt(joint.rigidBodyIndexA, data.info.rigidBodyIndexSize);

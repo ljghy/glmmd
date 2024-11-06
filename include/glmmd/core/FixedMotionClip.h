@@ -3,7 +3,6 @@
 
 #include <vector>
 #include <map>
-#include <limits>
 
 #include <glmmd/core/Motion.h>
 #include <glmmd/core/Transform.h>
@@ -38,8 +37,7 @@ public:
 
     virtual float duration() const override
     {
-        return m_loop ? std::numeric_limits<float>::max()
-                      : m_frameCount / m_frameRate;
+        return m_frameCount / m_frameRate;
     }
 
     virtual void getLocalPose(float time, ModelPose &pose) const override;

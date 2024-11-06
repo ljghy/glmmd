@@ -109,12 +109,8 @@ void dumpObjFile(const std::filesystem::path &path, const ModelData &modelData,
 
         if (mat.textureIndex != -1)
         {
-            const auto &tex    = modelData.textures[mat.textureIndex];
-            std::string u8path = modelData.info.internalEncodingMethod ==
-                                         EncodingMethod::UTF16_LE
-                                     ? codeCvt<UTF16_LE, UTF8>(tex.path)
-                                     : tex.path;
-            mtlFile << "map_Kd " << u8path << '\n';
+            const auto &tex = modelData.textures[mat.textureIndex];
+            mtlFile << "map_Kd " << tex.path << '\n';
         }
 
         mtlFile << '\n';

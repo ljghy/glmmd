@@ -1,26 +1,33 @@
 #include <iostream>
+#include <filesystem>
 
 #ifdef _WIN32
 #include <Windows.h>
 #endif
 
-#include "Context.h"
+#include "Viewer.h"
 
-int main()
+#ifdef _WIN32
+int wmain(int argc, wchar_t **argv)
+#else
+int main(int argc, char **argv)
+#endif
 {
 #ifdef _WIN32
     SetConsoleOutputCP(CP_UTF8);
     setvbuf(stdout, nullptr, _IOFBF, 1000);
+    setlocale(LC_ALL, ".UTF8");
 #endif
 
-    std::unique_ptr<Context> context;
     try
     {
-        context = std::make_unique<Context>("init.json");
+        std::filesystem::path executableDir =
+            std::filesystem::absolute(argv[0]).parent_path();
+        Viewer viewer(executableDir, "init.json");
+        viewer.run();
     }
     catch (const std::exception &e)
     {
         std::cerr << e.what() << '\n';
     }
-    context->run();
 }

@@ -33,8 +33,6 @@ struct ModelInfo
     uint8_t morphIndexSize;
     uint8_t rigidBodyIndexSize;
 
-    EncodingMethod internalEncodingMethod;
-
     std::string modelName;
     std::string modelNameEN;
     std::string comment;
@@ -76,7 +74,7 @@ struct Texture
     int         height;
     int         channels;
 
-    std::shared_ptr<uint8_t[]> data;
+    std::shared_ptr<unsigned char[]> data;
 };
 
 struct Material

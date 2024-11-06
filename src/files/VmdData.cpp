@@ -15,13 +15,7 @@ FixedMotionClip VmdData::toFixedMotionClip(const ModelData &modelData,
 
     std::unordered_map<std::string, uint32_t> boneNameToIndex;
     for (uint32_t i = 0; i < modelData.bones.size(); ++i)
-    {
-        if (modelData.info.internalEncodingMethod == EncodingMethod::UTF8)
-            boneNameToIndex.emplace(modelData.bones[i].name, i);
-        else
-            boneNameToIndex.emplace(
-                codeCvt<UTF16_LE, UTF8>(modelData.bones[i].name), i);
-    }
+        boneNameToIndex.emplace(modelData.bones[i].name, i);
 
     clip.m_boneFrames.reserve(boneFrames.size());
     clip.m_boneFrameIndex.resize(modelData.bones.size());
@@ -52,13 +46,7 @@ FixedMotionClip VmdData::toFixedMotionClip(const ModelData &modelData,
 
     std::unordered_map<std::string, uint32_t> morphNameToIndex;
     for (uint32_t i = 0; i < modelData.morphs.size(); ++i)
-    {
-        if (modelData.info.internalEncodingMethod == EncodingMethod::UTF8)
-            morphNameToIndex.emplace(modelData.morphs[i].name, i);
-        else
-            morphNameToIndex.emplace(
-                codeCvt<UTF16_LE, UTF8>(modelData.morphs[i].name), i);
-    }
+        morphNameToIndex.emplace(modelData.morphs[i].name, i);
 
     clip.m_morphFrames.reserve(morphFrames.size());
     clip.m_morphFrameIndex.resize(modelData.morphs.size());

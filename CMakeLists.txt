@@ -20,7 +20,6 @@ project(
     VERSION 0.0.1)
 
 option(GLMMD_DO_NOT_USE_STD_EXECUTION "Do not use std::execution" OFF)
-option(GLMMD_DO_NOT_FORCE_UTF8 "Do not convert names to UTF-8" OFF)
 option(GLMMD_BUILD_APPS "Build glmmd apps" ${GLMMD_IS_TOPLEVEL})
 option(GLMMD_BUILD_RENDERER "Build renderer" ON)
 

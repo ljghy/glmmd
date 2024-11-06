@@ -33,8 +33,7 @@ void PmxFileDumper::dumpInfo(const ModelData &data)
     writeFloat(info.version);
     writeUInt(uint8_t{8});
 
-    m_textEncoding         = info.encodingMethod;
-    m_internalTextEncoding = info.internalEncodingMethod;
+    m_textEncoding = info.encodingMethod;
 
     for (int i = 0; i < 8; ++i)
         writeUInt(*(&info.encodingMethod + i));

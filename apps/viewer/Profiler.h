@@ -29,14 +29,13 @@ public:
 
     void start(const std::string &name)
     {
-        m_start[m_nameToIndex.at(name)] =
-            std::chrono::high_resolution_clock::now();
+        m_start[m_nameToIndex.at(name)] = std::chrono::steady_clock::now();
     }
 
     void stop(const std::string &name)
     {
         auto i   = m_nameToIndex.at(name);
-        auto end = std::chrono::high_resolution_clock::now();
+        auto end = std::chrono::steady_clock::now();
         m_data[i * N + m_offset] =
             std::chrono::duration_cast<std::chrono::duration<Ty>>(end -
                                                                   m_start[i])
@@ -61,11 +60,10 @@ public:
     }
 
 private:
-    std::vector<std::chrono::time_point<std::chrono::high_resolution_clock>>
-                    m_start;
-    std::vector<Ty> m_data;
-    size_t          m_offset = N - 1;
-    size_t          m_count  = 0;
+    std::vector<std::chrono::time_point<std::chrono::steady_clock>> m_start;
+    std::vector<Ty>                                                 m_data;
+    size_t m_offset = N - 1;
+    size_t m_count  = 0;
 
     std::unordered_map<std::string, size_t> m_nameToIndex;
 };

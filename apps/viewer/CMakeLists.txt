@@ -2,8 +2,6 @@ cmake_minimum_required(VERSION 3.14)
 
 project(glmmd_viewer)
 
-set(CMAKE_CXX_STANDARD 17)
-
 if(NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE Release)
 endif()
@@ -62,7 +60,15 @@ add_executable(viewer)
 target_sources(
     viewer
     PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/InfiniteGridRenderer.cpp
-            ${CMAKE_CURRENT_SOURCE_DIR}/Context.cpp
+            ${CMAKE_CURRENT_SOURCE_DIR}/Viewer.cpp
             ${CMAKE_CURRENT_SOURCE_DIR}/main.cpp)
 
-target_link_libraries(viewer PRIVATE glmmd::glmmd imgui)
+target_link_libraries(viewer PRIVATE glmmd::glmmd imgui ImGuiFileDialog)
+
+target_compile_features(viewer PRIVATE cxx_std_17)
+
+add_custom_command(
+    TARGET viewer
+    POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/font
+            $<TARGET_FILE_DIR:viewer>/font)

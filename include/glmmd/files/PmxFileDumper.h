@@ -85,14 +85,13 @@ private:
 
     void writeTextBuffer(const std::string &buf)
     {
-        if (m_textEncoding == m_internalTextEncoding)
+        if (m_textEncoding == EncodingMethod::UTF8)
         {
             uint32_t sz = static_cast<uint32_t>(buf.size());
             writeUInt(sz);
             m_fout.write(buf.data(), sz);
         }
-        else if (m_textEncoding == EncodingMethod::UTF16_LE)
-        // internal is UTF-8, convert to UTF-16 LE
+        else
         {
             auto utf16 = codeCvt<UTF8, UTF16_LE>(buf);
 
@@ -100,22 +99,12 @@ private:
             writeUInt(sz);
             m_fout.write(utf16.data(), sz);
         }
-        else
-        // internal is UTF-16 LE, convert to UTF-8
-        {
-            auto utf8 = codeCvt<UTF16_LE, UTF8>(buf);
-
-            uint32_t sz = static_cast<uint32_t>(utf8.size());
-            writeUInt(sz);
-            m_fout.write(utf8.data(), sz);
-        }
     }
 
 private:
     std::ofstream m_fout;
 
     EncodingMethod m_textEncoding;
-    EncodingMethod m_internalTextEncoding;
 };
 
 inline void dumpPmxFile(const std::filesystem::path &path,

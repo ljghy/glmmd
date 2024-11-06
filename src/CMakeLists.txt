@@ -17,7 +17,7 @@ target_compile_definitions(
     glmmd_compile_definitions
     INTERFACE
         $<$<BOOL:${GLMMD_DO_NOT_USE_STD_EXECUTION}>:GLMMD_DO_NOT_USE_STD_EXECUTION>
-        $<$<BOOL:${GLMMD_DO_NOT_FORCE_UTF8}>:GLMMD_DO_NOT_FORCE_UTF8>)
+)
 
 file(GLOB GLMMD_CORE_SOURCES core/*.cpp)
 add_library(glmmd_core ${GLMMD_CORE_SOURCES})
