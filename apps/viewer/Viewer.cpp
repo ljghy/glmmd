@@ -140,7 +140,7 @@ void Viewer::initImGui()
 
     std::filesystem::path defaultFontPath =
         m_executableDir / "font" / "NotoSansCJK-Bold.ttc";
-    std::ifstream fontFile(defaultFontPath);
+    std::ifstream fontFile(defaultFontPath, std::ios::binary);
     if (!fontFile)
     {
         std::cerr << "Failed to load default font.\n";
@@ -158,9 +158,10 @@ void Viewer::initImGui()
 
         ImFontConfig cfg;
         cfg.FontDataOwnedByAtlas = false;
-        auto font                = io.Fonts->AddFontFromMemoryTTF(
-                           fontData.data(), static_cast<int>(fontData.size()), 18.f, &cfg,
-                           glyphRanges.Data);
+
+        auto font = io.Fonts->AddFontFromMemoryTTF(
+            fontData.data(), static_cast<int>(fontData.size()), 18.f, &cfg,
+            glyphRanges.Data);
         if (font == nullptr)
             std::cerr << "Failed to load default font.\n";
     }
@@ -501,7 +502,7 @@ void Viewer::dockspace()
 
         ImGuiID viewportDockId = dockspaceId;
         ImGuiID controlDockId  = ImGui::DockBuilderSplitNode(
-             viewportDockId, ImGuiDir_Left, 0.2f, nullptr, &viewportDockId);
+            viewportDockId, ImGuiDir_Left, 0.2f, nullptr, &viewportDockId);
         ImGuiID profilerDockId = ImGui::DockBuilderSplitNode(
             controlDockId, ImGuiDir_Down, 0.2f, nullptr, &controlDockId);
         ImGuiID progressDockId = ImGui::DockBuilderSplitNode(
@@ -963,6 +964,8 @@ Viewer::~Viewer()
     m_FBO.destroy();
     m_intermediateFBO.destroy();
     m_shadowMapFBO.destroy();
+
+    ImGui::GetIO().Fonts->Clear();
 
     ImGui_ImplOpenGL3_Shutdown();
     ImGui_ImplGlfw_Shutdown();
