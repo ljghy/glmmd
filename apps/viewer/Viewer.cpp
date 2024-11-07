@@ -56,6 +56,8 @@ Viewer::Viewer(const std::filesystem::path &executableDir,
     else
         m_initData = JsonNode{{"MSAA"_key, 4}};
 
+    initState();
+
     initWindow();
     initImGui();
     initFBO();
@@ -63,14 +65,44 @@ Viewer::Viewer(const std::filesystem::path &executableDir,
 
     m_gridRenderer = std::make_unique<InfiniteGridRenderer>();
 
-    initState();
-
     m_cameraTarget          = glm::vec3(0.f);
     m_camera.projType       = glmmd::CameraProjectionType::Perspective;
     m_camera.position       = glm::vec3(0.0f, 14.0f, -24.0f);
     m_lighting.direction    = glm::normalize(glm::vec3(-1.f, -2.f, 1.f));
     m_lighting.color        = glm::vec3(0.6f);
     m_lighting.ambientColor = glm::vec3(1.f);
+}
+
+void Viewer::initState()
+{
+    m_state.showControlPanel = true;
+    m_state.showProfiler     = true;
+    m_state.showProgress     = true;
+
+    m_state.selectedModelIndex  = -1;
+    m_state.selectedMotionIndex = -1;
+
+    m_state.paused    = true;
+    m_state.startTime = m_state.pauseTime = std::chrono::steady_clock::now();
+
+    m_state.physicsEnabled      = false;
+    m_state.physicsFPSSelection = 1;
+
+    m_state.gravity = glm::vec3(0.f, -9.8f, 0.f);
+
+    m_state.clearColor = glm::vec4(0.2f, 0.2f, 0.2f, 1.0f);
+
+    m_state.ortho =
+        m_camera.projType == glmmd::CameraProjectionType::Orthographic;
+    m_state.renderEdge         = true;
+    m_state.renderShadow       = true;
+    m_state.renderGroundShadow = true;
+    m_state.renderAxes         = true;
+    m_state.renderGrid         = true;
+    m_state.wireframe          = false;
+
+    m_state.lastModelPath  = ".";
+    m_state.lastMotionPath = ".";
 }
 
 void Viewer::initWindow()
@@ -394,38 +426,6 @@ void Viewer::updateModelPose(size_t i)
     model.solvePose();
 }
 
-void Viewer::initState()
-{
-    m_state.showControlPanel = true;
-    m_state.showProfiler     = true;
-    m_state.showProgress     = true;
-
-    m_state.selectedModelIndex  = -1;
-    m_state.selectedMotionIndex = -1;
-
-    m_state.paused    = true;
-    m_state.startTime = m_state.pauseTime = std::chrono::steady_clock::now();
-
-    m_state.physicsEnabled      = false;
-    m_state.physicsFPSSelection = 1;
-
-    m_state.gravity = glm::vec3(0.f, -9.8f, 0.f);
-
-    m_state.clearColor = glm::vec4(0.2f, 0.2f, 0.2f, 1.0f);
-
-    m_state.ortho =
-        m_camera.projType == glmmd::CameraProjectionType::Orthographic;
-    m_state.renderEdge         = true;
-    m_state.renderShadow       = true;
-    m_state.renderGroundShadow = true;
-    m_state.renderAxes         = true;
-    m_state.renderGrid         = true;
-    m_state.wireframe          = false;
-
-    m_state.lastModelPath  = ".";
-    m_state.lastMotionPath = ".";
-}
-
 void Viewer::menuBar()
 {
     if (ImGui::BeginMenuBar())
@@ -502,7 +502,7 @@ void Viewer::dockspace()
 
         ImGuiID viewportDockId = dockspaceId;
         ImGuiID controlDockId  = ImGui::DockBuilderSplitNode(
-            viewportDockId, ImGuiDir_Left, 0.2f, nullptr, &viewportDockId);
+             viewportDockId, ImGuiDir_Left, 0.2f, nullptr, &viewportDockId);
         ImGuiID profilerDockId = ImGui::DockBuilderSplitNode(
             controlDockId, ImGuiDir_Down, 0.2f, nullptr, &controlDockId);
         ImGuiID progressDockId = ImGui::DockBuilderSplitNode(
