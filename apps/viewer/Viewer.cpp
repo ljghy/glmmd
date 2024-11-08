@@ -405,13 +405,13 @@ void Viewer::handleInput(float deltaTime)
     constexpr float vel = 25.f;
 
     glm::vec3 translation(0.f);
-    if (io.KeysDown[GLFW_KEY_W])
+    if (ImGui::IsKeyDown(ImGuiKey_W))
         translation += vel * deltaTime * m_camera.front;
-    if (io.KeysDown[GLFW_KEY_S])
+    if (ImGui::IsKeyDown(ImGuiKey_S))
         translation -= vel * deltaTime * m_camera.front;
-    if (io.KeysDown[GLFW_KEY_A])
+    if (ImGui::IsKeyDown(ImGuiKey_A))
         translation -= vel * deltaTime * m_camera.right;
-    if (io.KeysDown[GLFW_KEY_D])
+    if (ImGui::IsKeyDown(ImGuiKey_D))
         translation += vel * deltaTime * m_camera.right;
 
     m_camera.position += translation;
