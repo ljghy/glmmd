@@ -48,7 +48,8 @@ void dropCallback(GLFWwindow *window, int count, const char **paths)
         else if (path.extension() == ".vpd")
             viewer->loadPose(path, viewer->m_state.selectedModelIndex);
         else
-            std::cout << "Unsupported file type: " << path.u8string() << '\n';
+            std::cout << "Unsupported file type: " << path.u8string()
+                      << std::endl;
     }
 }
 
@@ -63,7 +64,8 @@ Viewer::Viewer(const std::filesystem::path &executableDir)
     }
     else
     {
-        std::cout << "init.json not found, using default settings.\n";
+        std::cout << "init.json not found, using default settings."
+                  << std::endl;
         m_initData = JsonNode{{"MSAA"_key, 4}};
     }
 
@@ -287,31 +289,32 @@ bool Viewer::loadModel(const std::filesystem::path &path)
     std::vector<ogl::Texture2D>       gpuTextures;
     try
     {
-        modelData = glmmd::loadPmxFile(
-            path,
-            [&](glmmd::Texture &tex)
-            {
-                auto &gpuTex = gpuTextures.emplace_back();
-                if (!tex.data)
-                {
-                    std::cout << "Failed to load texture: " << tex.path << '\n';
-                    return;
-                }
-                ogl::Texture2DCreateInfo info;
-                info.width         = tex.width;
-                info.height        = tex.height;
-                info.data          = tex.data.get();
-                info.genMipmaps    = true;
-                info.internalFmt   = GL_SRGB_ALPHA;
-                info.dataFmt       = GL_RGBA;
-                info.dataType      = GL_UNSIGNED_BYTE;
-                info.wrapModeS     = GL_CLAMP_TO_EDGE;
-                info.wrapModeT     = GL_CLAMP_TO_EDGE;
-                info.minFilterMode = GL_LINEAR_MIPMAP_LINEAR;
-                info.magFilterMode = GL_LINEAR;
-                gpuTex.create(info);
-                tex.data.reset();
-            });
+        modelData =
+            glmmd::loadPmxFile(path,
+                               [&](glmmd::Texture &tex)
+                               {
+                                   auto &gpuTex = gpuTextures.emplace_back();
+                                   if (!tex.data)
+                                   {
+                                       std::cout << "Failed to load texture: "
+                                                 << tex.path << std::endl;
+                                       return;
+                                   }
+                                   ogl::Texture2DCreateInfo info;
+                                   info.width         = tex.width;
+                                   info.height        = tex.height;
+                                   info.data          = tex.data.get();
+                                   info.genMipmaps    = true;
+                                   info.internalFmt   = GL_SRGB_ALPHA;
+                                   info.dataFmt       = GL_RGBA;
+                                   info.dataType      = GL_UNSIGNED_BYTE;
+                                   info.wrapModeS     = GL_CLAMP_TO_EDGE;
+                                   info.wrapModeT     = GL_CLAMP_TO_EDGE;
+                                   info.minFilterMode = GL_LINEAR_MIPMAP_LINEAR;
+                                   info.magFilterMode = GL_LINEAR;
+                                   gpuTex.create(info);
+                                   tex.data.reset();
+                               });
     }
     catch (const std::exception &e)
     {
