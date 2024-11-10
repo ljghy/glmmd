@@ -23,7 +23,7 @@ int main(int argc, char **argv)
     {
         std::filesystem::path executableDir =
             std::filesystem::absolute(argv[0]).parent_path();
-        Viewer viewer(executableDir, "init.json");
+        Viewer viewer(executableDir);
         viewer.run();
     }
     catch (const std::exception &e)

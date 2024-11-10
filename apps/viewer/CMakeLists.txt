@@ -67,6 +67,9 @@ target_link_libraries(viewer PRIVATE glmmd::glmmd imgui ImGuiFileDialog)
 
 target_compile_features(viewer PRIVATE cxx_std_17)
 
+set_target_properties(viewer PROPERTIES RUNTIME_OUTPUT_DIRECTORY
+                                        ${CMAKE_BINARY_DIR}/bin)
+
 add_custom_command(
     TARGET viewer
     POST_BUILD

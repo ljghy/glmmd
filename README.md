@@ -26,7 +26,7 @@ Or build and install from source code:
 git clone https://github.com/bulletphysics/bullet3.git
 ```
 
-Then set environment variable `Bullet_ROOT` to the install directory, or add definition `-DGLMMD_BULLET_ROOT=<install directory>` to CMake when building glmmd.
+Then set environment variable `Bullet_ROOT` to the install directory.
 
 #### Linux (Ubuntu)
 
@@ -65,37 +65,6 @@ mkdir build
 cd build
 ```
 
-Create file `init.json` in `build`:
-
-```json
-{
-    "MSAA": 4,
-    "models": [
-        {
-            "filename": "model0.pmx"
-        },
-        {
-            "filename": "model1.pmx"
-        }
-    ],
-    "motions": [
-        {
-            "filename": "motion1.vmd",
-            "model": 0
-        },
-        {
-            "filename": "motion2.vmd",
-            "model": 0,
-            "loop": true
-        },
-        {
-            "filename": "motion3.vmd",
-            "model": 1
-        }
-    ]
-}
-```
-
 Install [Intel oneTBB](https://github.com/oneapi-src/oneTBB) to enable parallel execution with `gcc` on Linux. Otherwise, add definition `-DGLMMD_DO_NOT_USE_STD_EXECUTION=ON` to CMake to disable the use of `std::execution::par`.
 
 #### Windows MSVC
@@ -103,7 +72,7 @@ Install [Intel oneTBB](https://github.com/oneapi-src/oneTBB) to enable parallel 
 ```shell
 cmake -G"Visual Studio 17 2022" [-DCMAKE_TOOLCHAIN_FILE="your_vcpkg_cmake_toolchain_file"] ..
 cmake --build . --config Release [--parallel <N>]
-.\apps\viewer\Release\viewer.exe
+.\bin\Release\viewer.exe
 ```
 
 #### Windows MinGW
@@ -111,7 +80,7 @@ cmake --build . --config Release [--parallel <N>]
 ```shell
 cmake -DCMAKE_BUILD_TYPE=Release -G"MinGW Makefiles" ..
 mingw32-make [-j<N>]
-.\apps\viewer\viewer.exe
+.\bin\viewer.exe
 ```
 
 #### Linux GCC
@@ -119,7 +88,7 @@ mingw32-make [-j<N>]
 ```shell
 cmake -DCMAKE_BUILD_TYPE=Release ..
 make [-j<N>]
-./apps/viewer/viewer
+./bin/viewer
 ```
 
 ## Credits

@@ -42,8 +42,11 @@ class ShiftJIS
 {
 public:
     static uint32_t decode(std::string_view input, size_t &i);
+#ifdef GLMMD_USE_ICU
+    static void encode(uint32_t u, std::string &output);
+#endif
 
-    static constexpr size_t bytes = 3;
+    static constexpr size_t bytes = 2;
 };
 
 } // namespace glmmd

@@ -23,8 +23,7 @@ class Viewer
     friend void dropCallback(GLFWwindow *window, int count, const char **paths);
 
 public:
-    Viewer(const std::filesystem::path &executableDir,
-           const std::filesystem::path &initFile);
+    Viewer(const std::filesystem::path &executableDir);
     ~Viewer();
 
     void run();
@@ -40,6 +39,7 @@ private:
 
     void loadMotion(const std::filesystem::path &path, size_t modelIndex,
                     const JsonNode &config = JsonObj_t{});
+    void loadPose(const std::filesystem::path &path, size_t modelIndex);
 
     void updateModelPose(size_t i);
 
@@ -51,6 +51,7 @@ private:
     void dockspace();
     void loadModelDialog();
     void loadMotionDialog();
+    void loadPoseDialog();
     void updateModels();
     void updateViewportSize();
     void render();
@@ -69,6 +70,8 @@ private:
 private:
     std::filesystem::path m_executableDir;
     JsonNode              m_initData;
+
+    float m_uiScale;
 
     GLFWwindow *m_window;
 
@@ -130,6 +133,7 @@ private:
 
         std::string lastModelPath;
         std::string lastMotionPath;
+        std::string lastPosePath;
     } m_state;
 };
 

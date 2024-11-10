@@ -1,5 +1,5 @@
-#ifndef GLMMD_FILE_VMD_DATA_H_
-#define GLMMD_FILE_VMD_DATA_H_
+#ifndef GLMMD_FILES_VMD_DATA_H_
+#define GLMMD_FILES_VMD_DATA_H_
 
 #include <string>
 #include <cstdint>

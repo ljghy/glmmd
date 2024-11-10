@@ -420,6 +420,8 @@ struct ModelData
     std::vector<DisplayFrame> displayFrames;
     std::vector<RigidBody>    rigidBodies;
     std::vector<Joint>        joints;
+
+    void validateIndexByteSizes();
 };
 
 } // namespace glmmd

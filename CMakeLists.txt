@@ -22,13 +22,7 @@ project(
 option(GLMMD_DO_NOT_USE_STD_EXECUTION "Do not use std::execution" OFF)
 option(GLMMD_BUILD_APPS "Build glmmd apps" ${GLMMD_IS_TOPLEVEL})
 option(GLMMD_BUILD_RENDERER "Build renderer" ON)
-
-set(GLMMD_BULLET_ROOT
-    ""
-    CACHE PATH "Bullet physics root directory")
-if(NOT "${GLMMD_BULLET_ROOT}" STREQUAL "")
-    set(BULLET_ROOT "${GLMMD_BULLET_ROOT}")
-endif()
+option(GLMMD_USE_ICU "Use libicu" OFF)
 
 add_subdirectory(lib)
 add_subdirectory(src)

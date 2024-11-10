@@ -1,5 +1,9 @@
 #include <glmmd/files/CodeConverter.h>
 
+#ifdef GLMMD_USE_ICU
+#include <unicode/unistr.h>
+#endif
+
 namespace glmmd
 {
 
@@ -128,5 +132,17 @@ uint32_t ShiftJIS::decode(std::string_view input, size_t &i)
 
     return u;
 }
+
+#ifdef GLMMD_USE_ICU
+void ShiftJIS::encode(uint32_t u, std::string &output)
+{
+    icu::UnicodeString ustr((UChar32)u);
+
+    char dst[4];
+    auto len = ustr.extract(0, 1, dst, "shift_jis");
+
+    output.append(dst, dst + len);
+}
+#endif
 
 } // namespace glmmd

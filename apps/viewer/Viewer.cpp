@@ -13,9 +13,11 @@
 
 #include <ImGuiFileDialog.h>
 
+#include <glmmd/core/FixedPoseMotion.h>
 #include <glmmd/files/CodeConverter.h>
 #include <glmmd/files/PmxFileLoader.h>
 #include <glmmd/files/VmdFileLoader.h>
+#include <glmmd/files/VpdFileLoader.h>
 
 #include "Viewer.h"
 
@@ -39,22 +41,31 @@ void dropCallback(GLFWwindow *window, int count, const char **paths)
         {
             if (viewer->loadModel(path))
                 viewer->m_state.selectedModelIndex =
-                    static_cast<int>(viewer->m_modelData.size()) - 1;
+                    static_cast<int>(viewer->m_models.size()) - 1;
         }
         else if (path.extension() == ".vmd")
             viewer->loadMotion(path, viewer->m_state.selectedModelIndex);
+        else if (path.extension() == ".vpd")
+            viewer->loadPose(path, viewer->m_state.selectedModelIndex);
+        else
+            std::cout << "Unsupported file type: " << path.u8string() << '\n';
     }
 }
 
-Viewer::Viewer(const std::filesystem::path &executableDir,
-               const std::filesystem::path &initFile)
+Viewer::Viewer(const std::filesystem::path &executableDir)
     : m_executableDir(executableDir)
 {
+    std::filesystem::path initFilePath = executableDir / "init.json";
 
-    if (std::filesystem::exists(initFile))
-        m_initData = parseJsonFile(initFile);
+    if (std::filesystem::exists(initFilePath))
+    {
+        m_initData = parseJsonFile(initFilePath);
+    }
     else
+    {
+        std::cout << "init.json not found, using default settings.\n";
         m_initData = JsonNode{{"MSAA"_key, 4}};
+    }
 
     initState();
 
@@ -103,6 +114,7 @@ void Viewer::initState()
 
     m_state.lastModelPath  = ".";
     m_state.lastMotionPath = ".";
+    m_state.lastPosePath   = ".";
 }
 
 void Viewer::initWindow()
@@ -170,6 +182,20 @@ void Viewer::initImGui()
     ImGui_ImplGlfw_InitForOpenGL(m_window, true);
     ImGui_ImplOpenGL3_Init(glsl_version);
 
+    if (m_initData.contains("UIScale") &&
+        m_initData.get<float>("UIScale") > 0.f)
+    {
+        m_uiScale = m_initData.get<float>("UIScale");
+    }
+    else
+    {
+        float xScale, yScale;
+        glfwGetWindowContentScale(m_window, &xScale, &yScale);
+        m_uiScale = std::max(xScale, yScale);
+    }
+
+    style.ScaleAllSizes(m_uiScale);
+
     std::filesystem::path defaultFontPath =
         m_executableDir / "font" / "NotoSansCJK-Bold.ttc";
     std::ifstream fontFile(defaultFontPath, std::ios::binary);
@@ -192,8 +218,8 @@ void Viewer::initImGui()
         cfg.FontDataOwnedByAtlas = false;
 
         auto font = io.Fonts->AddFontFromMemoryTTF(
-            fontData.data(), static_cast<int>(fontData.size()), 18.f, &cfg,
-            glyphRanges.Data);
+            fontData.data(), static_cast<int>(fontData.size()),
+            18.f * m_uiScale, &cfg, glyphRanges.Data);
         if (font == nullptr)
             std::cerr << "Failed to load default font.\n";
     }
@@ -201,9 +227,9 @@ void Viewer::initImGui()
 
 void Viewer::initFBO()
 {
-    m_viewportWidth  = 1600;
-    m_viewportHeight = 900;
-    int samples      = m_initData.get<int>("MSAA", 4);
+    glfwGetWindowSize(m_window, &m_viewportWidth, &m_viewportHeight);
+
+    int samples = m_initData.get<int>("MSAA", 4);
 
     m_FBO.create();
     ogl::Texture2DCreateInfo texInfo;
@@ -358,16 +384,60 @@ void Viewer::loadMotion(const std::filesystem::path &path, size_t modelIndex,
     std::cout << std::endl;
 }
 
+void Viewer::loadPose(const std::filesystem::path &path, size_t modelIndex)
+{
+    if (modelIndex >= m_models.size())
+    {
+        std::cerr << "Invalid model index.\n";
+        return;
+    }
+
+    std::shared_ptr<glmmd::VpdData> vpdData(nullptr);
+    try
+    {
+        vpdData = glmmd::loadVpdFile(path);
+    }
+    catch (const std::exception &e)
+    {
+        std::cerr << e.what() << '\n';
+    }
+    if (!vpdData)
+        return;
+
+    auto pose = vpdData->toModelPose(m_modelData[modelIndex]);
+
+    auto        filename = path.filename().u8string();
+    std::string label(filename.begin(), filename.end());
+    m_motions[modelIndex]->addMotion(
+        label, std::make_shared<glmmd::FixedPoseMotion>(std::move(pose)));
+
+    std::cout << "Pose data loaded from: " << path.u8string() << '\n';
+    std::cout << "Created on: "
+              << glmmd::codeCvt<glmmd::ShiftJIS, glmmd::UTF8>(
+                     vpdData->modelName)
+              << '\n';
+    std::cout << std::endl;
+}
+
 void Viewer::loadResources()
 {
     if (m_initData.contains("models"))
+    {
         for (const auto &modelNode : m_initData["models"].arr())
             loadModel(modelNode.get<std::filesystem::path>("filename"));
+        if (!m_models.empty())
+            m_state.selectedModelIndex = 0;
+    }
 
     if (m_initData.contains("motions"))
         for (const auto &motionNode : m_initData["motions"].arr())
             loadMotion(motionNode.get<std::filesystem::path>("filename"),
                        motionNode.get<size_t>("model"), motionNode);
+
+    if (m_initData.contains("poses"))
+        for (const auto &poseNode : m_initData["poses"].arr())
+            loadPose(poseNode.get<std::filesystem::path>("filename"),
+                     poseNode.get<size_t>("model"));
 }
 
 void Viewer::handleInput(float deltaTime)
@@ -449,6 +519,15 @@ void Viewer::menuBar()
                     "LoadMotionDlg", "Load motion", ".vmd", config);
             }
 
+            if (m_state.selectedModelIndex != -1 &&
+                ImGui::MenuItem("Load pose"))
+            {
+                IGFD::FileDialogConfig config;
+                config.path = m_state.lastPosePath;
+                ImGuiFileDialog::Instance()->OpenDialog(
+                    "LoadPoseDlg", "Load pose", ".vpd", config);
+            }
+
             ImGui::Separator();
 
             if (ImGui::MenuItem("Exit"))
@@ -522,11 +601,15 @@ void Viewer::dockspace()
 
 void Viewer::loadModelDialog()
 {
-    if (ImGuiFileDialog::Instance()->Display("LoadModelDlg"))
+    if (ImGuiFileDialog::Instance()->Display("LoadModelDlg",
+                                             ImGuiWindowFlags_NoCollapse |
+                                                 ImGuiWindowFlags_NoDocking))
     {
         if (ImGuiFileDialog::Instance()->IsOk())
         {
-            loadModel(ImGuiFileDialog::Instance()->GetFilePathName());
+            if (loadModel(ImGuiFileDialog::Instance()->GetFilePathName()))
+                m_state.selectedModelIndex =
+                    static_cast<int>(m_models.size()) - 1;
             m_state.lastModelPath =
                 ImGuiFileDialog::Instance()->GetCurrentPath();
         }
@@ -536,13 +619,32 @@ void Viewer::loadModelDialog()
 
 void Viewer::loadMotionDialog()
 {
-    if (ImGuiFileDialog::Instance()->Display("LoadMotionDlg"))
+    if (ImGuiFileDialog::Instance()->Display("LoadMotionDlg",
+                                             ImGuiWindowFlags_NoCollapse |
+                                                 ImGuiWindowFlags_NoDocking))
     {
         if (ImGuiFileDialog::Instance()->IsOk())
         {
             loadMotion(ImGuiFileDialog::Instance()->GetFilePathName(),
                        m_state.selectedModelIndex);
             m_state.lastMotionPath =
+                ImGuiFileDialog::Instance()->GetCurrentPath();
+        }
+        ImGuiFileDialog::Instance()->Close();
+    }
+}
+
+void Viewer::loadPoseDialog()
+{
+    if (ImGuiFileDialog::Instance()->Display("LoadPoseDlg",
+                                             ImGuiWindowFlags_NoCollapse |
+                                                 ImGuiWindowFlags_NoDocking))
+    {
+        if (ImGuiFileDialog::Instance()->IsOk())
+        {
+            loadPose(ImGuiFileDialog::Instance()->GetFilePathName(),
+                     m_state.selectedModelIndex);
+            m_state.lastPosePath =
                 ImGuiFileDialog::Instance()->GetCurrentPath();
         }
         ImGuiFileDialog::Instance()->Close();
@@ -735,7 +837,10 @@ void Viewer::modelList()
         if (ImGui::Button("Remove##Model"))
         {
             removeModel(m_state.selectedModelIndex);
-            m_state.selectedModelIndex = -1;
+            if (m_state.selectedModelIndex > 0)
+                --m_state.selectedModelIndex;
+            else
+                m_state.selectedModelIndex = m_models.empty() ? -1 : 0;
         }
 
         if (m_state.selectedModelIndex == -1)
@@ -886,6 +991,7 @@ void Viewer::run()
         dockspace();
         loadModelDialog();
         loadMotionDialog();
+        loadPoseDialog();
 
         float deltaTime = io.DeltaTime;
 
