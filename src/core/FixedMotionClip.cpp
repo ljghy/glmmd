@@ -55,7 +55,7 @@ void FixedMotionClip::getLocalPose(float time, ModelPose &pose) const
         const auto &boneFrameMap = m_boneFrameIndex[i];
         if (boneFrameMap.empty())
         {
-            pose.setLocalBoneTransform(i, identityTransform);
+            pose.setLocalBoneTransform(i, Transform::identity);
             continue;
         }
 

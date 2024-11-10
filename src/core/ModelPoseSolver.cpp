@@ -252,7 +252,8 @@ void ModelPoseSolver::solveIK(ModelPose &pose, uint32_t first,
                 // if (link.angleLimitFlag && i == 0 && ik.loopCount > 1)
                 // {
                 //     pose.m_localBoneTransforms[link.boneIndex].rotation =
-                //         glm::quat(0.5f * (link.lowerLimit + link.upperLimit));
+                //         glm::quat(0.5f * (link.lowerLimit +
+                //         link.upperLimit));
                 //     solveChildGlobalBoneTransforms(pose, link.boneIndex,
                 //                                    ik.targetBoneIndex);
                 //     continue;
@@ -375,7 +376,7 @@ void ModelPoseSolver::updateInheritedBoneTransforms(ModelPose &pose,
         uint32_t    i    = m_boneDeformOrder[first];
         const auto &bone = m_modelData->bones[i];
 
-        Transform inheritedTransform = identityTransform;
+        Transform inheritedTransform = Transform::identity;
 
         if (bone.inheritRotation() && bone.inheritParentIndex != -1)
             inheritedTransform.rotation = glm::slerp(

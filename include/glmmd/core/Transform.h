@@ -58,10 +58,12 @@ struct Transform
         glm::quat invRot = glm::inverse(rotation);
         return {invRot * -translation, invRot};
     }
+
+    static const Transform identity;
 };
 
-inline constexpr Transform identityTransform{glm::vec3(0.f),
-                                             glm::identity<glm::quat>()};
+inline const Transform Transform::identity{glm::vec3(0.f),
+                                           glm::identity<glm::quat>()};
 
 } // namespace glmmd
 

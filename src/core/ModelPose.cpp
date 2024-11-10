@@ -17,9 +17,9 @@ namespace glmmd
 
 ModelPose::ModelPose(const std::shared_ptr<const ModelData> &modelData)
     : m_modelData(modelData)
-    , m_localBoneTransforms(modelData->bones.size(), identityTransform)
+    , m_localBoneTransforms(modelData->bones.size(), Transform::identity)
     , m_morphRatios(modelData->morphs.size(), 0.f)
-    , m_globalBoneTransforms(modelData->bones.size(), identityTransform)
+    , m_globalBoneTransforms(modelData->bones.size(), Transform::identity)
 {
 }
 
@@ -85,7 +85,7 @@ float &ModelPose::getMorphRatio(uint32_t morphIndex)
 void ModelPose::resetLocal()
 {
     std::fill(m_localBoneTransforms.begin(), m_localBoneTransforms.end(),
-              identityTransform);
+              Transform::identity);
     std::fill(m_morphRatios.begin(), m_morphRatios.end(), 0.f);
 }
 
