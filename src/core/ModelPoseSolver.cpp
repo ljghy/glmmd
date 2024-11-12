@@ -239,6 +239,8 @@ void ModelPoseSolver::solveIK(ModelPose &pose, uint32_t first,
         if (!bone.isIK())
             continue;
         const auto &ik = m_modelData->ikData[bone.ikDataIndex];
+        if (ik.targetBoneIndex < 0)
+            continue;
 
         glm::vec3 targetPos =
             pose.getGlobalBonePosition(ik.realTargetBoneIndex);
