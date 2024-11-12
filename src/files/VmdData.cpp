@@ -1,5 +1,6 @@
 #include <unordered_map>
 
+#define GLM_ENABLE_EXPERIMENTAL
 #include <glm/gtx/euler_angles.hpp>
 
 #include <glmmd/files/CodeConverter.h>
