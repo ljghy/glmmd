@@ -9,6 +9,7 @@
 
 #include <glmmd/core/ModelData.h>
 #include <glmmd/core/FixedMotionClip.h>
+#include <glmmd/core/CameraMotion.h>
 
 namespace glmmd
 {
@@ -18,6 +19,9 @@ struct VmdData
     FixedMotionClip toFixedMotionClip(const ModelData &modelData,
                                       bool             loop      = false,
                                       float            frameRate = 30.f) const;
+
+    CameraMotion toCameraMotion(bool  loop      = false,
+                                float frameRate = 30.f) const;
 
     int         version;
     std::string modelName; // Shift-JIS
@@ -50,15 +54,17 @@ struct VmdData
         uint32_t frameNumber;
 
         float     distance;
-        glm::vec3 targetPosition;
+        glm::vec3 target;
         glm::vec3 rotation;
 
-        uint8_t interpolation[24];
+        uint8_t interpolation[24]; // x, y, z, rotation, distance, fov
 
-        uint32_t fov;
-        uint8_t  perspective;
+        uint32_t fov;         // deg
+        uint8_t  perspective; // 0: Perspective, 1: Orthographic
     };
     std::vector<CameraKeyFrame> cameraFrames;
+
+    bool isCameraMotion() const { return !cameraFrames.empty(); }
 };
 
 } // namespace glmmd

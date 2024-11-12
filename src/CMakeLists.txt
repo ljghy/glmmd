@@ -39,6 +39,8 @@ target_link_libraries(
     glmmd_core PUBLIC glmmd_compiler_flags glmmd_compile_definitions
                       ${GLMMD_TBB_LIBRARY} glm::glm ${BULLET_LIBRARIES})
 
+target_compile_definitions(glmmd_core PUBLIC GLM_FORCE_RADIANS)
+
 file(GLOB GLMMD_FILES_SOURCES files/*.cpp)
 add_library(glmmd_files ${GLMMD_FILES_SOURCES})
 add_library(glmmd::files ALIAS glmmd_files)

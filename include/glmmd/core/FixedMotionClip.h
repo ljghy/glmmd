@@ -6,25 +6,21 @@
 
 #include <glmmd/core/Motion.h>
 #include <glmmd/core/Transform.h>
+#include <glmmd/core/InterpolationCurve.h>
 
 namespace glmmd
 {
 
-class FixedMotionClip : public Motion
+struct FixedMotionClip : public Motion
 {
-    friend struct VmdData;
-
-private:
-    using InterpolationCurve = glm::vec4;
-
     struct BoneKeyFrame
     {
         Transform transform;
 
-        InterpolationCurve xCurve;
-        InterpolationCurve yCurve;
-        InterpolationCurve zCurve;
-        InterpolationCurve rCurve;
+        InterpolationCurvePoints xCurve;
+        InterpolationCurvePoints yCurve;
+        InterpolationCurvePoints zCurve;
+        InterpolationCurvePoints rCurve;
     };
 
     struct MorphKeyFrame
@@ -32,30 +28,22 @@ private:
         float ratio;
     };
 
-public:
     FixedMotionClip(bool loop = false, float frameRate = 30.f);
 
-    virtual float duration() const override
-    {
-        return m_frameCount / m_frameRate;
-    }
+    virtual float duration() const override { return frameCount / frameRate; }
 
     virtual void getLocalPose(float time, ModelPose &pose) const override;
 
-public:
-    static float evalCurve(const InterpolationCurve &curve, float x);
+    bool  loop;
+    float frameRate;
 
-private:
-    bool  m_loop;
-    float m_frameRate;
+    uint32_t frameCount;
 
-    uint32_t m_frameCount;
+    std::vector<std::map<uint32_t, uint32_t>> boneFrameIndex;
+    std::vector<std::map<uint32_t, uint32_t>> morphFrameIndex;
 
-    std::vector<std::map<uint32_t, uint32_t>> m_boneFrameIndex;
-    std::vector<std::map<uint32_t, uint32_t>> m_morphFrameIndex;
-
-    std::vector<BoneKeyFrame>  m_boneFrames;
-    std::vector<MorphKeyFrame> m_morphFrames;
+    std::vector<BoneKeyFrame>  boneFrames;
+    std::vector<MorphKeyFrame> morphFrames;
 };
 
 } // namespace glmmd

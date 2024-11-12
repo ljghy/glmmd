@@ -2,52 +2,60 @@
 #define GLMMD_CORE_CAMERA_H_
 
 #include <glm/glm.hpp>
+#include <glm/gtc/quaternion.hpp>
 
 namespace glmmd
 {
 
-enum class CameraProjectionType
-{
-    Perspective,
-    Orthographic
-};
-
 struct Camera
 {
-public:
+    enum ProjType
+    {
+        Perspective,
+        Orthographic
+    };
+
     Camera();
 
-    glm::mat4 view() const;
-    glm::mat4 proj() const;
+    const glm::vec3 &front() const;
+    const glm::vec3 &up() const;
+    const glm::vec3 &right() const;
+
+    const glm::mat4 &view() const;
+    const glm::mat4 &proj() const;
+
+    void setRotation(const glm::vec3 &eulerAngles);
 
     void rotate(float dy, float dp);
-    void rotateAround(const glm::vec3 &point, float dy, float dp);
 
     void resize(int width, int height);
 
-private:
     void update();
 
-public:
-    CameraProjectionType projType = CameraProjectionType::Perspective;
+    ProjType projType = Perspective;
 
-    glm::vec3 worldUp  = glm::vec3(0.f, 1.f, 0.f);
-    glm::vec3 position = glm::vec3(0.f);
-    glm::vec3 front;
-    glm::vec3 up;
-    glm::vec3 right;
+    glm::vec3 target;
+    glm::quat rotation;
 
-    float fovy  = glm::radians(45.f);
-    float nearZ = 0.1f;
-    float farZ  = 1000.f;
-    float width = 40.f;
+    float distance;
+    float fov;
+    float nearZ;
+    float farZ;
+    float width;
 
-    float yaw   = glm::radians(90.f);
-    float pitch = glm::radians(-10.f);
+    int viewportWidth;
+    int viewportHeight;
 
-    int   viewportWidth  = 1;
-    int   viewportHeight = 1;
-    float aspect         = 1.f;
+private:
+    glm::vec3 m_position;
+    glm::vec3 m_front;
+    glm::vec3 m_up;
+    glm::vec3 m_right;
+
+    glm::mat4 m_view;
+    glm::mat4 m_proj;
+
+    float m_aspect;
 };
 
 } // namespace glmmd

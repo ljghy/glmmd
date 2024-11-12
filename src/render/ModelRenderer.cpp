@@ -204,11 +204,13 @@ void ModelRenderer::renderMesh(const Camera &camera, const Lighting &lighting,
     glm::mat4 MV    = view * model;
     glm::mat4 MVP   = proj * MV;
 
+    glm::vec3 dir = camera.front();
+
     m_shader.use();
     m_shader.setUniformMatrix4fv("u_model", &model[0][0]);
     m_shader.setUniformMatrix4fv("u_MVP", &MVP[0][0]);
 
-    m_shader.setUniform3fv("u_viewDir", &camera.front[0]);
+    m_shader.setUniform3fv("u_viewDir", &dir[0]);
     m_shader.setUniform3fv("u_lightDir", &lighting.direction[0]);
     m_shader.setUniform3fv("u_lightColor", &lighting.color[0]);
     m_shader.setUniform3fv("u_ambientColor", &lighting.ambientColor[0]);

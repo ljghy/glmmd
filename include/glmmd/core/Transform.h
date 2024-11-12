@@ -1,7 +1,6 @@
 #ifndef GLMMD_CORE_TRANSFORM_H_
 #define GLMMD_CORE_TRANSFORM_H_
 
-#define GLM_FORCE_RADIANS
 #include <glm/glm.hpp>
 #include <glm/gtc/quaternion.hpp>
 

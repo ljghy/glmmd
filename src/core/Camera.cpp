@@ -1,4 +1,5 @@
 #include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtx/euler_angles.hpp>
 
 #include <glmmd/core/Camera.h>
 
@@ -11,59 +12,50 @@ void Camera::resize(int w, int h)
 {
     viewportWidth  = w;
     viewportHeight = h;
-    aspect         = static_cast<float>(w) / h;
+    m_aspect       = static_cast<float>(w) / h;
 }
 
-glm::mat4 Camera::view() const
+void Camera::setRotation(const glm::vec3 &eulerAngles)
 {
-    return glm::lookAt(position, position + front, up);
+    rotation = glm::quat_cast(
+        glm::eulerAngleYZX(eulerAngles.y, eulerAngles.z, -eulerAngles.x));
 }
 
-glm::mat4 Camera::proj() const
-{
-    if (projType == CameraProjectionType::Perspective)
-    {
-        return glm::perspective(fovy, aspect, nearZ, farZ);
-    }
-    else
-    {
-        float height = width / aspect;
-        return glm::ortho(-width * 0.5f, width * 0.5f, -height * 0.5f,
-                          height * 0.5f, nearZ, farZ);
-    }
-}
+const glm::vec3 &Camera::front() const { return m_front; }
+const glm::vec3 &Camera::up() const { return m_up; }
+const glm::vec3 &Camera::right() const { return m_right; }
+
+const glm::mat4 &Camera::view() const { return m_view; }
+const glm::mat4 &Camera::proj() const { return m_proj; }
 
 void Camera::rotate(float dy, float dp)
 {
-    constexpr float limit = glm::radians(89.f);
-
-    yaw += dy;
-    pitch += dp;
-    pitch = glm::clamp(pitch, -limit, limit);
-    update();
-}
-
-void Camera::rotateAround(const glm::vec3 &point, float dy, float dp)
-{
-    constexpr float limit = glm::radians(89.f);
-    if (glm::abs(pitch + dp) < limit)
-    {
-        position = glm::rotate(glm::mat4(1.f), dy, worldUp) *
-                       glm::rotate(glm::mat4(1.f), dp, right) *
-                       glm::vec4(position - point, 1.f) +
-                   glm::vec4(point, 0.f);
-
-        rotate(-dy, dp);
-    }
+    glm::quat qy = glm::angleAxis(dy, glm::vec3(0.0f, 1.0f, 0.0f));
+    glm::quat qp = glm::angleAxis(dp, glm::vec3(-1.0f, 0.0f, 0.0f));
+    rotation     = glm::normalize(qy * rotation * qp);
 }
 
 void Camera::update()
 {
-    float cp = glm::cos(pitch);
+    glm::mat3 axes = glm::mat3_cast(rotation);
 
-    front = glm::normalize(glm::vec3(cos(yaw) * cp, sin(pitch), sin(yaw) * cp));
-    right = glm::normalize(glm::cross(front, worldUp));
-    up    = glm::normalize(glm::cross(right, front));
+    m_front    = axes[2];
+    m_up       = axes[1];
+    m_right    = -axes[0];
+    m_position = target - m_front * distance;
+
+    m_view = glm::lookAt(m_position, target, up());
+    if (projType == Perspective)
+    {
+        m_proj = glm::perspective(fov, m_aspect, nearZ, farZ);
+    }
+    else
+    {
+        float height = width / m_aspect;
+
+        m_proj = glm::ortho(-width * 0.5f, width * 0.5f, -height * 0.5f,
+                            height * 0.5f, nearZ, farZ);
+    }
 }
 
 } // namespace glmmd

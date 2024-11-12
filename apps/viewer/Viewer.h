@@ -11,6 +11,7 @@
 
 #include <glmmd/core/Model.h>
 #include <glmmd/core/PhysicsWorld.h>
+#include <glmmd/core/CameraMotion.h>
 #include <glmmd/render/ModelRenderer.h>
 
 #include "JsonParser.hpp"
@@ -53,6 +54,7 @@ private:
     void loadMotionDialog();
     void loadPoseDialog();
     void updateModels();
+    void updateCameraMotion();
     void updateViewportSize();
     void render();
     void progress();
@@ -88,9 +90,10 @@ private:
 
     std::vector<std::unique_ptr<BlendedMotion>> m_motions;
 
+    std::unique_ptr<glmmd::CameraMotion> m_cameraMotion;
+
     std::unique_ptr<InfiniteGridRenderer> m_gridRenderer;
 
-    glm::vec3       m_cameraTarget;
     glmmd::Camera   m_camera;
     glmmd::Lighting m_lighting;
 
@@ -130,6 +133,7 @@ private:
         bool renderAxes;
         bool renderGrid;
         bool wireframe;
+        bool lockCamera;
 
         std::string lastModelPath;
         std::string lastMotionPath;

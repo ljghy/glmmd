@@ -100,7 +100,7 @@ void VmdFileLoader::loadCameraFrames(VmdData &data)
 
         readUInt(cameraFrame.frameNumber);
         readFloat(cameraFrame.distance);
-        readFloat<3>(cameraFrame.targetPosition.x);
+        readFloat<3>(cameraFrame.target.x);
         readFloat<3>(cameraFrame.rotation.x);
         m_fin.read(reinterpret_cast<char *>(cameraFrame.interpolation), 24);
         readUInt(cameraFrame.fov);

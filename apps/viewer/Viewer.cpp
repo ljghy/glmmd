@@ -2,7 +2,6 @@
 #include <algorithm>
 
 #ifndef GLMMD_DO_NOT_USE_STD_EXECUTION
-#include <numeric>
 #include <execution>
 #endif
 
@@ -78,9 +77,18 @@ Viewer::Viewer(const std::filesystem::path &executableDir)
 
     m_gridRenderer = std::make_unique<InfiniteGridRenderer>();
 
-    m_cameraTarget          = glm::vec3(0.f);
-    m_camera.projType       = glmmd::CameraProjectionType::Perspective;
-    m_camera.position       = glm::vec3(0.0f, 14.0f, -24.0f);
+    m_camera.projType = glmmd::Camera::Perspective;
+    m_camera.target   = glm::vec3(0.f, 8.f, 0.f);
+    m_camera.setRotation(glm::radians(glm::vec3(-10.f, 0.f, 0.f)));
+    m_camera.distance = 30.f;
+    m_camera.fov      = glm::radians(45.f);
+    m_camera.nearZ    = 0.1f;
+    m_camera.farZ     = 1000.f;
+    m_camera.width    = 40.f;
+
+    m_camera.resize(m_viewportWidth, m_viewportHeight);
+    m_camera.update();
+
     m_lighting.direction    = glm::normalize(glm::vec3(-1.f, -2.f, 1.f));
     m_lighting.color        = glm::vec3(0.6f);
     m_lighting.ambientColor = glm::vec3(1.f);
@@ -105,14 +113,14 @@ void Viewer::initState()
 
     m_state.clearColor = glm::vec4(0.2f, 0.2f, 0.2f, 1.0f);
 
-    m_state.ortho =
-        m_camera.projType == glmmd::CameraProjectionType::Orthographic;
-    m_state.renderEdge         = true;
-    m_state.renderShadow       = true;
+    m_state.ortho        = m_camera.projType == glmmd::Camera::Orthographic;
+    m_state.renderEdge   = true;
+    m_state.renderShadow = true;
     m_state.renderGroundShadow = true;
     m_state.renderAxes         = true;
     m_state.renderGrid         = true;
     m_state.wireframe          = false;
+    m_state.lockCamera         = true;
 
     m_state.lastModelPath  = ".";
     m_state.lastMotionPath = ".";
@@ -353,11 +361,6 @@ void Viewer::removeModel(size_t i)
 void Viewer::loadMotion(const std::filesystem::path &path, size_t modelIndex,
                         const JsonNode &config)
 {
-    if (modelIndex >= m_models.size())
-    {
-        std::cerr << "Invalid model index.\n";
-        return;
-    }
     std::shared_ptr<glmmd::VmdData> vmdData(nullptr);
     try
     {
@@ -371,20 +374,40 @@ void Viewer::loadMotion(const std::filesystem::path &path, size_t modelIndex,
         return;
 
     bool loop = config.get<bool>("loop", false);
-    auto clip = std::make_shared<glmmd::FixedMotionClip>(
-        vmdData->toFixedMotionClip(m_models[modelIndex].data(), loop));
 
-    auto        filename = path.filename().u8string();
-    std::string label(filename.begin(), filename.end());
-    m_motions[modelIndex]->addMotion(label, clip);
+    auto filename = path.filename().u8string();
 
-    std::cout << "Motion data loaded from: " << path.u8string() << '\n';
-    std::cout << "Created on: "
-              << glmmd::codeCvt<glmmd::ShiftJIS, glmmd::UTF8>(
-                     vmdData->modelName)
-              << '\n';
-    std::cout << "Duration: " << clip->duration() << " s\n";
-    std::cout << std::endl;
+    if (vmdData->isCameraMotion())
+    {
+        m_cameraMotion = std::make_unique<glmmd::CameraMotion>(
+            vmdData->toCameraMotion(loop));
+
+        std::cout << "Camera motion data loaded from: " << path.u8string()
+                  << '\n';
+        std::cout << "Duration: " << m_cameraMotion->duration() << " s\n";
+        std::cout << std::endl;
+    }
+    else
+    {
+        if (modelIndex >= m_models.size())
+        {
+            std::cerr << "Invalid model index.\n";
+            return;
+        }
+        auto clip = std::make_shared<glmmd::FixedMotionClip>(
+            vmdData->toFixedMotionClip(m_models[modelIndex].data(), loop));
+
+        std::string label(filename.begin(), filename.end());
+        m_motions[modelIndex]->addMotion(label, clip);
+
+        std::cout << "Motion data loaded from: " << path.u8string() << '\n';
+        std::cout << "Created on: "
+                  << glmmd::codeCvt<glmmd::ShiftJIS, glmmd::UTF8>(
+                         vmdData->modelName)
+                  << '\n';
+        std::cout << "Duration: " << clip->duration() << " s\n";
+        std::cout << std::endl;
+    }
 }
 
 void Viewer::loadPose(const std::filesystem::path &path, size_t modelIndex)
@@ -451,44 +474,43 @@ void Viewer::handleInput(float deltaTime)
     constexpr float sensitivity = glm::radians(0.1f);
 
     if (io.MouseDown[1])
-        m_camera.rotateAround(m_cameraTarget, -mouseDelta.x * sensitivity,
-                              -mouseDelta.y * sensitivity);
+        m_camera.rotate(-mouseDelta.x * sensitivity,
+                        -mouseDelta.y * sensitivity);
 
     if (io.MouseDown[2])
     {
-        float     vel = 5.f * glm::tan(m_camera.fovy * 0.5f);
+        float     vel = 5.f * glm::tan(m_camera.fov * 0.5f);
         glm::vec3 translation =
-            -vel * mouseDelta.x * deltaTime * m_camera.right +
-            vel * mouseDelta.y * deltaTime * m_camera.up;
-        m_camera.position += translation;
-        m_cameraTarget += translation;
+            -vel * mouseDelta.x * deltaTime * m_camera.right() +
+            vel * mouseDelta.y * deltaTime * m_camera.up();
+        m_camera.target += translation;
     }
 
-    if (m_camera.projType == glmmd::CameraProjectionType::Perspective)
+    if (m_camera.projType == glmmd::Camera::Perspective)
     {
-        m_camera.fovy -= glm::radians(5.f) * io.MouseWheel;
-        m_camera.fovy =
-            glm::clamp(m_camera.fovy, glm::radians(1.f), glm::radians(120.f));
+        m_camera.fov -= glm::radians(5.f) * io.MouseWheel;
+        m_camera.fov =
+            glm::clamp(m_camera.fov, glm::radians(1.f), glm::radians(120.f));
     }
     else
     {
         m_camera.width -= 5.f * io.MouseWheel;
         m_camera.width = glm::clamp(m_camera.width, 1.f, 100.f);
     }
+
     constexpr float vel = 25.f;
 
     glm::vec3 translation(0.f);
     if (ImGui::IsKeyDown(ImGuiKey_W))
-        translation += vel * deltaTime * m_camera.front;
+        translation += vel * deltaTime * m_camera.front();
     if (ImGui::IsKeyDown(ImGuiKey_S))
-        translation -= vel * deltaTime * m_camera.front;
+        translation -= vel * deltaTime * m_camera.front();
     if (ImGui::IsKeyDown(ImGuiKey_A))
-        translation -= vel * deltaTime * m_camera.right;
+        translation -= vel * deltaTime * m_camera.right();
     if (ImGui::IsKeyDown(ImGuiKey_D))
-        translation += vel * deltaTime * m_camera.right;
+        translation += vel * deltaTime * m_camera.right();
 
-    m_camera.position += translation;
-    m_cameraTarget += translation;
+    m_camera.target += translation;
 }
 
 void Viewer::updateModelPose(size_t i)
@@ -513,8 +535,7 @@ void Viewer::menuBar()
                     "LoadModelDlg", "Load model", ".pmx", config);
             }
 
-            if (m_state.selectedModelIndex != -1 &&
-                ImGui::MenuItem("Load motion"))
+            if (ImGui::MenuItem("Load motion"))
             {
                 IGFD::FileDialogConfig config;
                 config.path = m_state.lastMotionPath;
@@ -656,23 +677,27 @@ void Viewer::loadPoseDialog()
 
 void Viewer::updateModels()
 {
+    std::for_each(
 #ifndef GLMMD_DO_NOT_USE_STD_EXECUTION
-    std::vector<size_t> modelIndices(m_models.size());
-    std::iota(modelIndices.begin(), modelIndices.end(), 0);
-    std::for_each(std::execution::par, modelIndices.begin(), modelIndices.end(),
-                  [&](size_t i)
-#else
-    for (size_t i = 0; i < m_models.size(); ++i)
+        std::execution::par,
 #endif
-                  {
-                      updateModelPose(i);
-                      m_modelRenderers[i].renderData().init();
-                      m_models[i].pose().applyToRenderData(
-                          m_modelRenderers[i].renderData());
-                  }
-#ifndef GLMMD_DO_NOT_USE_STD_EXECUTION
-    );
-#endif
+        m_models.begin(), m_models.end(),
+        [&](const glmmd::Model &model)
+        {
+            auto i = &model - m_models.data();
+            updateModelPose(i);
+            m_modelRenderers[i].renderData().init();
+            m_models[i].pose().applyToRenderData(
+                m_modelRenderers[i].renderData());
+        });
+}
+
+void Viewer::updateCameraMotion()
+{
+    if (!m_cameraMotion)
+        return;
+
+    m_cameraMotion->updateCamera(m_state.progress, m_camera);
 }
 
 void Viewer::updateViewportSize()
@@ -792,10 +817,11 @@ void Viewer::progress()
 {
     ImGui::Begin("Progress", nullptr, ImGuiWindowFlags_NoMove);
 
-    m_state.progress = getProgress();
-    float duration   = 0.f;
+    float duration = 0.f;
     for (const auto &motion : m_motions)
         duration = std::max(duration, motion->duration());
+    if (m_cameraMotion)
+        duration = std::max(duration, m_cameraMotion->duration());
 
     if (ImGui::SliderFloat("##Progress", &m_state.progress, 0.f, duration, ""))
         setProgress(m_state.progress);
@@ -918,9 +944,8 @@ void Viewer::controlPanel()
     ImGui::ColorEdit4("Clear color", &m_state.clearColor.x);
 
     if (ImGui::Checkbox("Ortho", &m_state.ortho))
-        m_camera.projType = m_state.ortho
-                                ? glmmd::CameraProjectionType::Orthographic
-                                : glmmd::CameraProjectionType::Perspective;
+        m_camera.projType = m_state.ortho ? glmmd::Camera::Orthographic
+                                          : glmmd::Camera::Perspective;
 
     if (ImGui::Checkbox("Render edge", &m_state.renderEdge))
     {
@@ -950,6 +975,8 @@ void Viewer::controlPanel()
     ImGui::Checkbox("Render grid", &m_state.renderGrid);
 
     ImGui::Checkbox("Wireframe", &m_state.wireframe);
+
+    ImGui::Checkbox("Lock camera", &m_state.lockCamera);
 
     if (ImGui::SliderFloat3("Light direction", &m_lighting.direction.x, -1.f,
                             1.f))
@@ -998,6 +1025,8 @@ void Viewer::run()
 
         float deltaTime = io.DeltaTime;
 
+        m_state.progress = getProgress();
+
         m_profiler.startFrame();
 
         {
@@ -1026,6 +1055,11 @@ void Viewer::run()
 
             if (ImGui::IsWindowFocused())
                 handleInput(deltaTime);
+
+            if (!m_state.paused || m_state.lockCamera)
+                updateCameraMotion();
+
+            m_camera.update();
 
             m_profiler.start("Render");
             render();
