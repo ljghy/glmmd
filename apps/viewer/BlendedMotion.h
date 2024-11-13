@@ -46,7 +46,7 @@ public:
 
     bool moveDown(size_t i)
     {
-        if (i == m_motions.size() - 1 || i >= m_motions.size())
+        if (i + 1 >= m_motions.size())
             return false;
         std::swap(m_labels[i], m_labels[i + 1]);
         std::swap(m_motions[i], m_motions[i + 1]);

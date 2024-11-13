@@ -19,7 +19,7 @@ project(
     LANGUAGES CXX
     VERSION 0.0.1)
 
-option(GLMMD_DO_NOT_USE_STD_EXECUTION "Do not use std::execution" OFF)
+option(GLMMD_DONT_PARALLELIZE "Do not parallelize" OFF)
 option(GLMMD_BUILD_APPS "Build glmmd apps" ${GLMMD_IS_TOPLEVEL})
 option(GLMMD_BUILD_RENDERER "Build renderer" ON)
 option(GLMMD_USE_ICU "Use libicu" OFF)

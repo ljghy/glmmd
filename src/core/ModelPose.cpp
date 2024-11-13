@@ -1,7 +1,4 @@
 #include <algorithm>
-#ifndef GLMMD_DO_NOT_USE_STD_EXECUTION
-#include <execution>
-#endif
 
 #define GLM_ENABLE_EXPERIMENTAL
 #include <glm/glm.hpp>
@@ -11,6 +8,7 @@
 #include <glm/gtx/dual_quaternion.hpp>
 
 #include <glmmd/core/ModelPose.h>
+#include <glmmd/core/ParallelForEach.h>
 
 namespace glmmd
 {
@@ -107,17 +105,14 @@ void ModelPose::applyMorphsToRenderData(RenderData &renderData) const
         switch (morph.type)
         {
         case MorphType::Vertex:
-            std::for_each(
-#ifndef GLMMD_DO_NOT_USE_STD_EXECUTION
-                std::execution::par,
-#endif
-                morph.vertex, morph.vertex + morph.count,
-                [&](const VertexMorph &data)
-                {
-                    renderData.setVertexPosition(
-                        data.index, renderData.getVertexPosition(data.index) +
+            parallelForEach(morph.vertex, morph.vertex + morph.count,
+                            [&](const VertexMorph &data)
+                            {
+                                renderData.setVertexPosition(
+                                    data.index,
+                                    renderData.getVertexPosition(data.index) +
                                         ratio * data.offset);
-                });
+                            });
             break;
         case MorphType::Material:
             for (int32_t j = 0; j < morph.count; ++j)
@@ -211,10 +206,7 @@ void ModelPose::applyBoneTransformsToRenderData(RenderData &renderData) const
     for (uint32_t i = 0; i < finalBoneTransforms.size(); ++i)
         finalBoneTransforms[i] = getFinalBoneTransform(i);
 
-    std::for_each(
-#ifndef GLMMD_DO_NOT_USE_STD_EXECUTION
-        std::execution::par,
-#endif
+    parallelForEach(
         m_modelData->vertices.cbegin(), m_modelData->vertices.cend(),
         [&](const Vertex &vert)
         {

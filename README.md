@@ -65,7 +65,7 @@ mkdir build
 cd build
 ```
 
-Install [Intel oneTBB](https://github.com/oneapi-src/oneTBB) to enable parallel execution with `gcc` on Linux. Otherwise, add definition `-DGLMMD_DO_NOT_USE_STD_EXECUTION=ON` to CMake to disable the use of `std::execution::par`.
+Install [Intel oneTBB](https://github.com/oneapi-src/oneTBB) to enable parallel execution with `gcc` on Linux. Otherwise, add definition `-DGLMMD_DONT_PARALLELIZE=ON` to CMake to disable the use of `std::execution::par`.
 
 #### Windows MSVC
 

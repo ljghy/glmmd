@@ -1,10 +1,6 @@
 #include <iostream>
 #include <algorithm>
 
-#ifndef GLMMD_DO_NOT_USE_STD_EXECUTION
-#include <execution>
-#endif
-
 #include <imgui.h>
 #include <imgui_impl_glfw.h>
 #include <imgui_impl_opengl3.h>
@@ -13,6 +9,7 @@
 #include <ImGuiFileDialog.h>
 
 #include <glmmd/core/FixedPoseMotion.h>
+#include <glmmd/core/ParallelForEach.h>
 #include <glmmd/files/CodeConverter.h>
 #include <glmmd/files/PmxFileLoader.h>
 #include <glmmd/files/VmdFileLoader.h>
@@ -77,17 +74,7 @@ Viewer::Viewer(const std::filesystem::path &executableDir)
 
     m_gridRenderer = std::make_unique<InfiniteGridRenderer>();
 
-    m_camera.projType = glmmd::Camera::Perspective;
-    m_camera.target   = glm::vec3(0.f, 8.f, 0.f);
-    m_camera.setRotation(glm::radians(glm::vec3(-10.f, 0.f, 0.f)));
-    m_camera.distance = 30.f;
-    m_camera.fov      = glm::radians(45.f);
-    m_camera.nearZ    = 0.1f;
-    m_camera.farZ     = 1000.f;
-    m_camera.width    = 40.f;
-
-    m_camera.resize(m_viewportWidth, m_viewportHeight);
-    m_camera.update();
+    initCamera();
 
     m_lighting.direction    = glm::normalize(glm::vec3(-1.f, -2.f, 1.f));
     m_lighting.color        = glm::vec3(0.6f);
@@ -125,6 +112,21 @@ void Viewer::initState()
     m_state.lastModelPath  = ".";
     m_state.lastMotionPath = ".";
     m_state.lastPosePath   = ".";
+}
+
+void Viewer::initCamera()
+{
+    m_camera.projType = glmmd::Camera::Perspective;
+    m_camera.target   = glm::vec3(0.f, 8.f, 0.f);
+    m_camera.setRotation(glm::radians(glm::vec3(-10.f, 0.f, 0.f)));
+    m_camera.distance = 30.f;
+    m_camera.fov      = glm::radians(45.f);
+    m_camera.nearZ    = 0.1f;
+    m_camera.farZ     = 2000.f;
+    m_camera.width    = 40.f;
+
+    m_camera.resize(m_viewportWidth, m_viewportHeight);
+    m_camera.update();
 }
 
 void Viewer::initWindow()
@@ -271,8 +273,8 @@ void Viewer::initFBO()
 
     m_shadowMapFBO.create();
     ogl::Texture2DCreateInfo shadowMapTexInfo;
-    m_shadowMapWidth             = m_initData.get<int>("ShadowMapWidth", 1024);
-    m_shadowMapHeight            = m_initData.get<int>("ShadowMapHeight", 1024);
+    m_shadowMapWidth             = m_initData.get<int>("ShadowMapWidth", 2048);
+    m_shadowMapHeight            = m_initData.get<int>("ShadowMapHeight", 2048);
     shadowMapTexInfo.width       = m_shadowMapWidth;
     shadowMapTexInfo.height      = m_shadowMapHeight;
     shadowMapTexInfo.internalFmt = GL_DEPTH_COMPONENT;
@@ -336,26 +338,35 @@ bool Viewer::loadModel(const std::filesystem::path &path)
     std::cout << "Comment: " << modelData->info.comment << '\n';
     std::cout << std::endl;
 
-    m_modelData.push_back(modelData);
-    auto &renderer = m_modelRenderers.emplace_back(modelData, false);
+    auto &renderer = m_modelRenderers.emplace_back(
+        std::make_unique<glmmd::ModelRenderer>(modelData, false));
     for (size_t i = 0; i < gpuTextures.size(); ++i)
-        renderer.setTexture(i, std::move(gpuTextures[i]));
-    auto &model = m_models.emplace_back(modelData);
+        renderer->setTexture(i, std::move(gpuTextures[i]));
+
+    uint32_t renderFlag = glmmd::MODEL_RENDER_FLAG_MESH;
+
+    if (m_state.renderEdge)
+        renderFlag |= glmmd::MODEL_RENDER_FLAG_EDGE;
+    if (m_state.renderGroundShadow)
+        renderFlag |= glmmd::MODEL_RENDER_FLAG_GROUND_SHADOW;
+    renderer->renderFlag() = renderFlag;
+
+    auto &model =
+        m_models.emplace_back(std::make_unique<glmmd::Model>(modelData));
     m_motions.emplace_back(std::make_unique<BlendedMotion>(modelData));
 
     if (m_state.physicsEnabled)
-        m_physicsWorld.setupModelPhysics(model);
+        m_physicsWorld.setupModelPhysics(*model);
 
     return true;
 }
 
 void Viewer::removeModel(size_t i)
 {
-    m_physicsWorld.clearModelPhysics(m_models[i]);
+    m_physicsWorld.clearModelPhysics(*m_models[i]);
     m_motions.erase(m_motions.begin() + i);
     m_modelRenderers.erase(m_modelRenderers.begin() + i);
     m_models.erase(m_models.begin() + i);
-    m_modelData.erase(m_modelData.begin() + i);
 }
 
 void Viewer::loadMotion(const std::filesystem::path &path, size_t modelIndex,
@@ -395,7 +406,7 @@ void Viewer::loadMotion(const std::filesystem::path &path, size_t modelIndex,
             return;
         }
         auto clip = std::make_shared<glmmd::FixedMotionClip>(
-            vmdData->toFixedMotionClip(m_models[modelIndex].data(), loop));
+            vmdData->toFixedMotionClip(m_models[modelIndex]->data(), loop));
 
         std::string label(filename.begin(), filename.end());
         m_motions[modelIndex]->addMotion(label, clip);
@@ -430,7 +441,7 @@ void Viewer::loadPose(const std::filesystem::path &path, size_t modelIndex)
     if (!vpdData)
         return;
 
-    auto pose = vpdData->toModelPose(m_modelData[modelIndex]);
+    auto pose = vpdData->toModelPose(m_models[modelIndex]->dataPtr());
 
     auto        filename = path.filename().u8string();
     std::string label(filename.begin(), filename.end());
@@ -516,9 +527,9 @@ void Viewer::handleInput(float deltaTime)
 void Viewer::updateModelPose(size_t i)
 {
     auto &model = m_models[i];
-    model.resetLocalPose();
-    m_motions[i]->getLocalPose(getProgress(), model.pose());
-    model.solvePose();
+    model->resetLocalPose();
+    m_motions[i]->getLocalPose(getProgress(), model->pose());
+    model->solvePose();
 }
 
 void Viewer::menuBar()
@@ -677,19 +688,15 @@ void Viewer::loadPoseDialog()
 
 void Viewer::updateModels()
 {
-    std::for_each(
-#ifndef GLMMD_DO_NOT_USE_STD_EXECUTION
-        std::execution::par,
-#endif
-        m_models.begin(), m_models.end(),
-        [&](const glmmd::Model &model)
-        {
-            auto i = &model - m_models.data();
-            updateModelPose(i);
-            m_modelRenderers[i].renderData().init();
-            m_models[i].pose().applyToRenderData(
-                m_modelRenderers[i].renderData());
-        });
+    glmmd::parallelForEach(m_models.begin(), m_models.end(),
+                           [&](const auto &model)
+                           {
+                               auto i = &model - m_models.data();
+                               updateModelPose(i);
+                               m_modelRenderers[i]->renderData().init();
+                               m_models[i]->pose().applyToRenderData(
+                                   m_modelRenderers[i]->renderData());
+                           });
 }
 
 void Viewer::updateCameraMotion()
@@ -723,7 +730,7 @@ void Viewer::render()
 {
 
     for (const auto &renderer : m_modelRenderers)
-        renderer.fillBuffers();
+        renderer->fillBuffers();
 
     // Render shadow map
 
@@ -734,7 +741,7 @@ void Viewer::render()
         glClear(GL_DEPTH_BUFFER_BIT);
         glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
         for (const auto &renderer : m_modelRenderers)
-            renderer.renderShadowMap(m_lighting);
+            renderer->renderShadowMap(m_lighting);
         m_shadowMapFBO.unbind();
     }
 
@@ -755,10 +762,10 @@ void Viewer::render()
         glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 
     for (const auto &renderer : m_modelRenderers)
-        renderer.render(m_camera, m_lighting,
-                        m_state.renderShadow
-                            ? m_shadowMapFBO.depthTextureAttachment()
-                            : nullptr);
+        renderer->render(m_camera, m_lighting,
+                         m_state.renderShadow
+                             ? m_shadowMapFBO.depthTextureAttachment()
+                             : nullptr);
 
     if (m_state.renderGrid)
         m_gridRenderer->render(m_camera);
@@ -853,7 +860,7 @@ void Viewer::modelList()
         for (int i = 0; i < static_cast<int>(m_models.size()); ++i)
         {
             ImGui::PushID(i);
-            if (ImGui::Selectable(m_modelData[i]->info.modelName.c_str(),
+            if (ImGui::Selectable(m_models[i]->data().info.modelName.c_str(),
                                   m_state.selectedModelIndex == i))
                 m_state.selectedModelIndex = i;
             ImGui::PopID();
@@ -874,6 +881,44 @@ void Viewer::modelList()
 
         if (m_state.selectedModelIndex == -1)
             return;
+
+        ImGui::SameLine();
+        if (ImGui::Button("Up##Model") && m_state.selectedModelIndex > 0)
+        {
+            std::swap(m_models[m_state.selectedModelIndex],
+                      m_models[m_state.selectedModelIndex - 1]);
+            std::swap(m_modelRenderers[m_state.selectedModelIndex],
+                      m_modelRenderers[m_state.selectedModelIndex - 1]);
+            std::swap(m_motions[m_state.selectedModelIndex],
+                      m_motions[m_state.selectedModelIndex - 1]);
+            --m_state.selectedModelIndex;
+        }
+        ImGui::SameLine();
+        if (ImGui::Button("Down##Model") &&
+            static_cast<size_t>(m_state.selectedModelIndex + 1) <
+                m_models.size())
+        {
+            std::swap(m_models[m_state.selectedModelIndex],
+                      m_models[m_state.selectedModelIndex + 1]);
+            std::swap(m_modelRenderers[m_state.selectedModelIndex],
+                      m_modelRenderers[m_state.selectedModelIndex + 1]);
+            std::swap(m_motions[m_state.selectedModelIndex],
+                      m_motions[m_state.selectedModelIndex + 1]);
+            ++m_state.selectedModelIndex;
+        }
+        ImGui::SameLine();
+        bool hideModel =
+            m_modelRenderers[m_state.selectedModelIndex]->renderFlag() &
+            glmmd::MODEL_RENDER_FLAG_HIDE;
+        if (ImGui::Checkbox("Hide##Model", &hideModel))
+        {
+            if (hideModel)
+                m_modelRenderers[m_state.selectedModelIndex]->renderFlag() |=
+                    glmmd::MODEL_RENDER_FLAG_HIDE;
+            else
+                m_modelRenderers[m_state.selectedModelIndex]->renderFlag() &=
+                    ~glmmd::MODEL_RENDER_FLAG_HIDE;
+        }
 
         const auto &motion = m_motions[m_state.selectedModelIndex];
         if (!motion->empty() && ImGui::BeginListBox("Motions"))
@@ -919,68 +964,103 @@ void Viewer::controlPanel()
 
     modelList();
 
-    ImGui::Separator();
-    if (ImGui::Checkbox("Physics", &m_state.physicsEnabled))
+    if (ImGui::TreeNode("Camera"))
     {
-        if (m_state.physicsEnabled)
+        if (ImGui::Checkbox("Ortho", &m_state.ortho))
+            m_camera.projType = m_state.ortho ? glmmd::Camera::Orthographic
+                                              : glmmd::Camera::Perspective;
+
+        float fov = glm::degrees(m_camera.fov);
+        if (ImGui::SliderFloat("FOV", &fov, 1.f, 120.f))
+            m_camera.fov = glm::radians(fov);
+
+        ImGui::InputFloat("Near", &m_camera.nearZ);
+        ImGui::InputFloat("Far", &m_camera.farZ);
+
+        if (m_cameraMotion && ImGui::Button("Clear camera motion"))
         {
-            for (auto &model : m_models)
-                m_physicsWorld.setupModelPhysics(model, true);
+            m_cameraMotion.reset();
+            initCamera();
         }
-        else
+        if (ImGui::Button("Reset##Camera"))
+            initCamera();
+
+        ImGui::Checkbox("Lock", &m_state.lockCamera);
+
+        ImGui::TreePop();
+    }
+
+    if (ImGui::TreeNode("Physics"))
+    {
+        if (ImGui::Checkbox("Physics", &m_state.physicsEnabled))
         {
-            for (auto &model : m_models)
-                m_physicsWorld.clearModelPhysics(model);
+            if (m_state.physicsEnabled)
+            {
+                for (auto &model : m_models)
+                    m_physicsWorld.setupModelPhysics(*model, true);
+            }
+            else
+            {
+                for (auto &model : m_models)
+                    m_physicsWorld.clearModelPhysics(*model);
+            }
         }
+
+        ImGui::Combo("Physics FPS", &m_state.physicsFPSSelection,
+                     "60\000120\000240\000");
+
+        if (ImGui::SliderFloat3("Gravity", &m_state.gravity.x, -10.f, 10.f))
+            m_physicsWorld.setGravity(m_state.gravity);
+
+        ImGui::TreePop();
     }
 
-    ImGui::Combo("Physics FPS", &m_state.physicsFPSSelection,
-                 "60\000120\000240");
-
-    if (ImGui::SliderFloat3("Gravity", &m_state.gravity.x, -10.f, 10.f))
-        m_physicsWorld.setGravity(m_state.gravity);
-
-    ImGui::Separator();
-    ImGui::ColorEdit4("Clear color", &m_state.clearColor.x);
-
-    if (ImGui::Checkbox("Ortho", &m_state.ortho))
-        m_camera.projType = m_state.ortho ? glmmd::Camera::Orthographic
-                                          : glmmd::Camera::Perspective;
-
-    if (ImGui::Checkbox("Render edge", &m_state.renderEdge))
+    if (ImGui::TreeNode("Render"))
     {
-        for (auto &renderer : m_modelRenderers)
-            if (m_state.renderEdge)
-                renderer.renderFlag() |= glmmd::MODEL_RENDER_FLAG_EDGE;
-            else
-                renderer.renderFlag() &= ~glmmd::MODEL_RENDER_FLAG_EDGE;
+
+        ImGui::ColorEdit4("Clear color", &m_state.clearColor.x);
+
+        if (ImGui::Checkbox("Render edge", &m_state.renderEdge))
+        {
+            for (auto &renderer : m_modelRenderers)
+                if (m_state.renderEdge)
+                    renderer->renderFlag() |= glmmd::MODEL_RENDER_FLAG_EDGE;
+                else
+                    renderer->renderFlag() &= ~glmmd::MODEL_RENDER_FLAG_EDGE;
+        }
+
+        if (ImGui::Checkbox("Render ground shadow",
+                            &m_state.renderGroundShadow))
+        {
+            for (auto &renderer : m_modelRenderers)
+                if (m_state.renderGroundShadow)
+                    renderer->renderFlag() |=
+                        glmmd::MODEL_RENDER_FLAG_GROUND_SHADOW;
+                else
+                    renderer->renderFlag() &=
+                        ~glmmd::MODEL_RENDER_FLAG_GROUND_SHADOW;
+        }
+
+        ImGui::Checkbox("Render shadow", &m_state.renderShadow);
+
+        if (ImGui::Checkbox("Render axes", &m_state.renderAxes))
+        {
+            m_gridRenderer->showAxes = m_state.renderAxes;
+        }
+        ImGui::Checkbox("Render grid", &m_state.renderGrid);
+
+        ImGui::Checkbox("Wireframe", &m_state.wireframe);
+
+        if (ImGui::SliderFloat3("Light direction", &m_lighting.direction.x,
+                                -1.f, 1.f))
+            m_lighting.direction = glm::normalize(m_lighting.direction);
+
+        ImGui::ColorEdit3("Light color", &m_lighting.color.x);
+
+        ImGui::ColorEdit3("Ambient color", &m_lighting.ambientColor.x);
+
+        ImGui::TreePop();
     }
-
-    if (ImGui::Checkbox("Render ground shadow", &m_state.renderGroundShadow))
-    {
-        for (auto &renderer : m_modelRenderers)
-            if (m_state.renderGroundShadow)
-                renderer.renderFlag() |= glmmd::MODEL_RENDER_FLAG_GROUND_SHADOW;
-            else
-                renderer.renderFlag() &=
-                    ~glmmd::MODEL_RENDER_FLAG_GROUND_SHADOW;
-    }
-
-    ImGui::Checkbox("Render shadow", &m_state.renderShadow);
-
-    if (ImGui::Checkbox("Render axes", &m_state.renderAxes))
-    {
-        m_gridRenderer->showAxes = m_state.renderAxes;
-    }
-    ImGui::Checkbox("Render grid", &m_state.renderGrid);
-
-    ImGui::Checkbox("Wireframe", &m_state.wireframe);
-
-    ImGui::Checkbox("Lock camera", &m_state.lockCamera);
-
-    if (ImGui::SliderFloat3("Light direction", &m_lighting.direction.x, -1.f,
-                            1.f))
-        m_lighting.direction = glm::normalize(m_lighting.direction);
 
     ImGui::End();
 }

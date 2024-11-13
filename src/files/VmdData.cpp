@@ -78,7 +78,7 @@ CameraMotion VmdData::toCameraMotion(bool loop, float frameRate) const
     for (const auto &frame : cameraFrames)
     {
         auto [iter, inserted] = motion.frameIndex.emplace(
-            frame.frameNumber, motion.keyFrames.size());
+            frame.frameNumber, static_cast<uint32_t>(motion.keyFrames.size()));
 
         if (!inserted)
             continue;

@@ -36,10 +36,11 @@ struct ModelRendererShaderSources
 
 enum ModelRenderFlag : uint32_t
 {
-    MODEL_RENDER_FLAG_NONE          = 0,
-    MODEL_RENDER_FLAG_MESH          = 1 << 0,
-    MODEL_RENDER_FLAG_EDGE          = 1 << 1,
-    MODEL_RENDER_FLAG_GROUND_SHADOW = 1 << 2,
+    MODEL_RENDER_FLAG_EMPTY         = 0,
+    MODEL_RENDER_FLAG_HIDE          = 1 << 0,
+    MODEL_RENDER_FLAG_MESH          = 1 << 1,
+    MODEL_RENDER_FLAG_EDGE          = 1 << 2,
+    MODEL_RENDER_FLAG_GROUND_SHADOW = 1 << 3,
 };
 
 class ModelRenderer

@@ -48,6 +48,8 @@ private:
 
     void initState();
 
+    void initCamera();
+
     void menuBar();
     void dockspace();
     void loadModelDialog();
@@ -80,15 +82,12 @@ private:
     int m_viewportWidth;
     int m_viewportHeight;
 
-    int m_shadowMapWidth  = 1024;
-    int m_shadowMapHeight = 1024;
+    int m_shadowMapWidth;
+    int m_shadowMapHeight;
 
-    std::vector<std::shared_ptr<glmmd::ModelData>> m_modelData;
-
-    std::vector<glmmd::Model>         m_models;
-    std::vector<glmmd::ModelRenderer> m_modelRenderers;
-
-    std::vector<std::unique_ptr<BlendedMotion>> m_motions;
+    std::vector<std::unique_ptr<glmmd::Model>>         m_models;
+    std::vector<std::unique_ptr<glmmd::ModelRenderer>> m_modelRenderers;
+    std::vector<std::unique_ptr<BlendedMotion>>        m_motions;
 
     std::unique_ptr<glmmd::CameraMotion> m_cameraMotion;
 

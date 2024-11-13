@@ -170,7 +170,7 @@ void ModelRenderer::fillBuffers() const
 void ModelRenderer::render(const Camera &camera, const Lighting &lighting,
                            const ogl::Texture2D *shadowMap) const
 {
-    if (m_renderFlag == MODEL_RENDER_FLAG_NONE)
+    if (m_renderFlag & MODEL_RENDER_FLAG_HIDE)
         return;
 
     m_VBO.bind();

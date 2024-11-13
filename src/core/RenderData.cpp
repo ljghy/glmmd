@@ -1,5 +1,5 @@
 #include <algorithm>
-#ifndef GLMMD_DO_NOT_USE_STD_EXECUTION
+#ifndef GLMMD_DONT_PARALLELIZE
 #include <execution>
 #endif
 
@@ -40,7 +40,7 @@ RenderData::RenderData(const std::shared_ptr<const ModelData> &data)
 void RenderData::init()
 {
     std::copy(
-#ifndef GLMMD_DO_NOT_USE_STD_EXECUTION
+#ifndef GLMMD_DONT_PARALLELIZE
         std::execution::par,
 #endif
         m_initialVertexBuffer.begin(), m_initialVertexBuffer.end(),

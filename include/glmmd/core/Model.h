@@ -33,6 +33,9 @@ public:
     ModelData       &data() { return *m_data; }
     const ModelData &data() const { return *m_data; }
 
+    std::shared_ptr<ModelData>       dataPtr() { return m_data; }
+    std::shared_ptr<const ModelData> dataPtr() const { return m_data; }
+
     ModelPose       &pose() { return m_pose; }
     const ModelPose &pose() const { return m_pose; }
 
