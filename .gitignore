@@ -1,11 +1,3 @@
-/*
-!CMakeLists.txt
-!.gitignore
-!.gitattributes
-!cmake/
-!lib/
-!include/
-!src/
-!apps/
-!README.md
-!.clang-format
+.cache/
+build*/
+tmp/
