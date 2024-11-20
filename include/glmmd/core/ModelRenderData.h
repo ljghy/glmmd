@@ -1,5 +1,5 @@
-#ifndef GLMMD_CORE_RENDER_DATA_H_
-#define GLMMD_CORE_RENDER_DATA_H_
+#ifndef GLMMD_CORE_MODEL_RENDER_DATA_H_
+#define GLMMD_CORE_MODEL_RENDER_DATA_H_
 
 #include <memory>
 #include <vector>
@@ -20,10 +20,16 @@ struct MaterialFactors
     glm::vec4 texture;
     glm::vec4 sphereTexture;
     glm::vec4 toonTexture;
+
+    void initAdd();
+    void initMul();
 };
 
 struct MaterialRenderData
 {
+    MaterialFactors add;
+    MaterialFactors mul;
+
     glm::vec4 diffuse;
     glm::vec3 specular;
     float     specularPower;
@@ -32,9 +38,13 @@ struct MaterialRenderData
     float     edgeSize;
 };
 
-struct RenderData
+struct ModelRenderData
 {
-    RenderData(const std::shared_ptr<const ModelData> &data);
+    ModelRenderData() = default;
+
+    ModelRenderData(const std::shared_ptr<const ModelData> &data);
+
+    void create(const std::shared_ptr<const ModelData> &data);
 
     void init();
 
@@ -55,8 +65,6 @@ struct RenderData
 
     std::vector<float> vertexBuffer;
 
-    std::vector<MaterialFactors>    materialAdd;
-    std::vector<MaterialFactors>    materialMul;
     std::vector<MaterialRenderData> materials;
 
 private:

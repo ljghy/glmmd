@@ -229,8 +229,8 @@ void ModelRenderer::renderMesh(const Camera &camera, const Lighting &lighting,
          indexOffset += m_modelData->materials[i++].indicesCount)
     {
         const auto &mat    = m_renderData.materials[i];
-        const auto &matAdd = m_renderData.materialAdd[i];
-        const auto &matMul = m_renderData.materialMul[i];
+        const auto &matAdd = m_renderData.materials[i].add;
+        const auto &matMul = m_renderData.materials[i].mul;
 
         if (mat.diffuse.a == 0.f)
             continue;

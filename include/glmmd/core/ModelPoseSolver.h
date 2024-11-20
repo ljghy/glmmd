@@ -12,17 +12,22 @@ namespace glmmd
 class ModelPoseSolver
 {
 public:
+    ModelPoseSolver() = default;
     ModelPoseSolver(const std::shared_ptr<const ModelData> &modelData);
+    ModelPoseSolver(const ModelPoseSolver &)                = default;
+    ModelPoseSolver &operator=(const ModelPoseSolver &)     = default;
+    ModelPoseSolver(ModelPoseSolver &&) noexcept            = default;
+    ModelPoseSolver &operator=(ModelPoseSolver &&) noexcept = default;
 
-    ModelPoseSolver(const ModelPoseSolver &other) = default;
-
-    void sortBoneDeformOrder();
+    void create(const std::shared_ptr<const ModelData> &modelData);
 
     void solveBeforePhysics(ModelPose &pose) const;
     void syncWithPhysics(ModelPose &pose, ModelPhysics &physics) const;
     void solveAfterPhysics(ModelPose &pose) const;
 
 private:
+    void sortBoneDeformOrder();
+
     void applyGroupMorphs(ModelPose &) const;
     void applyBoneMorphs(ModelPose &) const;
 

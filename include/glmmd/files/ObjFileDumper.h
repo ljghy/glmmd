@@ -4,13 +4,13 @@
 #include <filesystem>
 
 #include <glmmd/core/ModelData.h>
-#include <glmmd/core/RenderData.h>
+#include <glmmd/core/ModelRenderData.h>
 
 namespace glmmd
 {
 
 void dumpObjFile(const std::filesystem::path &path, const ModelData &modelData,
-                 const RenderData *renderData = nullptr);
+                 const ModelRenderData *renderData = nullptr);
 
 }
 

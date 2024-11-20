@@ -4,7 +4,7 @@
 #include <memory>
 
 #include <glmmd/core/ModelData.h>
-#include <glmmd/core/RenderData.h>
+#include <glmmd/core/ModelRenderData.h>
 #include <glmmd/core/Transform.h>
 
 namespace glmmd
@@ -15,14 +15,20 @@ class ModelPose
     friend class ModelPoseSolver;
 
 public:
+    ModelPose() = default;
     ModelPose(const std::shared_ptr<const ModelData> &modelData);
-    ModelPose(const ModelPose &other) = default;
+    ModelPose(const ModelPose &)                = default;
+    ModelPose &operator=(const ModelPose &)     = default;
+    ModelPose(ModelPose &&) noexcept            = default;
+    ModelPose &operator=(ModelPose &&) noexcept = default;
+
+    void create(const std::shared_ptr<const ModelData> &modelData);
 
     void resetLocal();
 
-    void applyToRenderData(RenderData &renderData) const;
-    void applyBoneTransformsToRenderData(RenderData &renderData) const;
-    void applyMorphsToRenderData(RenderData &renderData) const;
+    void applyToRenderData(ModelRenderData &renderData) const;
+    void applyBoneTransformsToRenderData(ModelRenderData &renderData) const;
+    void applyMorphsToRenderData(ModelRenderData &renderData) const;
 
     void blendWith(const ModelPose &other, float t);
     void operator+=(const ModelPose &other);
@@ -40,9 +46,13 @@ public:
     glm::mat4 getFinalBoneTransform(uint32_t boneIndex) const;
 
     const glm::vec3 &getLocalBoneTranslation(uint32_t boneIndex) const;
+    glm::vec3       &localBoneTranslation(uint32_t boneIndex);
+
     const glm::quat &getLocalBoneRotation(uint32_t boneIndex) const;
-    float            getMorphRatio(uint32_t morphIndex) const;
-    float           &getMorphRatio(uint32_t morphIndex);
+    glm::quat       &localBoneRotation(uint32_t boneIndex);
+
+    float  getMorphRatio(uint32_t morphIndex) const;
+    float &morphRatio(uint32_t morphIndex);
 
 private:
     std::shared_ptr<const ModelData> m_modelData;

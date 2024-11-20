@@ -14,11 +14,19 @@ namespace glmmd
 {
 
 ModelPose::ModelPose(const std::shared_ptr<const ModelData> &modelData)
-    : m_modelData(modelData)
-    , m_localBoneTransforms(modelData->bones.size(), Transform::identity)
-    , m_morphRatios(modelData->morphs.size(), 0.f)
-    , m_globalBoneTransforms(modelData->bones.size(), Transform::identity)
 {
+    create(modelData);
+}
+
+void ModelPose::create(const std::shared_ptr<const ModelData> &modelData)
+{
+    if (!modelData)
+        return;
+
+    m_modelData = modelData;
+    m_localBoneTransforms.resize(modelData->bones.size(), Transform::identity);
+    m_morphRatios.resize(modelData->morphs.size(), 0.f);
+    m_globalBoneTransforms.resize(modelData->bones.size(), Transform::identity);
 }
 
 const Transform &ModelPose::getGlobalBoneTransform(uint32_t boneIndex) const
@@ -65,7 +73,17 @@ const glm::vec3 &ModelPose::getLocalBoneTranslation(uint32_t boneIndex) const
     return m_localBoneTransforms[boneIndex].translation;
 }
 
+glm::vec3 &ModelPose::localBoneTranslation(uint32_t boneIndex)
+{
+    return m_localBoneTransforms[boneIndex].translation;
+}
+
 const glm::quat &ModelPose::getLocalBoneRotation(uint32_t boneIndex) const
+{
+    return m_localBoneTransforms[boneIndex].rotation;
+}
+
+glm::quat &ModelPose::localBoneRotation(uint32_t boneIndex)
 {
     return m_localBoneTransforms[boneIndex].rotation;
 }
@@ -75,7 +93,7 @@ float ModelPose::getMorphRatio(uint32_t morphIndex) const
     return m_morphRatios[morphIndex];
 }
 
-float &ModelPose::getMorphRatio(uint32_t morphIndex)
+float &ModelPose::morphRatio(uint32_t morphIndex)
 {
     return m_morphRatios[morphIndex];
 }
@@ -87,13 +105,13 @@ void ModelPose::resetLocal()
     std::fill(m_morphRatios.begin(), m_morphRatios.end(), 0.f);
 }
 
-void ModelPose::applyToRenderData(RenderData &renderData) const
+void ModelPose::applyToRenderData(ModelRenderData &renderData) const
 {
     applyMorphsToRenderData(renderData);
     applyBoneTransformsToRenderData(renderData);
 }
 
-void ModelPose::applyMorphsToRenderData(RenderData &renderData) const
+void ModelPose::applyMorphsToRenderData(ModelRenderData &renderData) const
 {
     for (size_t i = 0; i < m_morphRatios.size(); ++i)
     {
@@ -118,7 +136,7 @@ void ModelPose::applyMorphsToRenderData(RenderData &renderData) const
             for (int32_t j = 0; j < morph.count; ++j)
             {
                 const auto &data  = morph.material[j];
-                size_t      first = 0, last = renderData.materialMul.size();
+                size_t      first = 0, last = renderData.materials.size();
                 if (data.index >= 0)
                 {
                     first = data.index;
@@ -128,7 +146,7 @@ void ModelPose::applyMorphsToRenderData(RenderData &renderData) const
                 {
                     for (; first != last; ++first)
                     {
-                        auto &mul = renderData.materialMul[first];
+                        auto &mul = renderData.materials[first].mul;
                         mul.diffuse *=
                             glm::mix(glm::vec4(1.f), data.diffuse, ratio);
                         mul.specular *=
@@ -152,7 +170,7 @@ void ModelPose::applyMorphsToRenderData(RenderData &renderData) const
                 {
                     for (; first != last; ++first)
                     {
-                        auto &add = renderData.materialAdd[first];
+                        auto &add = renderData.materials[first].add;
                         add.diffuse += ratio * data.diffuse;
                         add.specular += ratio * data.specular;
                         add.specularPower += ratio * data.specularPower;
@@ -200,7 +218,8 @@ void ModelPose::applyMorphsToRenderData(RenderData &renderData) const
     renderData.applyMaterialFactors();
 }
 
-void ModelPose::applyBoneTransformsToRenderData(RenderData &renderData) const
+void ModelPose::applyBoneTransformsToRenderData(
+    ModelRenderData &renderData) const
 {
     std::vector<glm::mat4> finalBoneTransforms(m_globalBoneTransforms.size());
     for (uint32_t i = 0; i < finalBoneTransforms.size(); ++i)

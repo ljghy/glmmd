@@ -6,7 +6,7 @@
 #include <opengl_framework/Common.h>
 
 #include <glmmd/core/ModelData.h>
-#include <glmmd/core/RenderData.h>
+#include <glmmd/core/ModelRenderData.h>
 #include <glmmd/core/Camera.h>
 #include <glmmd/core/Lighting.h>
 
@@ -58,8 +58,8 @@ public:
     void render(const Camera &camera, const Lighting &lighting,
                 const ogl::Texture2D *shadowMap = nullptr) const;
 
-    RenderData       &renderData() { return m_renderData; }
-    const RenderData &renderData() const { return m_renderData; }
+    ModelRenderData       &renderData() { return m_renderData; }
+    const ModelRenderData &renderData() const { return m_renderData; }
 
     static void releaseSharedToonTextures();
 
@@ -80,7 +80,7 @@ private:
 private:
     std::shared_ptr<const ModelData> m_modelData;
 
-    RenderData m_renderData;
+    ModelRenderData m_renderData;
 
     ogl::VertexBufferObject m_VBO;
     ogl::VertexArrayObject  m_VAO;

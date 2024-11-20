@@ -26,6 +26,8 @@ if(BUILD_SHARED_LIBS OR OPENGL_FRAMEWORK_BUILD_SHARED_LIBS)
         opengl_framework_config INTERFACE OPENGL_FRAMEWORK_EXPORTS_BUILD_DLL
                                           GLAD_GLAPI_EXPORT)
     add_library(opengl_framework SHARED ${SOURCES})
+    set_target_properties(opengl_framework PROPERTIES POSITION_INDEPENDENT_CODE
+                                                      ON)
 else()
     add_library(opengl_framework STATIC ${SOURCES})
 endif()
@@ -33,7 +35,7 @@ endif()
 if(MSVC)
     target_compile_options(opengl_framework PRIVATE /W4 /MP /wd4251)
 else() # GCC
-    target_compile_options(opengl_framework PRIVATE -Wall -Wextra -fPIC)
+    target_compile_options(opengl_framework PRIVATE -Wall -Wextra)
 endif()
 
 target_compile_features(opengl_framework PUBLIC cxx_std_11)

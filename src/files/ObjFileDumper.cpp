@@ -7,7 +7,7 @@ namespace glmmd
 {
 
 void dumpObjFile(const std::filesystem::path &path, const ModelData &modelData,
-                 const RenderData *renderData)
+                 const ModelRenderData *renderData)
 {
     std::ofstream objFile(path);
     if (!objFile)

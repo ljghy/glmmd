@@ -268,23 +268,24 @@ struct Morph
             switch (type)
             {
             case MorphType::Group:
-                group = reinterpret_cast<GroupMorph *>(data());
+                group = std::launder(reinterpret_cast<GroupMorph *>(data()));
                 break;
             case MorphType::Vertex:
-                vertex = reinterpret_cast<VertexMorph *>(data());
+                vertex = std::launder(reinterpret_cast<VertexMorph *>(data()));
                 break;
             case MorphType::Bone:
-                bone = reinterpret_cast<BoneMorph *>(data());
+                bone = std::launder(reinterpret_cast<BoneMorph *>(data()));
                 break;
             case MorphType::UV:
             case MorphType::UV1:
             case MorphType::UV2:
             case MorphType::UV3:
             case MorphType::UV4:
-                uv = reinterpret_cast<UVMorph *>(data());
+                uv = std::launder(reinterpret_cast<UVMorph *>(data()));
                 break;
             case MorphType::Material:
-                material = reinterpret_cast<MaterialMorph *>(data());
+                material =
+                    std::launder(reinterpret_cast<MaterialMorph *>(data()));
                 break;
             }
         }

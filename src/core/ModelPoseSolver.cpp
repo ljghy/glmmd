@@ -8,10 +8,24 @@ namespace glmmd
 
 ModelPoseSolver::ModelPoseSolver(
     const std::shared_ptr<const ModelData> &modelData)
-    : m_modelData(modelData)
-    , m_boneChildren(modelData->bones.size())
-    , m_boneDeformOrder(modelData->bones.size())
 {
+    create(modelData);
+}
+
+void ModelPoseSolver::create(const std::shared_ptr<const ModelData> &modelData)
+{
+    if (!modelData)
+        return;
+
+    m_modelData = modelData;
+
+    m_updateBeforePhysicsRanges.clear();
+    m_updateAfterPhysicsRanges.clear();
+
+    m_boneChildren.resize(modelData->bones.size());
+    for (auto &children : m_boneChildren)
+        children.clear();
+    m_boneDeformOrder.resize(modelData->bones.size());
     for (uint32_t i = 0; i < modelData->bones.size(); ++i)
     {
         const auto &bone = modelData->bones[i];

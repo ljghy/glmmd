@@ -11,7 +11,7 @@ std::shared_ptr<VpdData> VpdFileLoader::load(const std::filesystem::path &path)
 {
     std::ifstream fin(path);
     if (!fin)
-        throw std::runtime_error("Failed to open file \"" + path.u8string() +
+        throw std::runtime_error("Failed to open file \"" + path.string() +
                                  "\".");
 
     auto data = std::make_shared<VpdData>();

@@ -3,7 +3,6 @@ add_library(glmmd_core ${GLMMD_CORE_SOURCES})
 add_library(glmmd::core ALIAS glmmd_core)
 
 find_package(Bullet REQUIRED)
-find_package(glm REQUIRED)
 
 if(NOT GLMMD_DONT_PARALLELIZE)
     find_package(TBB)
