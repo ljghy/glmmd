@@ -24,7 +24,12 @@ option(GLMMD_BUILD_APPS "Build glmmd apps" ${GLMMD_IS_TOPLEVEL})
 option(GLMMD_BUILD_RENDERER "Build renderer" ON)
 option(GLMMD_USE_ICU "Use libicu" OFF)
 
-add_subdirectory(lib)
+if(GLMMD_BUILD_RENDERER)
+    add_subdirectory(opengl_framework)
+endif()
+add_subdirectory(3rd/stb)
+add_subdirectory(3rd/glm)
+
 add_subdirectory(src)
 
 if(GLMMD_BUILD_APPS)
