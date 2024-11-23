@@ -167,7 +167,7 @@ void ModelRenderer::fillBuffers() const
                  m_renderData.vertexBuffer.data(), GL_DYNAMIC_DRAW);
 }
 
-void ModelRenderer::render(const Camera &camera, const Lighting &lighting,
+void ModelRenderer::render(const Camera &camera, const DirectionalLight &light,
                            const ogl::Texture2D *shadowMap) const
 {
     if (m_renderFlag & MODEL_RENDER_FLAG_HIDE)
@@ -178,17 +178,18 @@ void ModelRenderer::render(const Camera &camera, const Lighting &lighting,
     m_IBO.bind();
 
     if (m_renderFlag & MODEL_RENDER_FLAG_MESH)
-        renderMesh(camera, lighting, shadowMap);
+        renderMesh(camera, light, shadowMap);
 
     if (m_renderFlag & MODEL_RENDER_FLAG_EDGE)
         renderEdge(camera);
 
     if (m_renderFlag & MODEL_RENDER_FLAG_GROUND_SHADOW)
-        renderGroundShadow(camera, lighting);
+        renderGroundShadow(camera, light);
 }
 
-void ModelRenderer::renderMesh(const Camera &camera, const Lighting &lighting,
-                               const ogl::Texture2D *shadowMap) const
+void ModelRenderer::renderMesh(const Camera           &camera,
+                               const DirectionalLight &light,
+                               const ogl::Texture2D   *shadowMap) const
 {
     glEnable(GL_DEPTH_TEST);
     glDepthFunc(GL_LEQUAL);
@@ -211,12 +212,12 @@ void ModelRenderer::renderMesh(const Camera &camera, const Lighting &lighting,
     m_shader.setUniformMatrix4fv("u_MVP", &MVP[0][0]);
 
     m_shader.setUniform3fv("u_viewDir", &dir[0]);
-    m_shader.setUniform3fv("u_lightDir", &lighting.direction[0]);
-    m_shader.setUniform3fv("u_lightColor", &lighting.color[0]);
-    m_shader.setUniform3fv("u_ambientColor", &lighting.ambientColor[0]);
+    m_shader.setUniform3fv("u_lightDir", &light.direction[0]);
+    m_shader.setUniform3fv("u_lightColor", &light.color[0]);
+    m_shader.setUniform3fv("u_ambientColor", &light.ambientColor[0]);
 
     m_shader.setUniformMatrix4fv("u_lightVP",
-                                 &(lighting.proj() * lighting.view())[0][0]);
+                                 &(light.proj() * light.view())[0][0]);
 
     m_shader.setUniform1i("u_hasShadowMap", shadowMap != nullptr);
     if (shadowMap != nullptr)
@@ -286,6 +287,10 @@ void ModelRenderer::renderMesh(const Camera &camera, const Lighting &lighting,
                  ? sharedToonTextures[toonTextureIndex]
                  : m_textures[toonTextureIndex])
                 .bind(2);
+
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+
             m_shader.setUniform1i("u_mat.hasToonTexture", 1);
             m_shader.setUniform4fv("u_mat.toonTextureAdd",
                                    &matAdd.toonTexture[0]);
@@ -350,10 +355,10 @@ void ModelRenderer::renderEdge(const Camera &camera) const
     }
 }
 
-void ModelRenderer::renderGroundShadow(const Camera   &camera,
-                                       const Lighting &lighting) const
+void ModelRenderer::renderGroundShadow(const Camera           &camera,
+                                       const DirectionalLight &light) const
 {
-    if (lighting.direction.y == 0.f)
+    if (light.direction.y == 0.f)
         return;
 
     glEnable(GL_DEPTH_TEST);
@@ -364,7 +369,7 @@ void ModelRenderer::renderGroundShadow(const Camera   &camera,
     glDisable(GL_CULL_FACE);
     glDisable(GL_POLYGON_OFFSET_FILL);
 
-    glm::vec3 d     = lighting.direction / lighting.direction.y;
+    glm::vec3 d     = light.direction / light.direction.y;
     glm::mat4 model = glm::mat4(1.f);
     model[1][0]     = -d.x;
     model[1][1]     = 0.f;
@@ -373,7 +378,7 @@ void ModelRenderer::renderGroundShadow(const Camera   &camera,
 
     m_groundShadowShader.use();
     m_groundShadowShader.setUniformMatrix4fv("u_MVP", &MVP[0][0]);
-    m_groundShadowShader.setUniform3fv("u_lightDir", &lighting.direction[0]);
+    m_groundShadowShader.setUniform3fv("u_lightDir", &light.direction[0]);
 
     for (size_t i = 0, indexOffset = 0; i < m_modelData->materials.size();
          indexOffset += m_modelData->materials[i++].indicesCount)
@@ -388,7 +393,7 @@ void ModelRenderer::renderGroundShadow(const Camera   &camera,
     }
 }
 
-void ModelRenderer::renderShadowMap(const Lighting &lighting) const
+void ModelRenderer::renderShadowMap(const DirectionalLight &light) const
 {
     m_VBO.bind();
     m_VAO.bind();
@@ -397,8 +402,8 @@ void ModelRenderer::renderShadowMap(const Lighting &lighting) const
     glEnable(GL_DEPTH_TEST);
 
     m_shadowMapShader.use();
-    m_shadowMapShader.setUniformMatrix4fv(
-        "u_lightVP", &(lighting.proj() * lighting.view())[0][0]);
+    m_shadowMapShader.setUniformMatrix4fv("u_lightVP",
+                                          &(light.proj() * light.view())[0][0]);
     glm::mat4 model = glm::mat4(1.f);
     m_shadowMapShader.setUniformMatrix4fv("u_model", &model[0][0]);
 

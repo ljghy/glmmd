@@ -49,6 +49,7 @@ private:
     void initState();
 
     void initCamera();
+    void initMainLight();
 
     void menuBar();
     void dockspace();
@@ -93,8 +94,8 @@ private:
 
     std::unique_ptr<InfiniteGridRenderer> m_gridRenderer;
 
-    glmmd::Camera   m_camera;
-    glmmd::Lighting m_lighting;
+    glmmd::Camera           m_camera;
+    glmmd::DirectionalLight m_mainDirectionalLight;
 
     glmmd::PhysicsWorld m_physicsWorld;
 
@@ -133,6 +134,8 @@ private:
         bool renderGrid;
         bool wireframe;
         bool lockCamera;
+
+        float shadowDistance;
 
         std::string lastModelPath;
         std::string lastMotionPath;

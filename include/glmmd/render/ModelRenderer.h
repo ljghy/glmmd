@@ -8,7 +8,7 @@
 #include <glmmd/core/ModelData.h>
 #include <glmmd/core/ModelRenderData.h>
 #include <glmmd/core/Camera.h>
-#include <glmmd/core/Lighting.h>
+#include <glmmd/core/DirectionalLight.h>
 
 namespace glmmd
 {
@@ -54,8 +54,8 @@ public:
 
     void setTexture(size_t i, ogl::Texture2D &&tex);
 
-    void renderShadowMap(const Lighting &lighting) const;
-    void render(const Camera &camera, const Lighting &lighting,
+    void renderShadowMap(const DirectionalLight &light) const;
+    void render(const Camera &camera, const DirectionalLight &light,
                 const ogl::Texture2D *shadowMap = nullptr) const;
 
     ModelRenderData       &renderData() { return m_renderData; }
@@ -71,11 +71,11 @@ private:
     void initSharedToonTextures();
     void initShaders(const ModelRendererShaderSources &shaderSources);
 
-    void renderMesh(const Camera &camera, const Lighting &lighting,
+    void renderMesh(const Camera &camera, const DirectionalLight &light,
                     const ogl::Texture2D *shadowMap) const;
     void renderEdge(const Camera &camera) const;
-    void renderGroundShadow(const Camera   &camera,
-                            const Lighting &lighting) const;
+    void renderGroundShadow(const Camera           &camera,
+                            const DirectionalLight &light) const;
 
 private:
     std::shared_ptr<const ModelData> m_modelData;

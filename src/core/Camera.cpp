@@ -1,6 +1,5 @@
-#include <glm/gtc/matrix_transform.hpp>
-
 #define GLM_ENABLE_EXPERIMENTAL
+#include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtx/euler_angles.hpp>
 
 #include <glmmd/core/Camera.h>
@@ -49,14 +48,36 @@ void Camera::update()
     m_view = glm::lookAt(m_position, target, up());
     if (projType == Perspective)
     {
-        m_proj = glm::perspective(fov, m_aspect, nearZ, farZ);
+        m_proj = glm::perspective(fov, m_aspect, zNear, zFar);
     }
     else
     {
         float height = width / m_aspect;
 
         m_proj = glm::ortho(-width * 0.5f, width * 0.5f, -height * 0.5f,
-                            height * 0.5f, nearZ, farZ);
+                            height * 0.5f, zNear, zFar);
+    }
+}
+
+void Camera::getFrustumCorners(glm::vec3 *corners, float zNear_,
+                               float zFar_) const
+{
+    glm::mat4 invVP = glm::inverse(m_proj * m_view);
+
+    glm::vec4 pz = m_proj * glm::vec4(0.f, 0.f, -zNear_, 1.f);
+    zNear_       = pz.z / pz.w;
+    pz           = m_proj * glm::vec4(0.f, 0.f, -zFar_, 1.f);
+    zFar_        = pz.z / pz.w;
+
+    glm::vec4 ndcPoints[]{{1.f, 1.f, zNear_, 1.f},   {1.f, -1.f, zNear_, 1.f},
+                          {-1.f, -1.f, zNear_, 1.f}, {-1.f, 1.f, zNear_, 1.f},
+                          {1.f, 1.f, zFar_, 1.f},    {1.f, -1.f, zFar_, 1.f},
+                          {-1.f, -1.f, zFar_, 1.f},  {-1.f, 1.f, zFar_, 1.f}};
+
+    for (int i = 0; i < 8; ++i)
+    {
+        glm::vec4 p = invVP * ndcPoints[i];
+        corners[i]  = glm::vec3(p) / p.w;
     }
 }
 

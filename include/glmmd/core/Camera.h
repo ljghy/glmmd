@@ -32,6 +32,8 @@ struct Camera
 
     void update();
 
+    void getFrustumCorners(glm::vec3 *corners, float zNear, float zFar) const;
+
     ProjType projType = Perspective;
 
     glm::vec3 target;
@@ -39,8 +41,8 @@ struct Camera
 
     float distance;
     float fov;
-    float nearZ;
-    float farZ;
+    float zNear;
+    float zFar;
     float width;
 
     int viewportWidth;

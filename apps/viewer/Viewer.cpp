@@ -75,10 +75,7 @@ Viewer::Viewer(const std::filesystem::path &executableDir)
     m_gridRenderer = std::make_unique<InfiniteGridRenderer>();
 
     initCamera();
-
-    m_lighting.direction    = glm::normalize(glm::vec3(-1.f, -2.f, 1.f));
-    m_lighting.color        = glm::vec3(0.6f);
-    m_lighting.ambientColor = glm::vec3(1.f);
+    initMainLight();
 }
 
 void Viewer::initState()
@@ -109,6 +106,8 @@ void Viewer::initState()
     m_state.wireframe          = false;
     m_state.lockCamera         = true;
 
+    m_state.shadowDistance = 50.f;
+
     m_state.lastModelPath  = ".";
     m_state.lastMotionPath = ".";
     m_state.lastPosePath   = ".";
@@ -121,12 +120,23 @@ void Viewer::initCamera()
     m_camera.setRotation(glm::radians(glm::vec3(-10.f, 0.f, 0.f)));
     m_camera.distance = 30.f;
     m_camera.fov      = glm::radians(45.f);
-    m_camera.nearZ    = 0.1f;
-    m_camera.farZ     = 2000.f;
+    m_camera.zNear    = 0.1f;
+    m_camera.zFar     = 2000.f;
     m_camera.width    = 40.f;
 
     m_camera.resize(m_viewportWidth, m_viewportHeight);
     m_camera.update();
+}
+
+void Viewer::initMainLight()
+{
+    m_mainDirectionalLight.direction =
+        glm::normalize(glm::vec3(-1.f, -2.f, 1.f));
+    m_mainDirectionalLight.color        = glm::vec3(0.6f);
+    m_mainDirectionalLight.ambientColor = glm::vec3(1.f);
+
+    m_mainDirectionalLight.direction =
+        glm::normalize(glm::vec3(-1.f, -2.f, 1.f));
 }
 
 void Viewer::initWindow()
@@ -282,6 +292,8 @@ void Viewer::initFBO()
     shadowMapTexInfo.dataType    = GL_FLOAT;
     shadowMapTexInfo.wrapModeS   = GL_CLAMP_TO_BORDER;
     shadowMapTexInfo.wrapModeT   = GL_CLAMP_TO_BORDER;
+    shadowMapTexInfo.minFilterMode = GL_NEAREST;
+    shadowMapTexInfo.magFilterMode = GL_NEAREST;
     std::unique_ptr<ogl::Texture2D> shadowMapTex =
         std::make_unique<ogl::Texture2D>(shadowMapTexInfo);
     shadowMapTex->bind();
@@ -741,7 +753,7 @@ void Viewer::render()
         glClear(GL_DEPTH_BUFFER_BIT);
         glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
         for (const auto &renderer : m_modelRenderers)
-            renderer->renderShadowMap(m_lighting);
+            renderer->renderShadowMap(m_mainDirectionalLight);
         m_shadowMapFBO.unbind();
     }
 
@@ -762,7 +774,7 @@ void Viewer::render()
         glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 
     for (const auto &renderer : m_modelRenderers)
-        renderer->render(m_camera, m_lighting,
+        renderer->render(m_camera, m_mainDirectionalLight,
                          m_state.renderShadow
                              ? m_shadowMapFBO.depthTextureAttachment()
                              : nullptr);
@@ -974,8 +986,8 @@ void Viewer::controlPanel()
         if (ImGui::SliderFloat("FOV", &fov, 1.f, 120.f))
             m_camera.fov = glm::radians(fov);
 
-        ImGui::InputFloat("Near", &m_camera.nearZ);
-        ImGui::InputFloat("Far", &m_camera.farZ);
+        ImGui::InputFloat("Near", &m_camera.zNear);
+        ImGui::InputFloat("Far", &m_camera.zFar);
 
         if (m_cameraMotion && ImGui::Button("Clear camera motion"))
         {
@@ -1051,13 +1063,17 @@ void Viewer::controlPanel()
 
         ImGui::Checkbox("Wireframe", &m_state.wireframe);
 
-        if (ImGui::SliderFloat3("Light direction", &m_lighting.direction.x,
-                                -1.f, 1.f))
-            m_lighting.direction = glm::normalize(m_lighting.direction);
+        if (ImGui::SliderFloat3("Light direction",
+                                &m_mainDirectionalLight.direction.x, -1.f, 1.f))
+            m_mainDirectionalLight.direction =
+                glm::normalize(m_mainDirectionalLight.direction);
 
-        ImGui::ColorEdit3("Light color", &m_lighting.color.x);
+        ImGui::ColorEdit3("Light color", &m_mainDirectionalLight.color.x);
 
-        ImGui::ColorEdit3("Ambient color", &m_lighting.ambientColor.x);
+        ImGui::ColorEdit3("Ambient color",
+                          &m_mainDirectionalLight.ambientColor.x);
+
+        ImGui::InputFloat("Shadow distance", &m_state.shadowDistance);
 
         ImGui::TreePop();
     }
@@ -1140,6 +1156,13 @@ void Viewer::run()
                 updateCameraMotion();
 
             m_camera.update();
+
+            glm::vec3 cameraFrustumCorners[8];
+            m_camera.getFrustumCorners(cameraFrustumCorners, m_camera.zNear,
+                                       m_camera.zNear + m_state.shadowDistance);
+
+            m_mainDirectionalLight.updateFrustum(8, cameraFrustumCorners);
+            m_mainDirectionalLight.update();
 
             m_profiler.start("Render");
             render();
