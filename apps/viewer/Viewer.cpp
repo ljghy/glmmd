@@ -318,8 +318,8 @@ bool Viewer::loadModel(const std::filesystem::path &path)
                                    info.internalFmt   = GL_SRGB_ALPHA;
                                    info.dataFmt       = GL_RGBA;
                                    info.dataType      = GL_UNSIGNED_BYTE;
-                                   info.wrapModeS     = GL_CLAMP_TO_EDGE;
-                                   info.wrapModeT     = GL_CLAMP_TO_EDGE;
+                                   info.wrapModeS     = GL_REPEAT;
+                                   info.wrapModeT     = GL_REPEAT;
                                    info.minFilterMode = GL_LINEAR_MIPMAP_LINEAR;
                                    info.magFilterMode = GL_LINEAR;
                                    gpuTex.create(info);
