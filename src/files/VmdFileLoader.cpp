@@ -1,4 +1,3 @@
-#include <glmmd/files/CodeConverter.h>
 #include <glmmd/files/VmdFileLoader.h>
 
 namespace glmmd
@@ -44,6 +43,12 @@ void VmdFileLoader::loadBoneFrames(VmdData &data)
     uint32_t count;
     readUInt(count);
 
+    if (!m_fin)
+    {
+        count = 0;
+        return;
+    }
+
     data.boneFrames.resize(count);
     for (uint32_t i = 0; i < count; ++i)
     {
@@ -74,6 +79,12 @@ void VmdFileLoader::loadMorphFrames(VmdData &data)
     uint32_t count;
     readUInt(count);
 
+    if (!m_fin)
+    {
+        count = 0;
+        return;
+    }
+
     data.morphFrames.resize(count);
     for (uint32_t i = 0; i < count; ++i)
     {
@@ -92,6 +103,12 @@ void VmdFileLoader::loadCameraFrames(VmdData &data)
 {
     uint32_t count;
     readUInt(count);
+
+    if (!m_fin)
+    {
+        count = 0;
+        return;
+    }
 
     data.cameraFrames.resize(count);
     for (uint32_t i = 0; i < count; ++i)
