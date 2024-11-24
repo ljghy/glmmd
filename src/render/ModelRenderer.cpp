@@ -369,7 +369,7 @@ void ModelRenderer::renderGroundShadow(const Camera           &camera,
     glm::vec3 d     = light.direction / light.direction.y;
     glm::mat4 model = glm::mat4(1.f);
 
-    const double offset = 1e-2;
+    const float offset = 1e-2f;
 
     model[1][0] = -d.x;
     model[1][1] = 0.f;
