@@ -362,23 +362,26 @@ void ModelRenderer::renderGroundShadow(const Camera           &camera,
         return;
 
     glEnable(GL_DEPTH_TEST);
-    glDepthFunc(GL_LEQUAL);
-    glEnable(GL_BLEND);
-    glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ONE,
-                        GL_ONE_MINUS_SRC_ALPHA);
+    glDepthFunc(GL_LESS);
     glDisable(GL_CULL_FACE);
     glDisable(GL_POLYGON_OFFSET_FILL);
 
     glm::vec3 d     = light.direction / light.direction.y;
     glm::mat4 model = glm::mat4(1.f);
-    model[1][0]     = -d.x;
-    model[1][1]     = 0.f;
-    model[1][2]     = -d.z;
-    glm::mat4 MVP   = camera.proj() * camera.view() * model;
+
+    const double offset = 1e-2;
+
+    model[1][0] = -d.x;
+    model[1][1] = 0.f;
+    model[1][2] = -d.z;
+    model[3][0] = d.x * offset;
+    model[3][1] = offset;
+    model[3][2] = d.z * offset;
+
+    glm::mat4 MVP = camera.proj() * camera.view() * model;
 
     m_groundShadowShader.use();
     m_groundShadowShader.setUniformMatrix4fv("u_MVP", &MVP[0][0]);
-    m_groundShadowShader.setUniform3fv("u_lightDir", &light.direction[0]);
 
     for (size_t i = 0, indexOffset = 0; i < m_modelData->materials.size();
          indexOffset += m_modelData->materials[i++].indicesCount)
@@ -395,6 +398,9 @@ void ModelRenderer::renderGroundShadow(const Camera           &camera,
 
 void ModelRenderer::renderShadowMap(const DirectionalLight &light) const
 {
+    if (m_renderFlag & MODEL_RENDER_FLAG_HIDE)
+        return;
+
     m_VBO.bind();
     m_VAO.bind();
     m_IBO.bind();

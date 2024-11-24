@@ -38,7 +38,8 @@ void DirectionalLight::updateFrustum(size_t count, const glm::vec3 *points)
         ub = glm::max(ub, p);
     }
 
-    extents  = (boundingBoxEnlargeFactor * 0.5f) * (ub - lb);
+    extents = (boundingBoxEnlargeFactor * 0.5f) * (ub - lb);
+    extents.z *= 2.f;
     position = 0.5f * (ub + lb);
     position = glm::vec3(glm::inverse(view) * glm::vec4(position, 1.f));
 }
