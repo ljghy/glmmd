@@ -540,7 +540,7 @@ void Viewer::updateModelPose(size_t i)
 {
     auto &model = m_models[i];
     model->resetLocalPose();
-    m_motions[i]->getLocalPose(getProgress(), model->pose());
+    m_motions[i]->getLocalPose(m_state.progress, model->pose());
     model->solvePose();
 }
 

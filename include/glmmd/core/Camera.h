@@ -17,6 +17,7 @@ struct Camera
 
     Camera();
 
+    const glm::vec3 &position() const;
     const glm::vec3 &front() const;
     const glm::vec3 &up() const;
     const glm::vec3 &right() const;

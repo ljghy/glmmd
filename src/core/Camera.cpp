@@ -22,6 +22,7 @@ void Camera::setRotation(const glm::vec3 &eulerAngles)
         glm::eulerAngleYZX(eulerAngles.y, eulerAngles.z, -eulerAngles.x));
 }
 
+const glm::vec3 &Camera::position() const { return m_position; }
 const glm::vec3 &Camera::front() const { return m_front; }
 const glm::vec3 &Camera::up() const { return m_up; }
 const glm::vec3 &Camera::right() const { return m_right; }
