@@ -1,3 +1,5 @@
+#include <cstring>
+
 #include <glmmd/files/VmdFileLoader.h>
 
 namespace glmmd
@@ -22,11 +24,13 @@ std::shared_ptr<VmdData> VmdFileLoader::load(const std::filesystem::path &path)
 
 void VmdFileLoader::loadHeader(VmdData &data)
 {
-    std::string header(30, '\0');
-    m_fin.read(header.data(), 30);
-    if (header == "Vocaloid Motion Data file")
+    char header[31];
+    m_fin.read(header, 30);
+    header[30] = '\0';
+
+    if (strcmp(header, "Vocaloid Motion Data file") == 0)
         data.version = 1;
-    else if (header != "Vocaloid Motion Data 0002")
+    else if (strcmp(header, "Vocaloid Motion Data 0002") == 0)
         data.version = 2;
     else
         throw std::runtime_error("VMD file format error.");
@@ -44,10 +48,7 @@ void VmdFileLoader::loadBoneFrames(VmdData &data)
     readUInt(count);
 
     if (!m_fin)
-    {
-        count = 0;
         return;
-    }
 
     data.boneFrames.resize(count);
     for (uint32_t i = 0; i < count; ++i)
@@ -56,7 +57,8 @@ void VmdFileLoader::loadBoneFrames(VmdData &data)
 
         char name[16];
         m_fin.read(name, 15);
-        name[15]           = '\0';
+        name[15] = '\0';
+
         boneFrame.boneName = name;
 
         readUInt(boneFrame.frameNumber);
@@ -80,10 +82,7 @@ void VmdFileLoader::loadMorphFrames(VmdData &data)
     readUInt(count);
 
     if (!m_fin)
-    {
-        count = 0;
         return;
-    }
 
     data.morphFrames.resize(count);
     for (uint32_t i = 0; i < count; ++i)
@@ -92,8 +91,10 @@ void VmdFileLoader::loadMorphFrames(VmdData &data)
 
         char name[16];
         m_fin.read(name, 15);
-        name[15]             = '\0';
+        name[15] = '\0';
+
         morphFrame.morphName = name;
+
         readUInt(morphFrame.frameNumber);
         readFloat(morphFrame.ratio);
     }
@@ -105,10 +106,7 @@ void VmdFileLoader::loadCameraFrames(VmdData &data)
     readUInt(count);
 
     if (!m_fin)
-    {
-        count = 0;
         return;
-    }
 
     data.cameraFrames.resize(count);
     for (uint32_t i = 0; i < count; ++i)
