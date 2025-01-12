@@ -5,7 +5,6 @@
 #include <filesystem>
 #include <memory>
 #include <cassert>
-#include <functional>
 
 #include <glmmd/core/ModelData.h>
 
@@ -21,15 +20,13 @@ public:
     PmxFileLoader &operator=(const PmxFileLoader &) = delete;
     PmxFileLoader &operator=(PmxFileLoader &&)      = delete;
 
-    std::shared_ptr<ModelData>
-    load(const std::filesystem::path          &path,
-         const std::function<void(Texture &)> &loadTextureCallback = {});
+    std::shared_ptr<ModelData> load(const std::filesystem::path &path);
 
 private:
     void loadInfo(ModelData &);
     void loadVertices(ModelData &);
     void loadIndices(ModelData &);
-    void loadTextures(ModelData &, const std::function<void(Texture &)> &);
+    void loadTextures(ModelData &);
     void loadMaterials(ModelData &);
     void loadBones(ModelData &);
     void loadMorphs(ModelData &);
@@ -138,11 +135,9 @@ private:
     std::filesystem::path m_modelDir;
 };
 
-inline std::shared_ptr<ModelData>
-loadPmxFile(const std::filesystem::path          &path,
-            const std::function<void(Texture &)> &loadTextureCallback = {})
+inline std::shared_ptr<ModelData> loadPmxFile(const std::filesystem::path &path)
 {
-    return PmxFileLoader{}.load(path, loadTextureCallback);
+    return PmxFileLoader{}.load(path);
 }
 
 } // namespace glmmd

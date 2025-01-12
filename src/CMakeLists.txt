@@ -7,7 +7,8 @@ target_compile_options(
     glmmd_compiler_flags
     INTERFACE
         "$<${gcc_like_cxx}:$<BUILD_INTERFACE:-Wall;-Wshadow;-Wformat=2;-Wunused>>"
-        "$<${msvc_cxx}:$<BUILD_INTERFACE:/W3;/MP;/wd4996;/Zc:__cplusplus>>")
+        "$<${msvc_cxx}:$<BUILD_INTERFACE:/W3;/MP;/wd4996;/Zc:__cplusplus;/D_DISABLE_CONSTEXPR_MUTEX_CONSTRUCTOR>>"
+)
 
 target_compile_features(glmmd_compiler_flags INTERFACE cxx_std_17)
 
@@ -19,15 +20,7 @@ target_compile_definitions(
 
 add_subdirectory(core)
 add_subdirectory(files)
-if(GLMMD_BUILD_RENDERER)
-    add_subdirectory(render)
-endif()
 
 add_library(glmmd INTERFACE)
 add_library(glmmd::glmmd ALIAS glmmd)
-if(GLMMD_BUILD_RENDERER)
-    target_link_libraries(glmmd INTERFACE glmmd::core glmmd::files
-                                          glmmd::render)
-else()
-    target_link_libraries(glmmd INTERFACE glmmd::core glmmd::files)
-endif()
+target_link_libraries(glmmd INTERFACE glmmd::core glmmd::files)

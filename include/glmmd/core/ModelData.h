@@ -6,6 +6,7 @@
 #include <array>
 #include <vector>
 #include <memory>
+#include <filesystem>
 
 #include <glm/glm.hpp>
 #include <glm/gtc/quaternion.hpp>
@@ -68,12 +69,8 @@ struct Vertex
 
 struct Texture
 {
-    std::string path;
-    int         width;
-    int         height;
-    int         channels;
-
-    std::shared_ptr<unsigned char[]> data;
+    std::string           rawPath;
+    std::filesystem::path path;
 };
 
 struct Material
@@ -167,8 +164,11 @@ struct Bone
     bool deformAfterPhysics() const { return bitFlag & 0x1000; }
     // 0x2000 : external parent
 
-    glm::vec3 endPosition;
-    int32_t   endIndex;
+    union
+    {
+        glm::vec3 endPosition;
+        int32_t   endIndex;
+    };
 
     int32_t inheritParentIndex;
     float   inheritWeight;

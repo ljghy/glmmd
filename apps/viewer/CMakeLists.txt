@@ -60,10 +60,13 @@ add_executable(viewer)
 target_sources(
     viewer
     PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/InfiniteGridRenderer.cpp
+            ${CMAKE_CURRENT_SOURCE_DIR}/ModelRenderer.cpp
             ${CMAKE_CURRENT_SOURCE_DIR}/Viewer.cpp
             ${CMAKE_CURRENT_SOURCE_DIR}/main.cpp)
 
-target_link_libraries(viewer PRIVATE glmmd::glmmd imgui ImGuiFileDialog)
+target_link_libraries(
+    viewer PRIVATE glmmd::glmmd imgui ImGuiFileDialog stb::stb glfw
+                   opengl_framework::opengl_framework)
 
 target_compile_features(viewer PRIVATE cxx_std_17)
 

@@ -311,32 +311,7 @@ bool Viewer::loadModel(const std::filesystem::path &path)
     std::vector<ogl::Texture2D>       gpuTextures;
     try
     {
-        modelData =
-            glmmd::loadPmxFile(path,
-                               [&](glmmd::Texture &tex)
-                               {
-                                   auto &gpuTex = gpuTextures.emplace_back();
-                                   if (!tex.data)
-                                   {
-                                       std::cout << "Failed to load texture: "
-                                                 << tex.path << std::endl;
-                                       return;
-                                   }
-                                   ogl::Texture2DCreateInfo info;
-                                   info.width         = tex.width;
-                                   info.height        = tex.height;
-                                   info.data          = tex.data.get();
-                                   info.genMipmaps    = true;
-                                   info.internalFmt   = GL_SRGB_ALPHA;
-                                   info.dataFmt       = GL_RGBA;
-                                   info.dataType      = GL_UNSIGNED_BYTE;
-                                   info.wrapModeS     = GL_REPEAT;
-                                   info.wrapModeT     = GL_REPEAT;
-                                   info.minFilterMode = GL_LINEAR_MIPMAP_LINEAR;
-                                   info.magFilterMode = GL_LINEAR;
-                                   gpuTex.create(info);
-                                   tex.data.reset();
-                               });
+        modelData = glmmd::loadPmxFile(path);
     }
     catch (const std::exception &e)
     {
@@ -351,16 +326,14 @@ bool Viewer::loadModel(const std::filesystem::path &path)
     std::cout << std::endl;
 
     auto &renderer = m_modelRenderers.emplace_back(
-        std::make_unique<glmmd::ModelRenderer>(modelData, false));
-    for (size_t i = 0; i < gpuTextures.size(); ++i)
-        renderer->setTexture(i, std::move(gpuTextures[i]));
+        std::make_unique<ModelRenderer>(modelData));
 
-    uint32_t renderFlag = glmmd::MODEL_RENDER_FLAG_MESH;
+    uint32_t renderFlag = MODEL_RENDER_FLAG_MESH;
 
     if (m_state.renderEdge)
-        renderFlag |= glmmd::MODEL_RENDER_FLAG_EDGE;
+        renderFlag |= MODEL_RENDER_FLAG_EDGE;
     if (m_state.renderGroundShadow)
-        renderFlag |= glmmd::MODEL_RENDER_FLAG_GROUND_SHADOW;
+        renderFlag |= MODEL_RENDER_FLAG_GROUND_SHADOW;
     renderer->renderFlag() = renderFlag;
 
     auto &model =
@@ -628,7 +601,7 @@ void Viewer::dockspace()
 
         ImGuiID viewportDockId = dockspaceId;
         ImGuiID controlDockId  = ImGui::DockBuilderSplitNode(
-             viewportDockId, ImGuiDir_Left, 0.2f, nullptr, &viewportDockId);
+            viewportDockId, ImGuiDir_Left, 0.2f, nullptr, &viewportDockId);
         ImGuiID profilerDockId = ImGui::DockBuilderSplitNode(
             controlDockId, ImGuiDir_Down, 0.2f, nullptr, &controlDockId);
         ImGuiID progressDockId = ImGui::DockBuilderSplitNode(
@@ -921,15 +894,15 @@ void Viewer::modelList()
         ImGui::SameLine();
         bool hideModel =
             m_modelRenderers[m_state.selectedModelIndex]->renderFlag() &
-            glmmd::MODEL_RENDER_FLAG_HIDE;
+            MODEL_RENDER_FLAG_HIDE;
         if (ImGui::Checkbox("Hide##Model", &hideModel))
         {
             if (hideModel)
                 m_modelRenderers[m_state.selectedModelIndex]->renderFlag() |=
-                    glmmd::MODEL_RENDER_FLAG_HIDE;
+                    MODEL_RENDER_FLAG_HIDE;
             else
                 m_modelRenderers[m_state.selectedModelIndex]->renderFlag() &=
-                    ~glmmd::MODEL_RENDER_FLAG_HIDE;
+                    ~MODEL_RENDER_FLAG_HIDE;
         }
 
         const auto &motion = m_motions[m_state.selectedModelIndex];
@@ -1036,9 +1009,9 @@ void Viewer::controlPanel()
         {
             for (auto &renderer : m_modelRenderers)
                 if (m_state.renderEdge)
-                    renderer->renderFlag() |= glmmd::MODEL_RENDER_FLAG_EDGE;
+                    renderer->renderFlag() |= MODEL_RENDER_FLAG_EDGE;
                 else
-                    renderer->renderFlag() &= ~glmmd::MODEL_RENDER_FLAG_EDGE;
+                    renderer->renderFlag() &= ~MODEL_RENDER_FLAG_EDGE;
         }
 
         if (ImGui::Checkbox("Render ground shadow",
@@ -1046,11 +1019,9 @@ void Viewer::controlPanel()
         {
             for (auto &renderer : m_modelRenderers)
                 if (m_state.renderGroundShadow)
-                    renderer->renderFlag() |=
-                        glmmd::MODEL_RENDER_FLAG_GROUND_SHADOW;
+                    renderer->renderFlag() |= MODEL_RENDER_FLAG_GROUND_SHADOW;
                 else
-                    renderer->renderFlag() &=
-                        ~glmmd::MODEL_RENDER_FLAG_GROUND_SHADOW;
+                    renderer->renderFlag() &= ~MODEL_RENDER_FLAG_GROUND_SHADOW;
         }
 
         ImGui::Checkbox("Render shadow", &m_state.renderShadow);
@@ -1086,11 +1057,11 @@ void Viewer::profiler()
     ImGui::Begin("Profiler", nullptr, ImGuiWindowFlags_NoMove);
 
     ImGui::Text("FPS: %.1f", ImGui::GetIO().Framerate);
-    ImGui::Text("Physics: %.3f ms", m_profiler.query("Physics") * 1000.f);
+    ImGui::Text("Physics: %.3f ms", m_profiler.averageTime("Physics"));
     ImGui::Text("Model update: %.3f ms",
-                m_profiler.query("Model update") * 1000.f);
-    ImGui::Text("Render: %.3f ms", m_profiler.query("Render") * 1000.f);
-    ImGui::Text("Total: %.3f ms", m_profiler.queryTotal() * 1000.f);
+                m_profiler.averageTime("Model update"));
+    ImGui::Text("Render: %.3f ms", m_profiler.averageTime("Render"));
+    ImGui::Text("Total: %.3f ms", m_profiler.totalTime());
 
     ImGui::End();
 }
@@ -1099,9 +1070,9 @@ void Viewer::run()
 {
     auto &io = ImGui::GetIO();
 
-    m_profiler.push("Physics");
-    m_profiler.push("Model update");
-    m_profiler.push("Render");
+    m_profiler.add("Physics");
+    m_profiler.add("Model update");
+    m_profiler.add("Render");
 
     while (!glfwWindowShouldClose(m_window))
     {
@@ -1182,6 +1153,7 @@ void Viewer::run()
         if (m_state.showControlPanel)
             controlPanel();
 
+        m_profiler.endFrame();
         if (m_state.showProfiler)
             profiler();
 
@@ -1204,7 +1176,7 @@ Viewer::~Viewer()
 {
     m_gridRenderer.reset();
 
-    glmmd::ModelRenderer::releaseSharedToonTextures();
+    ModelRenderer::releaseSharedToonTextures();
 
     m_modelRenderers.clear();
     m_FBO.destroy();

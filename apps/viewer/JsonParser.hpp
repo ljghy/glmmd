@@ -19,19 +19,29 @@
 #include <utility>
 #include <vector>
 
+#ifdef JSON_PARSER_USE_LIBFMT
+
+#include <fmt/format.h>
+
+#else
+
 #if __cplusplus >= 202002L
 #include <version>
 #endif
 
 #ifdef __cpp_lib_format
-#define JSON_PARSER_USE_FORMAT 1
+#ifndef JSON_PARSER_USE_STD_FORMAT
+#define JSON_PARSER_USE_STD_FORMAT
+#endif
+#include <format>
 #else
-#define JSON_PARSER_USE_FORMAT 0
 #include <cstdio>
 #endif
 
-#if JSON_PARSER_USE_FORMAT
-#include <format>
+#endif
+
+#ifndef JSON_PARSER_IO_BUFFER_SIZE
+#define JSON_PARSER_IO_BUFFER_SIZE 1024
 #endif
 
 /*
@@ -47,10 +57,16 @@ using JsonObj_t = std::map<std::string, JsonNode>;
 
 struct JsonKeyLiteral_t {
   std::string_view key;
-  JsonKeyLiteral_t(const std::string_view &k);
+  explicit JsonKeyLiteral_t(const std::string_view &k);
 };
 
 JsonKeyLiteral_t operator""_key(const char *key, size_t len);
+
+class JsonParserLocaleGuard {
+public:
+  JsonParserLocaleGuard();
+  ~JsonParserLocaleGuard();
+};
 
 class JsonNode {
 public:
@@ -60,15 +76,20 @@ public:
   JsonNode(const JsonStr_t &);
   JsonNode(JsonStr_t &&);
   JsonNode(const JsonArr_t &);
+  JsonNode(const std::filesystem::path &);
   JsonNode(JsonArr_t &&);
   JsonNode(const JsonObj_t &);
   JsonNode(JsonObj_t &&);
   template <typename NumberLike> JsonNode(NumberLike);
   JsonNode(std::nullptr_t);
   JsonNode(char);
+  template <size_t N> JsonNode(const char (&)[N]);
   JsonNode(const char *);
-  JsonNode(const std::initializer_list<JsonNode> &);
-  JsonNode(const std::initializer_list<std::pair<const JsonKeyLiteral_t, JsonNode>> &);
+  JsonNode(std::string_view);
+  JsonNode(std::initializer_list<JsonNode>);
+  JsonNode(std::initializer_list<std::pair<const JsonKeyLiteral_t, JsonNode>>);
+  JsonNode(const ArrayLike &, const size_t n, size_t offset, stride);
+  JsonNode(const MapLike &);
 
   JsonNode(const JsonNode &);
   JsonNode(JsonNode &&) noexcept;
@@ -199,7 +220,7 @@ using JsonObj_t = std::map<std::string, JsonNode>;
 
 struct JsonKeyLiteral_t {
   std::string_view key;
-  JsonKeyLiteral_t(const std::string_view &k) : key(k) {}
+  explicit JsonKeyLiteral_t(const std::string_view &k) : key(k) {}
 };
 
 inline JsonKeyLiteral_t operator""_key(const char *key, size_t len) {
@@ -246,18 +267,33 @@ inline const char *getJsonErrorMsg(JsonErrorCode code) {
 }
 }; // namespace detail
 
+// If the locale is not "C", the parser may fail to parse floating-point numbers
+// and the serializer may produce non-standard JSON strings. This class is used
+// to temporarily set the locale to "C" during parsing and serialization with
+// RAII (not thread-safe).
+class JsonParserLocaleGuard {
+public:
+  JsonParserLocaleGuard() : m_backup(std::locale()) {
+    std::locale::global(std::locale::classic());
+  }
+  ~JsonParserLocaleGuard() { std::locale::global(m_backup); }
+
+private:
+  std::locale m_backup;
+};
+
 class JsonNode {
   friend class JsonParser;
 
 private:
-  struct TraverseState {
+  struct TraversalState {
     JsonNode *node;
     union {
       JsonArr_t::iterator arrIt;
       JsonObj_t::iterator objIt;
     };
 
-    TraverseState(JsonNode *n) : node(n) {
+    TraversalState(JsonNode *n) : node(n) {
       if (n->isArr())
         arrIt = n->val_.a->begin();
       else if (n->isObj())
@@ -265,14 +301,14 @@ private:
     }
   };
 
-  struct ConstTraverseState {
+  struct ConstTraversalState {
     const JsonNode *node;
     union {
       JsonArr_t::const_iterator arrIt;
       JsonObj_t::const_iterator objIt;
     };
 
-    ConstTraverseState(const JsonNode *n) : node(n) {
+    ConstTraversalState(const JsonNode *n) : node(n) {
       if (n->isArr())
         arrIt = n->val_.a->cbegin();
       else if (n->isObj())
@@ -343,11 +379,11 @@ private:
   static constexpr bool has_static_length_op_v = has_length_op<T>::value;
 
   template <typename T>
-  static constexpr bool is_unresizable_sequence_container_v =
+  static constexpr bool is_unresizable_sequencial_container_v =
       has_subscript_op_v<T> && !has_resize_op_v<T> && !std::is_pointer_v<T>;
 
   template <typename T>
-  static constexpr bool is_resizable_sequence_container_v =
+  static constexpr bool is_resizable_sequencial_container_v =
       has_subscript_op_v<T> && has_resize_op_v<T> && !std::is_pointer_v<T> &&
       !std::is_same_v<T, std::string>;
 
@@ -370,7 +406,11 @@ public:
 
   JsonNode(JsonNull_t) : ty_(NullType_), val_() {}
 
-  JsonNode(bool b) : ty_(BoolType_) { val_.b = b; }
+  template <typename T,
+            typename std::enable_if_t<std::is_same_v<T, bool>, int> = 0>
+  JsonNode(T b) : ty_(BoolType_) {
+    val_.b = b;
+  }
 
   JsonNode(const JsonStr_t &str) : ty_(StrType_) {
     val_.s = new JsonStr_t(str);
@@ -378,6 +418,15 @@ public:
 
   JsonNode(JsonStr_t &&str) : ty_(StrType_) {
     val_.s = new JsonStr_t(std::move(str));
+  }
+
+  JsonNode(const std::filesystem::path &path) : ty_(StrType_) {
+#if __cplusplus >= 202002L
+    auto u8path = path.u8string();
+    val_.s = new JsonStr_t(u8path.begin(), u8path.end());
+#else
+    val_.s = new JsonStr_t(path.u8string());
+#endif
   }
 
   JsonNode(const JsonArr_t &arr) : ty_(ArrType_) {
@@ -416,14 +465,25 @@ public:
 
   JsonNode(char c) : ty_(StrType_) { val_.s = new JsonStr_t(1, c); }
 
-  JsonNode(const char *str) : ty_(StrType_) { val_.s = new JsonStr_t(str); }
+  template <size_t N> JsonNode(const char (&str)[N]) : ty_(StrType_) {
+    val_.s = new JsonStr_t(str, N > 0 ? N - 1 : 0);
+  }
 
-  JsonNode(const std::initializer_list<JsonNode> &arr) : ty_(ArrType_) {
+  template <typename T,
+            typename std::enable_if_t<std::is_same_v<T, const char *>, int> = 0>
+  JsonNode(T str) : ty_(StrType_) {
+    val_.s = new JsonStr_t(str);
+  }
+
+  JsonNode(std::string_view str) : ty_(StrType_) {
+    val_.s = new JsonStr_t(str.begin(), str.end());
+  }
+
+  JsonNode(std::initializer_list<JsonNode> arr) : ty_(ArrType_) {
     val_.a = new JsonArr_t(arr);
   }
   JsonNode(
-      const std::initializer_list<std::pair<const JsonKeyLiteral_t, JsonNode>>
-          &obj)
+      std::initializer_list<std::pair<const JsonKeyLiteral_t, JsonNode>> obj)
       : ty_(ObjType_) {
     val_.o = new JsonObj_t{};
     for (const auto &p : obj) {
@@ -473,7 +533,7 @@ public:
   }
 
   JsonNode(const JsonNode &other) {
-    std::stack<ConstTraverseState> stateStack;
+    std::stack<ConstTraversalState> stateStack;
     std::stack<JsonNode *> nodeStack;
     stateStack.emplace(&other);
     nodeStack.emplace(this);
@@ -545,7 +605,7 @@ public:
     if (!isInternalPtr())
       return;
 
-    std::stack<TraverseState> stateStack;
+    std::stack<TraversalState> stateStack;
     stateStack.emplace(this);
     while (!stateStack.empty()) {
       auto node = stateStack.top().node;
@@ -553,7 +613,7 @@ public:
       case ArrType_: {
         auto &arr = node->val_.a;
         auto &it = stateStack.top().arrIt;
-        if (it != arr->cend()) {
+        if (it != arr->end()) {
           if (it->isInternalPtr()) {
             const auto child = &(*it);
             stateStack.emplace(child);
@@ -568,7 +628,7 @@ public:
       case ObjType_: {
         auto &obj = node->val_.o;
         auto &it = stateStack.top().objIt;
-        if (it != obj->cend()) {
+        if (it != obj->end()) {
           if (it->second.isInternalPtr()) {
             const auto child = &(it->second);
             stateStack.emplace(child);
@@ -624,12 +684,9 @@ public:
   // Index and key
 private:
   void requireType(size_t ty) const {
-    (void)ty; // Suppress unused variable warning
-#ifndef NDEBUG
     if (ty_ != ty)
       throw std::runtime_error(
           getJsonErrorMsg(detail::JsonErrorCode::InvalidJsonAccess));
-#endif
   }
 
 public:
@@ -817,7 +874,7 @@ public:
   }
 
   template <typename T>
-  typename std::enable_if_t<is_unresizable_sequence_container_v<T>, T>
+  typename std::enable_if_t<is_unresizable_sequencial_container_v<T>, T>
   get(const size_t n = static_cast<size_t>(-1), size_t offset = 0,
       const size_t stride = 1) const {
     requireType(ArrType_);
@@ -831,7 +888,7 @@ public:
   }
 
   template <typename T>
-  typename std::enable_if_t<is_resizable_sequence_container_v<T>, T>
+  typename std::enable_if_t<is_resizable_sequencial_container_v<T>, T>
   get(const size_t n = static_cast<size_t>(-1), size_t offset = 0,
       const size_t stride = 1) const {
     requireType(ArrType_);
@@ -869,8 +926,10 @@ public:
     case BoolType_:
       return val_.b ? "true" : "false";
     case DoubleType_:
-#if JSON_PARSER_USE_FORMAT
+#ifdef JSON_PARSER_USE_STD_FORMAT
       return std::format("{}", val_.d);
+#elif defined(JSON_PARSER_USE_LIBFMT)
+      return fmt::format("{}", val_.d);
 #else
       return std::to_string(val_.d);
 #endif
@@ -949,7 +1008,7 @@ private:
 
   private:
     void dumpBuffer() {
-      m_os.puts_(m_buf, m_pos);
+      m_os.putsDerived(m_buf, m_pos);
       m_pos = 0;
     }
     size_t free() const { return BufSize - m_pos; }
@@ -962,8 +1021,6 @@ private:
 
 public:
   template <typename Derived> class JsonOutputStreamBase {
-    friend class JsonStringRingBuffer<256, Derived>;
-
   public:
     JsonOutputStreamBase() : m_buf(*this) {}
 
@@ -971,20 +1028,19 @@ public:
     void put(char c, size_t rep) { m_buf.put(c, rep); }
     void puts(const char *s, size_t n) { m_buf.puts(s, n); }
 
-  private:
-    void puts_(const char *s, size_t n) {
-      static_cast<Derived *>(this)->puts_(s, n);
+    void putsDerived(const char *s, size_t n) {
+      static_cast<Derived *>(this)->putsDerived(s, n);
     }
 
   private:
-    JsonStringRingBuffer<256, Derived> m_buf;
+    JsonStringRingBuffer<JSON_PARSER_IO_BUFFER_SIZE, Derived> m_buf;
   };
 
   class JsonStringOutputStream
       : public JsonOutputStreamBase<JsonStringOutputStream> {
   public:
     JsonStringOutputStream(std::string &str) : m_str(str) {}
-    void puts_(const char *s, size_t n) { m_str.append(s, n); }
+    void putsDerived(const char *s, size_t n) { m_str.append(s, n); }
 
   private:
     std::string &m_str;
@@ -994,7 +1050,7 @@ public:
       : public JsonOutputStreamBase<JsonFileOutputStream> {
   public:
     JsonFileOutputStream(std::ostream &os) : m_os(os) {}
-    void puts_(const char *s, size_t n) { m_os.write(s, n); }
+    void putsDerived(const char *s, size_t n) { m_os.write(s, n); }
 
   private:
     std::ostream &m_os;
@@ -1029,7 +1085,7 @@ public:
     Serializer &dump(JsonOutputStreamBase<Derived> &os) {
       bool formatted = (m_indent != -1);
 
-      std::stack<ConstTraverseState> stateStack;
+      std::stack<ConstTraversalState> stateStack;
       stateStack.emplace(&m_node);
 
       while (!stateStack.empty()) {
@@ -1176,9 +1232,13 @@ public:
     template <typename Derived>
     static void dumpDouble(JsonOutputStreamBase<Derived> &os, double d,
                            int precision) {
-#if JSON_PARSER_USE_FORMAT
+#ifdef JSON_PARSER_USE_STD_FORMAT
       std::string num = precision != -1 ? std::format("{:.{}f}", d, precision)
                                         : std::format("{}", d);
+      os.puts(num.c_str(), num.size());
+#elif defined(JSON_PARSER_USE_LIBFMT)
+      std::string num = precision != -1 ? fmt::format("{:.{}f}", d, precision)
+                                        : fmt::format("{}", d);
       os.puts(num.c_str(), num.size());
 #else
       char buf[64];
@@ -1214,7 +1274,16 @@ public:
           os.puts("\\t", 2);
           break;
         default: {
-          if (ascii && *ite & 0x80)
+          if (static_cast<unsigned char>(*ite) < 0x20u) {
+            const char escaped[]{
+                '\\',
+                'u',
+                '0',
+                '0',
+                char('0' + *ite / 16),
+                char(*ite % 16 + ((*ite % 16) > 9 ? 'a' - 10 : '0'))};
+            os.puts(escaped, 6);
+          } else if (ascii && *ite & 0x80)
             decodeUtf8(os, ite);
           else
             os.put(*ite);
@@ -1566,7 +1635,7 @@ inline JsonNode JsonParser::parse(std::string_view inputView, size_t *offset) {
 }
 
 inline JsonNode JsonParser::parse(std::ifstream &is, bool checkEnd) {
-  auto fileInputStream = JsonFileInputStream<256>(is);
+  auto fileInputStream = JsonFileInputStream<JSON_PARSER_IO_BUFFER_SIZE>(is);
   return parse(fileInputStream, checkEnd);
 }
 
@@ -1586,7 +1655,7 @@ inline JsonNode JsonParser::streamParse(std::string_view inputView,
 }
 
 inline JsonNode JsonParser::streamParse(std::ifstream &is, bool *isComplete) {
-  auto fileInputStream = JsonFileInputStream<256>(is);
+  auto fileInputStream = JsonFileInputStream<JSON_PARSER_IO_BUFFER_SIZE>(is);
   return streamParse(fileInputStream, isComplete);
 }
 

@@ -12,8 +12,8 @@
 #include <glmmd/core/Model.h>
 #include <glmmd/core/PhysicsWorld.h>
 #include <glmmd/core/CameraMotion.h>
-#include <glmmd/render/ModelRenderer.h>
 
+#include "ModelRenderer.h"
 #include "JsonParser.hpp"
 #include "BlendedMotion.h"
 #include "InfiniteGridRenderer.h"
@@ -86,9 +86,9 @@ private:
     int m_shadowMapWidth;
     int m_shadowMapHeight;
 
-    std::vector<std::unique_ptr<glmmd::Model>>         m_models;
-    std::vector<std::unique_ptr<glmmd::ModelRenderer>> m_modelRenderers;
-    std::vector<std::unique_ptr<BlendedMotion>>        m_motions;
+    std::vector<std::unique_ptr<glmmd::Model>>  m_models;
+    std::vector<std::unique_ptr<ModelRenderer>> m_modelRenderers;
+    std::vector<std::unique_ptr<BlendedMotion>> m_motions;
 
     std::unique_ptr<glmmd::CameraMotion> m_cameraMotion;
 
@@ -103,7 +103,7 @@ private:
     ogl::FrameBufferObject m_intermediateFBO;
     ogl::FrameBufferObject m_shadowMapFBO;
 
-    Profiler<float, 64> m_profiler;
+    ProfilerSet<> m_profiler;
 
     struct State
     {

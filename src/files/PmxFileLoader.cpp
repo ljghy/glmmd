@@ -2,8 +2,6 @@
 #include <fstream>
 #include <algorithm>
 
-#include <stb/stb_image.h>
-
 #include <glmmd/files/CodeConverter.h>
 #include <glmmd/files/PmxFileLoader.h>
 
@@ -11,8 +9,7 @@ namespace glmmd
 {
 
 std::shared_ptr<ModelData>
-PmxFileLoader::load(const std::filesystem::path          &path,
-                    const std::function<void(Texture &)> &loadTextureCallback)
+PmxFileLoader::load(const std::filesystem::path &path)
 {
     m_fin.open(path, std::ios::binary);
     if (!m_fin)
@@ -26,7 +23,7 @@ PmxFileLoader::load(const std::filesystem::path          &path,
     loadInfo(*data);
     loadVertices(*data);
     loadIndices(*data);
-    loadTextures(*data, loadTextureCallback);
+    loadTextures(*data);
     loadMaterials(*data);
     loadBones(*data);
     loadMorphs(*data);
@@ -144,33 +141,7 @@ void PmxFileLoader::loadIndices(ModelData &data)
         readUInt(index, data.info.vertexIndexSize);
 }
 
-static void loadTexture(const std::filesystem::path &path, Texture &tex)
-{
-    tex.data.reset();
-
-    if (!path.has_filename())
-        return;
-
-    std::ifstream fin(path, std::ios::binary);
-    if (!fin)
-        return;
-
-    std::vector<char> buffer(std::istreambuf_iterator<char>(fin),
-                             std::istreambuf_iterator<char>{});
-
-    stbi_uc *pixels = stbi_load_from_memory(
-        reinterpret_cast<const stbi_uc *>(buffer.data()),
-        static_cast<int>(buffer.size()), &tex.width, &tex.height, nullptr, 4);
-
-    if (pixels)
-    {
-        tex.channels = 4;
-        tex.data.reset(pixels, stbi_image_free);
-    }
-}
-
-void PmxFileLoader::loadTextures(ModelData                            &data,
-                                 const std::function<void(Texture &)> &callback)
+void PmxFileLoader::loadTextures(ModelData &data)
 {
     int32_t count;
     readInt(count);
@@ -178,29 +149,25 @@ void PmxFileLoader::loadTextures(ModelData                            &data,
 
     for (auto &texture : data.textures)
     {
-        readTextBuffer(texture.path);
+        readTextBuffer(texture.rawPath);
 
         std::string u8path =
             data.info.encodingMethod == EncodingMethod::UTF16_LE
-                ? codeCvt<UTF16_LE, UTF8>(texture.path)
-                : texture.path;
+                ? codeCvt<UTF16_LE, UTF8>(texture.rawPath)
+                : texture.rawPath;
 
-        texture.path = u8path;
+        texture.rawPath = u8path;
 
 #ifndef _WIN32
         std::replace(u8path.begin(), u8path.end(), '\\', '/');
 #endif
-        std::filesystem::path path =
+        texture.path =
 #if __cplusplus < 202002L
             std::filesystem::u8path(u8path);
 #else
             std::u8string(u8path.begin(), u8path.end());
 #endif
-        path = m_modelDir / path.make_preferred();
-
-        loadTexture(path, texture);
-        if (callback)
-            callback(texture);
+        texture.path = m_modelDir / texture.path.make_preferred();
     }
 }
 

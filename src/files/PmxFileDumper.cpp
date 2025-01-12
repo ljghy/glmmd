@@ -108,7 +108,7 @@ void PmxFileDumper::dumpTextures(const ModelData &data)
     writeUInt(static_cast<uint32_t>(data.textures.size()));
     for (const auto &t : data.textures)
     {
-        writeTextBuffer(t.path);
+        writeTextBuffer(t.rawPath);
     }
 }
 

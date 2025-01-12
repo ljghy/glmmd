@@ -1,71 +1,116 @@
 #ifndef VIEWER_PROFILER_H_
 #define VIEWER_PROFILER_H_
 
+#include <algorithm>
 #include <chrono>
-#include <numeric>
 #include <string>
 #include <unordered_map>
 #include <vector>
 
-template <typename Ty, size_t N>
+template <size_t BufferSize = 64>
 class Profiler
 {
 public:
-    void push(const std::string &name)
+    Profiler()
+        : m_offset(0)
+        , m_count(0)
+        , m_totalTime(0.f)
+        , m_averageTime(0.f)
     {
-        size_t i            = m_nameToIndex.size();
-        m_nameToIndex[name] = i;
-        m_data.resize(m_nameToIndex.size() * N);
-        m_start.resize(m_nameToIndex.size());
+        std::fill(m_frameTime, m_frameTime + BufferSize, 0.f);
     }
 
     void startFrame()
     {
-        m_offset = (m_offset + 1) % N;
-        m_count  = std::min(m_count + 1, N);
-        for (size_t i = 0; i < m_nameToIndex.size(); ++i)
-            m_data[i * N + m_offset] = Ty{};
+        m_totalTime -= m_frameTime[m_offset];
+        m_frameTime[m_offset] = 0.f;
+    }
+
+    void start() { m_start = std::chrono::steady_clock::now(); }
+
+    void stop()
+    {
+        auto end = std::chrono::steady_clock::now();
+        m_frameTime[m_offset] +=
+            std::chrono::duration<float, std::milli>(end - m_start).count();
+    }
+
+    void endFrame()
+    {
+        if (m_count < BufferSize)
+            ++m_count;
+
+        m_totalTime += m_frameTime[m_offset];
+        m_averageTime = m_totalTime / m_count;
+
+        ++m_offset;
+        if (m_offset == BufferSize)
+            m_offset = 0;
+    }
+
+    float averageTime() const { return m_averageTime; }
+
+private:
+    size_t m_offset;
+    size_t m_count;
+
+    std::chrono::time_point<std::chrono::steady_clock> m_start;
+
+    float m_frameTime[BufferSize];
+
+    float m_totalTime;
+    float m_averageTime;
+};
+
+template <size_t BufferSize = 64>
+class ProfilerSet
+{
+public:
+    void add(const std::string &name)
+    {
+        auto [_, inserted] = m_indices.emplace(name, m_profilers.size());
+        if (inserted)
+            m_profilers.emplace_back();
+    }
+
+    void startFrame()
+    {
+        for (auto &profiler : m_profilers)
+            profiler.startFrame();
     }
 
     void start(const std::string &name)
     {
-        m_start[m_nameToIndex.at(name)] = std::chrono::steady_clock::now();
+        m_profilers[m_indices.at(name)].start();
     }
 
     void stop(const std::string &name)
     {
-        auto i   = m_nameToIndex.at(name);
-        auto end = std::chrono::steady_clock::now();
-        m_data[i * N + m_offset] =
-            std::chrono::duration_cast<std::chrono::duration<Ty>>(end -
-                                                                  m_start[i])
-                .count();
+        m_profilers[m_indices.at(name)].stop();
     }
 
-    Ty query(const std::string &name) const
+    void endFrame()
     {
-        auto i = m_nameToIndex.at(name);
-        return std::accumulate(m_data.begin() + i * N,
-                               m_data.begin() + i * N + m_count, Ty{}) /
-               m_count;
+        for (auto &profiler : m_profilers)
+            profiler.endFrame();
     }
 
-    Ty queryTotal() const
+    float averageTime(const std::string &name) const
     {
-        Ty total{};
-        for (size_t i = 0; i < m_nameToIndex.size(); ++i)
-            total += std::accumulate(m_data.begin() + i * N,
-                                     m_data.begin() + i * N + m_count, Ty{});
-        return total / m_count;
+        return m_profilers[m_indices.at(name)].averageTime();
+    }
+
+    float totalTime() const
+    {
+        float total = 0.f;
+        for (const auto &profiler : m_profilers)
+            total += profiler.averageTime();
+        return total;
     }
 
 private:
-    std::vector<std::chrono::time_point<std::chrono::steady_clock>> m_start;
-    std::vector<Ty>                                                 m_data;
-    size_t m_offset = N - 1;
-    size_t m_count  = 0;
-
-    std::unordered_map<std::string, size_t> m_nameToIndex;
+    std::unordered_map<std::string, size_t> m_indices;
+    std::vector<Profiler<BufferSize>>       m_profilers;
 };
 
 #endif

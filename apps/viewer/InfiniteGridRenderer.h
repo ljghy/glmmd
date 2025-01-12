@@ -16,7 +16,7 @@ public:
     float     gridSize     = 5.f;
     float     lineWidth    = 1.f;
     float     falloffDepth = 200.f;
-    glm::vec3 color        = glm::vec3(0.6, 0.6, 0.6);
+    glm::vec3 color        = glm::vec3(0.6f, 0.6f, 0.6f);
     int       showAxes     = 1;
 
 private:

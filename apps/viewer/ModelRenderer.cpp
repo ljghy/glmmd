@@ -1,10 +1,10 @@
 #include <mutex>
+#include <fstream>
+#include <iostream>
 
-#include <glmmd/render/ModelRenderer.h>
+#include <stb/stb_image.h>
 
-namespace glmmd
-{
-
+#include "ModelRenderer.h"
 #include "DefaultShaderSources.inl"
 #include "SharedToonTextures.inl"
 
@@ -23,16 +23,15 @@ void ModelRenderer::releaseSharedToonTextures()
     sharedToonTexturesLoaded = false;
 }
 
-ModelRenderer::ModelRenderer(const std::shared_ptr<const ModelData> &data,
-                             bool                              loadTextures,
-                             const ModelRendererShaderSources &shaderSources)
+ModelRenderer::ModelRenderer(
+    const std::shared_ptr<const glmmd::ModelData> &data,
+    const ModelRendererShaderSources              &shaderSources)
     : m_modelData(data)
     , m_renderData(data)
 {
     initBuffers();
     m_textures.resize(m_modelData->textures.size());
-    if (loadTextures)
-        initTextures();
+    initTextures();
     initSharedToonTextures();
     initShaders(shaderSources);
 }
@@ -60,33 +59,49 @@ void ModelRenderer::initBuffers()
                                            m_modelData->indices.size()));
 }
 
-void ModelRenderer::setTexture(size_t i, ogl::Texture2D &&tex)
-{
-    m_textures[i] = std::move(tex);
-}
-
 void ModelRenderer::initTextures()
 {
     for (size_t i = 0; i < m_modelData->textures.size(); ++i)
     {
-        const auto &tex = m_modelData->textures[i];
-        if (!tex.data)
+        std::ifstream fin(m_modelData->textures[i].path, std::ios::binary);
+        if (!fin)
+        {
+            std::cout << "Failed to load texture: "
+                      << m_modelData->textures[i].path << std::endl;
             continue;
+        }
+        std::vector<stbi_uc> buffer(std::istreambuf_iterator<char>{fin},
+                                    std::istreambuf_iterator<char>{});
+        fin.close();
+
+        int      width, height, channels;
+        stbi_uc *data = stbi_load_from_memory(buffer.data(),
+                                              static_cast<int>(buffer.size()),
+                                              &width, &height, &channels, 4);
+
+        if (!data)
+        {
+            std::cout << "Failed to load texture: "
+                      << m_modelData->textures[i].path << std::endl;
+            continue;
+        }
 
         ogl::Texture2DCreateInfo info;
-        info.width         = tex.width;
-        info.height        = tex.height;
-        info.data          = tex.data.get();
+        info.width         = width;
+        info.height        = height;
+        info.data          = data;
         info.genMipmaps    = true;
         info.internalFmt   = GL_SRGB_ALPHA;
         info.dataFmt       = GL_RGBA;
         info.dataType      = GL_UNSIGNED_BYTE;
-        info.wrapModeS     = GL_CLAMP_TO_EDGE;
-        info.wrapModeT     = GL_CLAMP_TO_EDGE;
+        info.wrapModeS     = GL_REPEAT;
+        info.wrapModeT     = GL_REPEAT;
         info.minFilterMode = GL_LINEAR_MIPMAP_LINEAR;
         info.magFilterMode = GL_LINEAR;
 
         m_textures[i].create(info);
+
+        stbi_image_free(data);
     }
 }
 
@@ -167,8 +182,9 @@ void ModelRenderer::fillBuffers() const
                  m_renderData.vertexBuffer.data(), GL_DYNAMIC_DRAW);
 }
 
-void ModelRenderer::render(const Camera &camera, const DirectionalLight &light,
-                           const ogl::Texture2D *shadowMap) const
+void ModelRenderer::render(const glmmd::Camera           &camera,
+                           const glmmd::DirectionalLight &light,
+                           const ogl::Texture2D          *shadowMap) const
 {
     if (m_renderFlag & MODEL_RENDER_FLAG_HIDE)
         return;
@@ -187,9 +203,9 @@ void ModelRenderer::render(const Camera &camera, const DirectionalLight &light,
         renderGroundShadow(camera, light);
 }
 
-void ModelRenderer::renderMesh(const Camera           &camera,
-                               const DirectionalLight &light,
-                               const ogl::Texture2D   *shadowMap) const
+void ModelRenderer::renderMesh(const glmmd::Camera           &camera,
+                               const glmmd::DirectionalLight &light,
+                               const ogl::Texture2D          *shadowMap) const
 {
     glEnable(GL_DEPTH_TEST);
     glDepthFunc(GL_LEQUAL);
@@ -312,7 +328,7 @@ void ModelRenderer::renderMesh(const Camera           &camera,
     }
 }
 
-void ModelRenderer::renderEdge(const Camera &camera) const
+void ModelRenderer::renderEdge(const glmmd::Camera &camera) const
 {
     glEnable(GL_CULL_FACE);
     glCullFace(GL_FRONT);
@@ -355,8 +371,8 @@ void ModelRenderer::renderEdge(const Camera &camera) const
     }
 }
 
-void ModelRenderer::renderGroundShadow(const Camera           &camera,
-                                       const DirectionalLight &light) const
+void ModelRenderer::renderGroundShadow(
+    const glmmd::Camera &camera, const glmmd::DirectionalLight &light) const
 {
     if (light.direction.y == 0.f)
         return;
@@ -396,7 +412,7 @@ void ModelRenderer::renderGroundShadow(const Camera           &camera,
     }
 }
 
-void ModelRenderer::renderShadowMap(const DirectionalLight &light) const
+void ModelRenderer::renderShadowMap(const glmmd::DirectionalLight &light) const
 {
     if (m_renderFlag & MODEL_RENDER_FLAG_HIDE)
         return;
@@ -434,5 +450,3 @@ void ModelRenderer::renderShadowMap(const DirectionalLight &light) const
                        (const void *)(uintptr_t)(indexOffset * sizeof(GLuint)));
     }
 }
-
-} // namespace glmmd

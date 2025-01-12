@@ -10,9 +10,6 @@
 #include <glmmd/core/Camera.h>
 #include <glmmd/core/DirectionalLight.h>
 
-namespace glmmd
-{
-
 extern const char *defaultVertShaderSrc;
 extern const char *defaultFragShaderSrc;
 extern const char *defaultEdgeVertShaderSrc;
@@ -46,20 +43,18 @@ enum ModelRenderFlag : uint32_t
 class ModelRenderer
 {
 public:
-    ModelRenderer(const std::shared_ptr<const ModelData> &data,
-                  bool                                    loadTextures  = true,
-                  const ModelRendererShaderSources       &shaderSources = {});
+    ModelRenderer(const std::shared_ptr<const glmmd::ModelData> &data,
+                  const ModelRendererShaderSources &shaderSources = {});
 
     void fillBuffers() const;
 
-    void setTexture(size_t i, ogl::Texture2D &&tex);
+    void renderShadowMap(const glmmd::DirectionalLight &light) const;
+    void render(const glmmd::Camera           &camera,
+                const glmmd::DirectionalLight &light,
+                const ogl::Texture2D          *shadowMap = nullptr) const;
 
-    void renderShadowMap(const DirectionalLight &light) const;
-    void render(const Camera &camera, const DirectionalLight &light,
-                const ogl::Texture2D *shadowMap = nullptr) const;
-
-    ModelRenderData       &renderData() { return m_renderData; }
-    const ModelRenderData &renderData() const { return m_renderData; }
+    glmmd::ModelRenderData       &renderData() { return m_renderData; }
+    const glmmd::ModelRenderData &renderData() const { return m_renderData; }
 
     static void releaseSharedToonTextures();
 
@@ -71,16 +66,17 @@ private:
     void initSharedToonTextures();
     void initShaders(const ModelRendererShaderSources &shaderSources);
 
-    void renderMesh(const Camera &camera, const DirectionalLight &light,
-                    const ogl::Texture2D *shadowMap) const;
-    void renderEdge(const Camera &camera) const;
-    void renderGroundShadow(const Camera           &camera,
-                            const DirectionalLight &light) const;
+    void renderMesh(const glmmd::Camera           &camera,
+                    const glmmd::DirectionalLight &light,
+                    const ogl::Texture2D          *shadowMap) const;
+    void renderEdge(const glmmd::Camera &camera) const;
+    void renderGroundShadow(const glmmd::Camera           &camera,
+                            const glmmd::DirectionalLight &light) const;
 
 private:
-    std::shared_ptr<const ModelData> m_modelData;
+    std::shared_ptr<const glmmd::ModelData> m_modelData;
 
-    ModelRenderData m_renderData;
+    glmmd::ModelRenderData m_renderData;
 
     ogl::VertexBufferObject m_VBO;
     ogl::VertexArrayObject  m_VAO;
@@ -99,7 +95,5 @@ private:
     uint32_t m_renderFlag = MODEL_RENDER_FLAG_MESH | MODEL_RENDER_FLAG_EDGE |
                             MODEL_RENDER_FLAG_GROUND_SHADOW;
 };
-
-} // namespace glmmd
 
 #endif
