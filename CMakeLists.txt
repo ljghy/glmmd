@@ -23,7 +23,7 @@ option(GLMMD_DONT_PARALLELIZE "Do not parallelize" OFF)
 option(GLMMD_BUILD_APPS "Build glmmd apps" ${GLMMD_IS_TOPLEVEL})
 option(GLMMD_USE_ICU "Use libicu" OFF)
 
-add_subdirectory(glm/glm)
+add_subdirectory(glm)
 add_subdirectory(src)
 
 if(GLMMD_BUILD_APPS)
