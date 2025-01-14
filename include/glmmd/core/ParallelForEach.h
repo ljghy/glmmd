@@ -1,12 +1,11 @@
 #ifndef GLMMD_PARALLEL_FOR_EACH_H_
 #define GLMMD_PARALLEL_FOR_EACH_H_
 
-#include <algorithm>
-
 #ifndef GLMMD_DONT_PARALLELIZE
 #ifdef GLMMD_USE_TBB
 #include <tbb/parallel_for_each.h>
 #else
+#include <algorithm>
 #include <execution>
 #endif
 #endif
