@@ -1,5 +1,4 @@
 #include <cmath>
-#include <limits>
 
 #include <glmmd/core/InterpolationCurve.h>
 

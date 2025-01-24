@@ -46,7 +46,7 @@ void Camera::update()
     m_right    = -axes[0];
     m_position = target - m_front * distance;
 
-    m_view = glm::lookAt(m_position, target, up());
+    m_view = glm::lookAt(m_position, m_position + m_front, up());
     if (projType == Perspective)
     {
         m_proj = glm::perspective(fov, m_aspect, zNear, zFar);
