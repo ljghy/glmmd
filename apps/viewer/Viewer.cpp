@@ -17,6 +17,15 @@
 
 #include "Viewer.h"
 
+static std::filesystem::path u8stringToPath(const std::string &u8path)
+{
+#if __cplusplus >= 202002L
+    return std::u8string(u8path.begin(), u8path.end());
+#else
+    return std::filesystem::u8path(u8path);
+#endif
+}
+
 void framebufferSizeCallback(GLFWwindow *, int width, int height)
 {
     glViewport(0, 0, width, height);
@@ -27,12 +36,8 @@ void dropCallback(GLFWwindow *window, int count, const char **paths)
     Viewer *viewer = (Viewer *)glfwGetWindowUserPointer(window);
     for (int i = 0; i < count; ++i)
     {
-        std::filesystem::path path =
-#if __cplusplus >= 202002L
-            std::u8string(paths[i], paths[i] + strlen(paths[i]));
-#else
-            std::filesystem::u8path(paths[i]);
-#endif
+        auto path = u8stringToPath(paths[i]);
+
         if (path.extension() == ".pmx")
         {
             if (viewer->loadModel(path))
@@ -627,7 +632,8 @@ void Viewer::loadModelDialog()
     {
         if (ImGuiFileDialog::Instance()->IsOk())
         {
-            if (loadModel(ImGuiFileDialog::Instance()->GetFilePathName()))
+            if (loadModel(u8stringToPath(
+                    ImGuiFileDialog::Instance()->GetFilePathName())))
                 m_state.selectedModelIndex =
                     static_cast<int>(m_models.size()) - 1;
             m_state.lastModelPath =

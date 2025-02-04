@@ -17,3 +17,5 @@ endif()
 target_link_libraries(ImGuiFileDialog PUBLIC imgui)
 
 target_compile_features(ImGuiFileDialog PUBLIC cxx_std_17)
+
+target_compile_definitions(ImGuiFileDialog PRIVATE USE_STD_FILESYSTEM)

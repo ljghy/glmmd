@@ -2,18 +2,20 @@
 #include <filesystem>
 
 #ifdef _WIN32
-#include <Windows.h>
+#include <windows.h>
 #endif
 
 #include "Viewer.h"
 
 #ifdef _WIN32
-int wmain(int argc, wchar_t **argv)
+int main()
 #else
 int main(int argc, char **argv)
 #endif
 {
 #ifdef _WIN32
+    int  argc;
+    auto argv = CommandLineToArgvW(GetCommandLineW(), &argc);
     SetConsoleOutputCP(CP_UTF8);
     setvbuf(stdout, nullptr, _IOFBF, 1000);
     setlocale(LC_ALL, ".UTF8");
@@ -30,4 +32,8 @@ int main(int argc, char **argv)
     {
         std::cerr << e.what() << '\n';
     }
+
+#ifdef _WIN32
+    LocalFree(argv);
+#endif
 }
