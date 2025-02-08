@@ -183,7 +183,7 @@ void PmxFileDumper::dumpBones(const ModelData &data)
         {
             const auto &ik = data.ikData[b.ikDataIndex];
 
-            writeInt(ik.targetBoneIndex, data.info.boneIndexSize);
+            writeInt(ik.endEffector, data.info.boneIndexSize);
             writeInt(ik.loopCount);
             writeFloat(ik.limitAngle);
 

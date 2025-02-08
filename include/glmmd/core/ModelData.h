@@ -118,9 +118,9 @@ struct IKLink
 
 struct IKData
 {
-    int32_t realTargetBoneIndex;
+    int32_t targetBoneIndex;
 
-    int32_t targetBoneIndex; // end effector
+    int32_t endEffector; // end effector
     int32_t loopCount;
     float   limitAngle; // rad
 

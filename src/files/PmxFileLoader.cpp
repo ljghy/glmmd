@@ -261,8 +261,8 @@ void PmxFileLoader::loadBones(ModelData &data)
             data.ikData.emplace_back();
             auto &ik = data.ikData.back();
 
-            ik.realTargetBoneIndex = i;
-            readInt(ik.targetBoneIndex, data.info.boneIndexSize);
+            ik.targetBoneIndex = i;
+            readInt(ik.endEffector, data.info.boneIndexSize);
             readInt(ik.loopCount);
             readFloat(ik.limitAngle);
 

@@ -31,6 +31,10 @@ void ModelPoseSolver::create(const std::shared_ptr<const ModelData> &modelData)
         const auto &bone = modelData->bones[i];
         if (bone.parentIndex != -1)
             m_boneChildren[bone.parentIndex].push_back(i);
+        if ((bone.inheritRotation() || bone.inheritTranslation()) &&
+            bone.inheritWeight != 0.f && bone.inheritParentIndex != -1 &&
+            bone.inheritParentIndex != bone.parentIndex)
+            m_boneChildren[bone.inheritParentIndex].push_back(i);
     }
 
     sortBoneDeformOrder();
@@ -253,11 +257,10 @@ void ModelPoseSolver::solveIK(ModelPose &pose, uint32_t first,
         if (!bone.isIK())
             continue;
         const auto &ik = m_modelData->ikData[bone.ikDataIndex];
-        if (ik.targetBoneIndex < 0)
+        if (ik.endEffector < 0)
             continue;
 
-        glm::vec3 targetPos =
-            pose.getGlobalBonePosition(ik.realTargetBoneIndex);
+        glm::vec3 targetPos = pose.getGlobalBonePosition(ik.targetBoneIndex);
 
         for (int32_t i = 0; i < ik.loopCount; ++i)
         {
@@ -276,7 +279,7 @@ void ModelPoseSolver::solveIK(ModelPose &pose, uint32_t first,
                 // }
 
                 glm::vec3 endEffectorPos =
-                    pose.getGlobalBonePosition(ik.targetBoneIndex);
+                    pose.getGlobalBonePosition(ik.endEffector);
 
                 constexpr float tol = 1e-5f;
 
@@ -325,7 +328,7 @@ void ModelPoseSolver::solveIK(ModelPose &pose, uint32_t first,
                 }
 
                 solveChildGlobalBoneTransforms(pose, link.boneIndex,
-                                               ik.targetBoneIndex);
+                                               ik.endEffector);
             }
 
             if (converged)
