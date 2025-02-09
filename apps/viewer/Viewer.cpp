@@ -271,7 +271,7 @@ void Viewer::initFBO()
     rboInfo.width       = m_viewportWidth;
     rboInfo.height      = m_viewportHeight;
     rboInfo.samples     = samples;
-    rboInfo.internalFmt = GL_DEPTH24_STENCIL8;
+    rboInfo.internalFmt = GL_DEPTH_COMPONENT24;
     m_FBO.attachDepthRenderBuffer(
         std::make_unique<ogl::RenderBufferObject>(rboInfo));
 

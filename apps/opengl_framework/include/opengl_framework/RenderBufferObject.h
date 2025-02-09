@@ -38,6 +38,8 @@ public:
     int width() const { return m_info.width; }
     int height() const { return m_info.height; }
 
+    unsigned int internalFmt() const { return m_info.internalFmt; }
+
     unsigned int id() const { return m_id; }
 
     void resize(int width, int height);

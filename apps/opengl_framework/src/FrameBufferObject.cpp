@@ -1,7 +1,11 @@
 #include <glad/glad.h>
+
+#include <stdexcept>
+
 #include <opengl_framework/FrameBufferObject.h>
 
 #include "GLCheck.h"
+
 namespace ogl
 {
 
@@ -102,6 +106,23 @@ void FrameBufferObject::attachDepthTexture(std::unique_ptr<Texture2D> &&texture)
     unbind();
 }
 
+static GLenum getDepthStencilAttachmentType(unsigned int fmt)
+{
+    switch (fmt)
+    {
+    case GL_DEPTH_COMPONENT16:
+    case GL_DEPTH_COMPONENT24:
+    case GL_DEPTH_COMPONENT32F:
+        return GL_DEPTH_ATTACHMENT;
+    case GL_DEPTH24_STENCIL8:
+    case GL_DEPTH32F_STENCIL8:
+        return GL_DEPTH_STENCIL_ATTACHMENT;
+    case GL_STENCIL_INDEX8:
+        return GL_STENCIL_ATTACHMENT;
+    }
+    throw std::runtime_error("Unsupported render buffer internal format");
+}
+
 void FrameBufferObject::attachDepthRenderBuffer(
     std::unique_ptr<RenderBufferObject> &&renderBuffer)
 {
@@ -109,8 +130,10 @@ void FrameBufferObject::attachDepthRenderBuffer(
     m_depthRenderBufferAttachment = std::move(renderBuffer);
     m_depthRenderBufferAttachment->bind();
     GL_CHECK(glFramebufferRenderbuffer(
-        GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER,
-        m_depthRenderBufferAttachment->id()));
+        GL_FRAMEBUFFER,
+        getDepthStencilAttachmentType(
+            m_depthRenderBufferAttachment->internalFmt()),
+        GL_RENDERBUFFER, m_depthRenderBufferAttachment->id()));
     unbind();
 }
 

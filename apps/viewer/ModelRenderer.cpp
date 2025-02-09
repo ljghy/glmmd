@@ -338,7 +338,7 @@ void ModelRenderer::renderEdge(const glmmd::Camera &camera) const
     glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ONE,
                         GL_ONE_MINUS_SRC_ALPHA);
     glEnable(GL_POLYGON_OFFSET_FILL);
-    glPolygonOffset(1.f, 1.f);
+    glPolygonOffset(2.f, 2.f);
 
     glm::mat4 model = glm::mat4(1.f);
     glm::mat4 proj  = camera.proj();
@@ -369,6 +369,8 @@ void ModelRenderer::renderEdge(const glmmd::Camera &camera) const
                        GL_UNSIGNED_INT,
                        (const void *)(uintptr_t)(indexOffset * sizeof(GLuint)));
     }
+
+    glPolygonOffset(0.f, 0.f);
 }
 
 void ModelRenderer::renderGroundShadow(
