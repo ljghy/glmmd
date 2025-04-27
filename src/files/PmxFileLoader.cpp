@@ -1,6 +1,6 @@
-#include <stdexcept>
-#include <fstream>
 #include <algorithm>
+#include <fstream>
+#include <stdexcept>
 
 #include <glmmd/files/CodeConverter.h>
 #include <glmmd/files/PmxFileLoader.h>
@@ -8,8 +8,8 @@
 namespace glmmd
 {
 
-std::shared_ptr<ModelData>
-PmxFileLoader::load(const std::filesystem::path &path)
+std::shared_ptr<ModelData> PmxFileLoader::load(
+    const std::filesystem::path &path)
 {
     m_fin.open(path, std::ios::binary);
     if (!m_fin)
@@ -82,6 +82,11 @@ void PmxFileLoader::loadVertices(ModelData &data)
     readInt(count);
     data.vertices.resize(count);
 
+    if (data.info.additionalUVNum > 0)
+        data.additionalUVs.resize(count);
+
+    int32_t index = 0;
+
     for (auto &vert : data.vertices)
     {
         readFloat<3>(vert.position.x);
@@ -89,7 +94,7 @@ void PmxFileLoader::loadVertices(ModelData &data)
         readFloat<2>(vert.uv.x);
 
         for (int i = 0; i < data.info.additionalUVNum; ++i)
-            readFloat<4>(vert.additionalUVs[i].x);
+            readFloat<4>(data.additionalUVs[index][i].x);
 
         readUInt(vert.skinningType);
 
@@ -103,6 +108,7 @@ void PmxFileLoader::loadVertices(ModelData &data)
             readInt(vert.boneIndices[0], sz);
             readInt(vert.boneIndices[1], sz);
             readFloat<1>(vert.boneWeights[0]);
+            vert.boneWeights[1] = 1.f - vert.boneWeights[0];
             break;
         case VertexSkinningType::BDEF4:
             readInt(vert.boneIndices[0], sz);
@@ -161,12 +167,8 @@ void PmxFileLoader::loadTextures(ModelData &data)
 #ifndef _WIN32
         std::replace(u8path.begin(), u8path.end(), '\\', '/');
 #endif
-        texture.path =
-#if __cplusplus < 202002L
-            std::filesystem::u8path(u8path);
-#else
-            std::u8string(u8path.begin(), u8path.end());
-#endif
+        texture.path = std::u8string(u8path.begin(), u8path.end());
+
         texture.path = m_modelDir / texture.path.make_preferred();
     }
 }

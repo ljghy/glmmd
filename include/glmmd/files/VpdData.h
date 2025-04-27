@@ -1,9 +1,9 @@
 #ifndef GLMMD_FILES_VPD_DATA_H_
 #define GLMMD_FILES_VPD_DATA_H_
 
+#include <memory>
 #include <string>
 #include <vector>
-#include <memory>
 
 #include <glm/glm.hpp>
 #include <glm/gtc/quaternion.hpp>
@@ -15,8 +15,8 @@ namespace glmmd
 
 struct VpdData
 {
-    ModelPose
-    toModelPose(const std::shared_ptr<const ModelData> &modelData) const;
+    ModelPose toModelPose(
+        const std::shared_ptr<const ModelData> &modelData) const;
 
     std::string modelName; // Shift-JIS
 

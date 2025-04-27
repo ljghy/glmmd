@@ -25,7 +25,15 @@
 
 #else
 
-#if __cplusplus >= 202002L
+#ifndef JSON_PARSER_CXX_STD
+#ifdef _MSC_VER
+#define JSON_PARSER_CXX_STD _MSVC_LANG
+#else
+#define JSON_PARSER_CXX_STD __cplusplus
+#endif
+#endif
+
+#if JSON_PARSER_CXX_STD >= 202002L
 #include <version>
 #endif
 
@@ -421,7 +429,7 @@ public:
   }
 
   JsonNode(const std::filesystem::path &path) : ty_(StrType_) {
-#if __cplusplus >= 202002L
+#if JSON_PARSER_CXX_STD >= 202002L
     auto u8path = path.u8string();
     val_.s = new JsonStr_t(u8path.begin(), u8path.end());
 #else
@@ -866,7 +874,7 @@ public:
                             std::filesystem::path>
   get() const {
     requireType(StrType_);
-#if __cplusplus >= 202002L
+#if JSON_PARSER_CXX_STD >= 202002L
     return std::filesystem::path(std::u8string(val_.s->begin(), val_.s->end()));
 #else
     return std::filesystem::u8path(*val_.s);

@@ -7,18 +7,11 @@
 #include <unordered_map>
 #include <vector>
 
-template <size_t BufferSize = 64>
+template <size_t WindowSize = 64>
 class Profiler
 {
 public:
-    Profiler()
-        : m_offset(0)
-        , m_count(0)
-        , m_totalTime(0.f)
-        , m_averageTime(0.f)
-    {
-        std::fill(m_frameTime, m_frameTime + BufferSize, 0.f);
-    }
+    Profiler() { std::fill(m_frameTime, m_frameTime + WindowSize, 0.f); }
 
     void startFrame()
     {
@@ -37,32 +30,32 @@ public:
 
     void endFrame()
     {
-        if (m_count < BufferSize)
+        if (m_count < WindowSize)
             ++m_count;
 
         m_totalTime += m_frameTime[m_offset];
         m_averageTime = m_totalTime / m_count;
 
         ++m_offset;
-        if (m_offset == BufferSize)
+        if (m_offset == WindowSize)
             m_offset = 0;
     }
 
     float averageTime() const { return m_averageTime; }
 
 private:
-    size_t m_offset;
-    size_t m_count;
+    size_t m_offset{};
+    size_t m_count{};
 
     std::chrono::time_point<std::chrono::steady_clock> m_start;
 
-    float m_frameTime[BufferSize];
+    float m_frameTime[WindowSize];
 
-    float m_totalTime;
-    float m_averageTime;
+    float m_totalTime{};
+    float m_averageTime{};
 };
 
-template <size_t BufferSize = 64>
+template <size_t WindowSize = 64>
 class ProfilerSet
 {
 public:
@@ -110,7 +103,7 @@ public:
 
 private:
     std::unordered_map<std::string, size_t> m_indices;
-    std::vector<Profiler<BufferSize>>       m_profilers;
+    std::vector<Profiler<WindowSize>>       m_profilers;
 };
 
 #endif

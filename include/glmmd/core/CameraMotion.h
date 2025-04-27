@@ -1,8 +1,8 @@
 #ifndef GLMMD_CORE_CAMERA_MOTION_H_
 #define GLMMD_CORE_CAMERA_MOTION_H_
 
-#include <vector>
 #include <map>
+#include <vector>
 
 #include <glmmd/core/Camera.h>
 #include <glmmd/core/InterpolationCurve.h>

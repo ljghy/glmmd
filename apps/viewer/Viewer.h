@@ -5,18 +5,18 @@
 //
 #include <GLFW/glfw3.h>
 
-#include <memory>
 #include <chrono>
 #include <filesystem>
+#include <memory>
 
+#include <glmmd/core/CameraMotion.h>
 #include <glmmd/core/Model.h>
 #include <glmmd/core/PhysicsWorld.h>
-#include <glmmd/core/CameraMotion.h>
 
-#include "ModelRenderer.h"
-#include "JsonParser.hpp"
 #include "BlendedMotion.h"
 #include "InfiniteGridRenderer.h"
+#include "JsonParser.hpp"
+#include "ModelRenderer.h"
 #include "Profiler.h"
 
 class Viewer

@@ -67,7 +67,7 @@ void ModelRenderData::create(const std::shared_ptr<const ModelData> &data)
         m_initialVertexBuffer[offset++] = vert.uv.y;
         for (uint8_t j = 0; j < data->info.additionalUVNum; ++j)
             for (uint8_t k = 0; k < 4; ++k)
-                m_initialVertexBuffer[offset++] = vert.additionalUVs[j][k];
+                m_initialVertexBuffer[offset++] = data->additionalUVs[i][j][k];
     }
 }
 

@@ -3,6 +3,10 @@
 
 #include <memory>
 
+#include <glm/glm.hpp>
+#include <glm/gtx/dual_quaternion.hpp>
+#include <glm/gtx/quaternion.hpp>
+
 #include <glmmd/core/ModelData.h>
 #include <glmmd/core/ModelRenderData.h>
 #include <glmmd/core/Transform.h>
@@ -43,7 +47,7 @@ public:
     const Transform &getGlobalBoneTransform(uint32_t boneIndex) const;
     glm::vec3        getGlobalBonePosition(uint32_t boneIndex) const;
 
-    glm::mat4 getFinalBoneTransform(uint32_t boneIndex) const;
+    glm::dualquat getFinalBoneTransform(uint32_t boneIndex) const;
 
     const glm::vec3 &getLocalBoneTranslation(uint32_t boneIndex) const;
     glm::vec3       &localBoneTranslation(uint32_t boneIndex);

@@ -1,6 +1,6 @@
-#include <stdexcept>
 #include <algorithm>
 #include <fstream>
+#include <stdexcept>
 
 #include <glmmd/files/VpdFileLoader.h>
 

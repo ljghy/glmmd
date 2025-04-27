@@ -1,12 +1,12 @@
 #ifndef GLMMD_CORE_FIXED_MOTION_CLIP_H_
 #define GLMMD_CORE_FIXED_MOTION_CLIP_H_
 
-#include <vector>
 #include <map>
+#include <vector>
 
+#include <glmmd/core/InterpolationCurve.h>
 #include <glmmd/core/Motion.h>
 #include <glmmd/core/Transform.h>
-#include <glmmd/core/InterpolationCurve.h>
 
 namespace glmmd
 {
@@ -30,9 +30,9 @@ struct FixedMotionClip : public Motion
 
     FixedMotionClip(bool loop = false, float frameRate = 30.f);
 
-    virtual float duration() const override { return frameCount / frameRate; }
+    float duration() const override { return frameCount / frameRate; }
 
-    virtual void getLocalPose(float time, ModelPose &pose) const override;
+    void getLocalPose(float time, ModelPose &pose) const override;
 
     bool  loop;
     float frameRate;

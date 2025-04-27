@@ -1,15 +1,15 @@
 #ifndef GLMMD_FILES_VMD_DATA_H_
 #define GLMMD_FILES_VMD_DATA_H_
 
-#include <string>
 #include <cstdint>
+#include <string>
 #include <vector>
 
 #include <glm/glm.hpp>
 
-#include <glmmd/core/ModelData.h>
-#include <glmmd/core/FixedMotionClip.h>
 #include <glmmd/core/CameraMotion.h>
+#include <glmmd/core/FixedMotionClip.h>
+#include <glmmd/core/ModelData.h>
 
 namespace glmmd
 {

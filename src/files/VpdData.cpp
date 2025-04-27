@@ -1,13 +1,13 @@
 #include <unordered_map>
 
-#include <glmmd/files/VpdData.h>
 #include <glmmd/files/CodeConverter.h>
+#include <glmmd/files/VpdData.h>
 
 namespace glmmd
 {
 
-ModelPose
-VpdData::toModelPose(const std::shared_ptr<const ModelData> &modelData) const
+ModelPose VpdData::toModelPose(
+    const std::shared_ptr<const ModelData> &modelData) const
 {
     ModelPose pose(modelData);
 

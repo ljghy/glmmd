@@ -1,9 +1,9 @@
 #ifndef GLMMD_FILES_PMX_FILE_DUMPER_H_
 #define GLMMD_FILES_PMX_FILE_DUMPER_H_
 
-#include <fstream>
-#include <filesystem>
 #include <cassert>
+#include <filesystem>
+#include <fstream>
 
 #include <glmmd/core/ModelData.h>
 #include <glmmd/files/CodeConverter.h>
@@ -61,19 +61,19 @@ private:
         {
         case 1:
         {
-            int8_t tmp = static_cast<int8_t>(val);
+            auto tmp = static_cast<int8_t>(val);
             m_fout.write(reinterpret_cast<const char *>(&tmp), 1);
             break;
         }
         case 2:
         {
-            int16_t tmp = static_cast<int16_t>(val);
+            auto tmp = static_cast<int16_t>(val);
             m_fout.write(reinterpret_cast<const char *>(&tmp), 2);
             break;
         }
         case 4:
         {
-            int32_t tmp = static_cast<int32_t>(val);
+            auto tmp = static_cast<int32_t>(val);
             m_fout.write(reinterpret_cast<const char *>(&tmp), 4);
             break;
         }
@@ -87,7 +87,7 @@ private:
     {
         if (m_textEncoding == EncodingMethod::UTF8)
         {
-            uint32_t sz = static_cast<uint32_t>(buf.size());
+            auto sz = static_cast<uint32_t>(buf.size());
             writeUInt(sz);
             m_fout.write(buf.data(), sz);
         }
@@ -95,7 +95,7 @@ private:
         {
             auto utf16 = codeCvt<UTF8, UTF16_LE>(buf);
 
-            uint32_t sz = static_cast<uint32_t>(utf16.size());
+            auto sz = static_cast<uint32_t>(utf16.size());
             writeUInt(sz);
             m_fout.write(utf16.data(), sz);
         }

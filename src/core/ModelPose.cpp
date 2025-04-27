@@ -1,11 +1,6 @@
 #include <algorithm>
 
-#define GLM_ENABLE_EXPERIMENTAL
-#include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
-#include <glm/gtx/matrix_decompose.hpp>
-#include <glm/gtx/quaternion.hpp>
-#include <glm/gtx/dual_quaternion.hpp>
 
 #include <glmmd/core/ModelPose.h>
 #include <glmmd/core/ParallelForEach.h>
@@ -62,10 +57,11 @@ void ModelPose::setMorphRatio(uint32_t morphIndex, float ratio)
     m_morphRatios[morphIndex] = ratio;
 }
 
-glm::mat4 ModelPose::getFinalBoneTransform(uint32_t boneIndex) const
+glm::dualquat ModelPose::getFinalBoneTransform(uint32_t boneIndex) const
 {
-    return glm::translate(m_globalBoneTransforms[boneIndex].toMatrix(),
-                          -m_modelData->bones[boneIndex].position);
+    auto &r = m_globalBoneTransforms[boneIndex].rotation;
+    auto &t = m_globalBoneTransforms[boneIndex].translation;
+    return glm::dualquat(r, t - r * m_modelData->bones[boneIndex].position);
 }
 
 const glm::vec3 &ModelPose::getLocalBoneTranslation(uint32_t boneIndex) const
@@ -123,14 +119,13 @@ void ModelPose::applyMorphsToRenderData(ModelRenderData &renderData) const
         switch (morph.type)
         {
         case MorphType::Vertex:
-            parallelForEach(morph.vertex, morph.vertex + morph.count,
-                            [&](const VertexMorph &data)
-                            {
-                                renderData.setVertexPosition(
-                                    data.index,
-                                    renderData.getVertexPosition(data.index) +
-                                        ratio * data.offset);
-                            });
+            for (int32_t j = 0; j < morph.count; ++j)
+            {
+                const auto &data = morph.vertex[j];
+                renderData.setVertexPosition(
+                    data.index, renderData.getVertexPosition(data.index) +
+                                    ratio * data.offset);
+            }
             break;
         case MorphType::Material:
             for (int32_t j = 0; j < morph.count; ++j)
@@ -221,97 +216,70 @@ void ModelPose::applyMorphsToRenderData(ModelRenderData &renderData) const
 void ModelPose::applyBoneTransformsToRenderData(
     ModelRenderData &renderData) const
 {
-    std::vector<glm::mat4> finalBoneTransforms(m_globalBoneTransforms.size());
+    std::vector<glm::dualquat> finalBoneTransforms(
+        m_globalBoneTransforms.size());
     for (uint32_t i = 0; i < finalBoneTransforms.size(); ++i)
         finalBoneTransforms[i] = getFinalBoneTransform(i);
 
     parallelForEach(
-        m_modelData->vertices.cbegin(), m_modelData->vertices.cend(),
+        m_modelData->vertices.begin(), m_modelData->vertices.end(),
         [&](const Vertex &vert)
         {
             auto i   = static_cast<uint32_t>(&vert - &m_modelData->vertices[0]);
             auto pos = renderData.getVertexPosition(i);
             auto norm = renderData.getVertexNormal(i);
 
-            glm::mat4 vertMatrix;
+            if (vert.skinningType == VertexSkinningType::SDEF)
+            {
+                const auto &dq0 = finalBoneTransforms[vert.boneIndices[0]];
+                const auto &dq1 = finalBoneTransforms[vert.boneIndices[1]];
+                const auto &q0  = dq0.real;
+                const auto &q1  = dq1.real;
 
-            switch (vert.skinningType)
-            {
-            case VertexSkinningType::BDEF1:
-                vertMatrix = finalBoneTransforms[vert.boneIndices[0]];
-                break;
-            case VertexSkinningType::BDEF2:
-                vertMatrix = vert.boneWeights[0] *
-                                 finalBoneTransforms[vert.boneIndices[0]] +
-                             (1.f - vert.boneWeights[0]) *
-                                 finalBoneTransforms[vert.boneIndices[1]];
-                break;
-            case VertexSkinningType::BDEF4:
-                vertMatrix = vert.boneWeights[0] *
-                                 finalBoneTransforms[vert.boneIndices[0]] +
-                             vert.boneWeights[1] *
-                                 finalBoneTransforms[vert.boneIndices[1]] +
-                             vert.boneWeights[2] *
-                                 finalBoneTransforms[vert.boneIndices[2]] +
-                             vert.boneWeights[3] *
-                                 finalBoneTransforms[vert.boneIndices[3]];
-                break;
-            case VertexSkinningType::SDEF:
-            {
                 float w0 = vert.boneWeights[0];
                 float w1 = 1.f - w0;
-                auto  q0 = m_globalBoneTransforms[vert.boneIndices[0]].rotation;
-                auto  q1 = m_globalBoneTransforms[vert.boneIndices[1]].rotation;
-                auto  rot = glm::mat3_cast(glm::slerp(q0, q1, w1));
+
+                auto q = glm::slerp(q0, q1, w1);
 
                 const auto &c = vert.sdefC;
-                auto        r = 0.5f * (vert.sdefR0 - vert.sdefR1);
 
-                const auto &m0 = finalBoneTransforms[vert.boneIndices[0]];
-                const auto &m1 = finalBoneTransforms[vert.boneIndices[1]];
+                auto r = 0.5f * (vert.sdefR0 - vert.sdefR1);
 
-                pos = rot * (pos - c) +
-                      glm::vec3(m0 * glm::vec4(c + w1 * r, 1.f)) * w0 +
-                      glm::vec3(m1 * glm::vec4(c - w0 * r, 1.f)) * w1;
-                norm = glm::normalize(rot * norm);
+                pos = q * (pos - c) + (dq0 * (c + w1 * r)) * w0 +
+                      (dq1 * (c - w0 * r)) * w1;
+                norm = q * norm;
             }
-            break;
-            case VertexSkinningType::QDEF:
+            else
             {
-                glm::dualquat dq[4];
-                glm::vec4     w(0.f);
-                for (int bi = 0; bi < 4; ++bi)
+                int nb =
+                    vert.skinningType == VertexSkinningType::BDEF1
+                        ? 1
+                        : (vert.skinningType == VertexSkinningType::BDEF2 ? 2
+                                                                          : 4);
+
+                glm::dualquat dq = finalBoneTransforms[vert.boneIndices[0]];
+                auto          q0 = dq.real;
+
+                if (nb > 1)
                 {
-                    auto j = vert.boneIndices[bi];
-                    if (j != -1)
+                    dq *= vert.boneWeights[0];
+                    for (int bi = 1; bi < nb; ++bi)
                     {
-                        dq[bi] = glm::dualquat_cast(glm::mat3x4(
-                            glm::transpose(finalBoneTransforms[j])));
-                        dq[bi] = glm::normalize(dq[bi]);
-                        w[bi]  = vert.boneWeights[bi];
+                        float w = vert.boneWeights[bi];
+                        if (glm::dot(q0,
+                                     finalBoneTransforms[vert.boneIndices[bi]]
+                                         .real) < 0)
+                            w = -w;
+                        dq = dq + w * finalBoneTransforms[vert.boneIndices[bi]];
                     }
-                    else
-                        w[bi] = 0;
+
+                    dq = glm::normalize(dq);
                 }
 
-                if (glm::dot(dq[0].real, dq[1].real) < 0)
-                    w[1] *= -1.0f;
-                if (glm::dot(dq[0].real, dq[2].real) < 0)
-                    w[2] *= -1.0f;
-                if (glm::dot(dq[0].real, dq[3].real) < 0)
-                    w[3] *= -1.0f;
-                auto blendDQ =
-                    w[0] * dq[0] + w[1] * dq[1] + w[2] * dq[2] + w[3] * dq[3];
-                blendDQ    = glm::normalize(blendDQ);
-                vertMatrix = glm::transpose(glm::mat3x4_cast(blendDQ));
-                break;
+                pos  = dq * pos;
+                norm = dq.real * norm;
             }
-            }
-            if (vert.skinningType != VertexSkinningType::SDEF)
-            {
-                pos  = glm::vec3(vertMatrix * glm::vec4(pos, 1.f));
-                norm = glm::mat3(vertMatrix) * norm;
-            }
+
             renderData.setVertexPosition(i, pos);
             renderData.setVertexNormal(i, norm);
         });

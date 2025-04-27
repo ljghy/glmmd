@@ -19,7 +19,7 @@ target_link_libraries(
     viewer PRIVATE glmmd::glmmd imgui ImGuiFileDialog stb::stb glfw
                    opengl_framework::opengl_framework)
 
-target_compile_features(viewer PRIVATE cxx_std_17)
+target_compile_features(viewer PRIVATE cxx_std_20)
 
 set_target_properties(viewer PROPERTIES RUNTIME_OUTPUT_DIRECTORY
                                         ${CMAKE_BINARY_DIR}/bin)

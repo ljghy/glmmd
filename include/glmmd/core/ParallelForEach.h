@@ -14,7 +14,7 @@ namespace glmmd
 {
 
 template <typename Iter, typename Func>
-void parallelForEach(Iter first, Iter last, Func func)
+void parallelForEach(Iter first, Iter last, Func &&func)
 {
 
 #ifndef GLMMD_DONT_PARALLELIZE

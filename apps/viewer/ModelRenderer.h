@@ -5,10 +5,10 @@
 
 #include <opengl_framework/Common.h>
 
-#include <glmmd/core/ModelData.h>
-#include <glmmd/core/ModelRenderData.h>
 #include <glmmd/core/Camera.h>
 #include <glmmd/core/DirectionalLight.h>
+#include <glmmd/core/ModelData.h>
+#include <glmmd/core/ModelRenderData.h>
 
 extern const char *defaultVertShaderSrc;
 extern const char *defaultFragShaderSrc;

@@ -1,5 +1,5 @@
-#include <iostream>
 #include <algorithm>
+#include <iostream>
 
 #include <imgui.h>
 #include <imgui_impl_glfw.h>
@@ -15,16 +15,8 @@
 #include <glmmd/files/VmdFileLoader.h>
 #include <glmmd/files/VpdFileLoader.h>
 
+#include "PathConv.h"
 #include "Viewer.h"
-
-static std::filesystem::path u8stringToPath(const std::string &u8path)
-{
-#if __cplusplus >= 202002L
-    return std::u8string(u8path.begin(), u8path.end());
-#else
-    return std::filesystem::u8path(u8path);
-#endif
-}
 
 void framebufferSizeCallback(GLFWwindow *, int width, int height)
 {
@@ -33,7 +25,7 @@ void framebufferSizeCallback(GLFWwindow *, int width, int height)
 
 void dropCallback(GLFWwindow *window, int count, const char **paths)
 {
-    Viewer *viewer = (Viewer *)glfwGetWindowUserPointer(window);
+    auto *viewer = (Viewer *)glfwGetWindowUserPointer(window);
     for (int i = 0; i < count; ++i)
     {
         auto path = u8stringToPath(paths[i]);
@@ -49,7 +41,7 @@ void dropCallback(GLFWwindow *window, int count, const char **paths)
         else if (path.extension() == ".vpd")
             viewer->loadPose(path, viewer->m_state.selectedModelIndex);
         else
-            std::cout << "Unsupported file type: " << path.u8string()
+            std::cout << "Unsupported file type: " << pathToU8string(path)
                       << std::endl;
     }
 }
@@ -161,13 +153,13 @@ void Viewer::initWindow()
     int initHeight = m_initData.get<int>("WindowHeight", 900);
 
     m_window = glfwCreateWindow(initWidth, initHeight, "Viewer", NULL, NULL);
-    glfwSetFramebufferSizeCallback(m_window, framebufferSizeCallback);
-    glfwSetDropCallback(m_window, dropCallback);
-    glfwSetWindowUserPointer(m_window, this);
     if (m_window == nullptr)
     {
         throw std::runtime_error("Failed to create window.");
     }
+    glfwSetFramebufferSizeCallback(m_window, framebufferSizeCallback);
+    glfwSetDropCallback(m_window, dropCallback);
+    glfwSetWindowUserPointer(m_window, this);
 
     glfwMakeContextCurrent(m_window);
     glfwSwapInterval(1);
@@ -180,7 +172,7 @@ void Viewer::initWindow()
 
 void Viewer::initImGui()
 {
-    const char *glsl_version = "#version 130";
+    const char *glsl_version = "#version 330";
 
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
@@ -325,7 +317,7 @@ bool Viewer::loadModel(const std::filesystem::path &path)
     if (!modelData)
         return false;
 
-    std::cout << "Model loaded from: " << path.u8string() << '\n';
+    std::cout << "Model loaded from: " << pathToU8string(path) << '\n';
     std::cout << "Name: " << modelData->info.modelName << '\n';
     std::cout << "Comment: " << modelData->info.comment << '\n';
     std::cout << std::endl;
@@ -383,7 +375,7 @@ void Viewer::loadMotion(const std::filesystem::path &path, size_t modelIndex,
         m_cameraMotion = std::make_unique<glmmd::CameraMotion>(
             vmdData->toCameraMotion(loop));
 
-        std::cout << "Camera motion data loaded from: " << path.u8string()
+        std::cout << "Camera motion data loaded from: " << pathToU8string(path)
                   << '\n';
         std::cout << "Duration: " << m_cameraMotion->duration() << " s\n";
         std::cout << std::endl;
@@ -401,7 +393,8 @@ void Viewer::loadMotion(const std::filesystem::path &path, size_t modelIndex,
         std::string label(filename.begin(), filename.end());
         m_motions[modelIndex]->addMotion(label, clip);
 
-        std::cout << "Motion data loaded from: " << path.u8string() << '\n';
+        std::cout << "Motion data loaded from: " << pathToU8string(path)
+                  << '\n';
         std::cout << "Created on: "
                   << glmmd::codeCvt<glmmd::ShiftJIS, glmmd::UTF8>(
                          vmdData->modelName)
@@ -438,7 +431,7 @@ void Viewer::loadPose(const std::filesystem::path &path, size_t modelIndex)
     m_motions[modelIndex]->addMotion(
         label, std::make_shared<glmmd::FixedPoseMotion>(std::move(pose)));
 
-    std::cout << "Pose data loaded from: " << path.u8string() << '\n';
+    std::cout << "Pose data loaded from: " << pathToU8string(path) << '\n';
     std::cout << "Created on: "
               << glmmd::codeCvt<glmmd::ShiftJIS, glmmd::UTF8>(
                      vpdData->modelName)

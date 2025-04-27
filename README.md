@@ -2,7 +2,7 @@
 
 ## Requirements
 
-+ C++17
++ C++20
 
 + CMake 3.14+
 
@@ -34,29 +34,7 @@ Then set environment variable `Bullet_ROOT` to the install directory.
 sudo apt install libbullet-dev
 ```
 
-### 2. Install glm
-
-#### Windows
-
-Install with vcpkg:
-
-```shell
-vcpkg install glm
-```
-
-Or build and install from source code:
-
-```shell
-git clone https://github.com/g-truc/glm.git
-```
-
-#### Linux (Ubuntu)
-
-```shell
-sudo apt install libglm-dev
-```
-
-### 3. Build `glmmd` library and viewer
+### 2. Build `glmmd` library and viewer
 
 ```shell
 git clone --recursive https://github.com/ljghy/glmmd.git
@@ -65,7 +43,7 @@ mkdir build
 cd build
 ```
 
-Install [Intel oneTBB](https://github.com/oneapi-src/oneTBB) to enable parallel execution with `gcc` on Linux. Otherwise, add definition `-DGLMMD_DONT_PARALLELIZE=ON` to CMake to disable the use of `std::execution::par`.
+Install [Intel oneTBB](https://github.com/uxlfoundation/oneTBB) to enable parallel execution with `libstdc++` on Linux. Otherwise, add definition `-DGLMMD_DONT_PARALLELIZE=ON` to CMake to disable the use of `std::execution::par`.
 
 #### Windows MSVC
 

@@ -1,8 +1,8 @@
 #ifndef GLMMD_FILES_VMD_FILE_LOADER_H_
 #define GLMMD_FILES_VMD_FILE_LOADER_H_
 
-#include <fstream>
 #include <filesystem>
+#include <fstream>
 
 #include <glmmd/files/VmdData.h>
 

@@ -14,8 +14,9 @@ struct Transform
 
     Transform operator*(const float t) const
     {
-        return {translation * t,
-                glm::slerp(glm::identity<glm::quat>(), rotation, t)};
+        return {.translation = translation * t,
+                .rotation =
+                    glm::slerp(glm::identity<glm::quat>(), rotation, t)};
     }
 
     friend Transform operator*(const float t, const Transform &transform)
@@ -25,8 +26,8 @@ struct Transform
 
     Transform operator*(const Transform &other) const
     {
-        return {other.rotation * translation + other.translation,
-                other.rotation * rotation};
+        return {.translation = other.rotation * translation + other.translation,
+                .rotation    = other.rotation * rotation};
     }
 
     glm::vec3 operator*(const glm::vec3 &v) const
@@ -46,23 +47,17 @@ struct Transform
         return *this;
     }
 
-    glm::mat4 toMatrix() const
-    {
-        return glm::translate(glm::mat4(1.f), translation) *
-               glm::mat4_cast(rotation);
-    }
-
     Transform inverse() const
     {
         glm::quat invRot = glm::inverse(rotation);
-        return {invRot * -translation, invRot};
+        return {.translation = invRot * -translation, .rotation = invRot};
     }
 
     static const Transform identity;
 };
 
-inline const Transform Transform::identity{glm::vec3(0.f),
-                                           glm::identity<glm::quat>()};
+inline const Transform Transform::identity{
+    .translation = glm::vec3(0.f), .rotation = glm::identity<glm::quat>()};
 
 } // namespace glmmd
 

@@ -3,8 +3,8 @@
 
 #include <memory>
 
-#include <glmmd/core/ModelPose.h>
 #include <glmmd/core/ModelPhysics.h>
+#include <glmmd/core/ModelPose.h>
 
 namespace glmmd
 {

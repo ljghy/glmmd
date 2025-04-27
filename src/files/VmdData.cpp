@@ -1,6 +1,5 @@
 #include <unordered_map>
 
-#define GLM_ENABLE_EXPERIMENTAL
 #include <glm/gtx/euler_angles.hpp>
 
 #include <glmmd/files/CodeConverter.h>
@@ -90,7 +89,7 @@ CameraMotion VmdData::toCameraMotion(bool loop, float frameRate) const
         ckf.distance    = -frame.distance;
         ckf.target      = frame.target;
         ckf.rotation    = glm::quat_cast(glm::eulerAngleYZX(
-               -frame.rotation.y, -frame.rotation.z, -frame.rotation.x));
+            -frame.rotation.y, -frame.rotation.z, -frame.rotation.x));
         ckf.fov         = glm::radians(static_cast<float>(frame.fov));
         ckf.perspective = frame.perspective == 0u;
 

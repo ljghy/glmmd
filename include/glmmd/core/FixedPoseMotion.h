@@ -1,8 +1,8 @@
 #ifndef GLMMD_CORE_FIXED_POSE_MOTION_H_
 #define GLMMD_CORE_FIXED_POSE_MOTION_H_
 
-#include <glmmd/core/Motion.h>
 #include <glmmd/core/ModelPose.h>
+#include <glmmd/core/Motion.h>
 
 namespace glmmd
 {
@@ -20,9 +20,9 @@ public:
     {
     }
 
-    virtual float duration() const override { return 0.f; }
+    float duration() const override { return 0.f; }
 
-    virtual void getLocalPose(float time, ModelPose &pose) const override
+    void getLocalPose(float time, ModelPose &pose) const override
     {
         pose = m_pose;
     }

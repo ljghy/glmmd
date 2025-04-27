@@ -1,11 +1,11 @@
 #ifndef GLMMD_CORE_MODEL_DATA_H_
 #define GLMMD_CORE_MODEL_DATA_H_
 
-#include <string>
-#include <cstdint>
 #include <array>
-#include <vector>
+#include <cstdint>
 #include <filesystem>
+#include <string>
+#include <vector>
 
 #include <glm/glm.hpp>
 #include <glm/gtc/quaternion.hpp>
@@ -52,9 +52,6 @@ struct Vertex
     glm::vec3 position;
     glm::vec3 normal;
     glm::vec2 uv;
-
-    std::array<glm::vec4, 4> additionalUVs{glm::vec4(0.f), glm::vec4(0.f),
-                                           glm::vec4(0.f), glm::vec4(0.f)};
 
     VertexSkinningType     skinningType;
     std::array<int32_t, 4> boneIndices;
@@ -405,11 +402,14 @@ struct Joint
     glm::vec3 angularStiffness;
 };
 
+using AdditionalUV = std::array<glm::vec4, 4>;
+
 struct ModelData
 {
     ModelInfo info;
 
     std::vector<Vertex>       vertices;
+    std::vector<AdditionalUV> additionalUVs;
     std::vector<uint32_t>     indices;
     std::vector<Texture>      textures;
     std::vector<Material>     materials;

@@ -1,11 +1,12 @@
-#include <mutex>
 #include <fstream>
 #include <iostream>
+#include <mutex>
 
 #include <stb/stb_image.h>
 
-#include "ModelRenderer.h"
 #include "DefaultShaderSources.inl"
+#include "ModelRenderer.h"
+#include "PathConv.h"
 #include "SharedToonTextures.inl"
 
 std::mutex sharedToonTexturesInitMutex;
@@ -67,7 +68,8 @@ void ModelRenderer::initTextures()
         if (!fin)
         {
             std::cout << "Failed to load texture: "
-                      << m_modelData->textures[i].path << std::endl;
+                      << pathToU8string(m_modelData->textures[i].path)
+                      << std::endl;
             continue;
         }
         std::vector<stbi_uc> buffer(std::istreambuf_iterator<char>{fin},
@@ -82,7 +84,8 @@ void ModelRenderer::initTextures()
         if (!data)
         {
             std::cout << "Failed to load texture: "
-                      << m_modelData->textures[i].path << std::endl;
+                      << pathToU8string(m_modelData->textures[i].path)
+                      << std::endl;
             continue;
         }
 

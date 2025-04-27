@@ -47,6 +47,7 @@ void PmxFileDumper::dumpInfo(const ModelData &data)
 void PmxFileDumper::dumpVertices(const ModelData &data)
 {
     writeUInt(static_cast<uint32_t>(data.vertices.size()));
+    int32_t index = 0;
     for (const auto &v : data.vertices)
     {
         writeFloat<3>(v.position.x);
@@ -54,7 +55,7 @@ void PmxFileDumper::dumpVertices(const ModelData &data)
         writeFloat<2>(v.uv.x);
 
         for (int i = 0; i < data.info.additionalUVNum; ++i)
-            writeFloat<4>(v.additionalUVs[i].x);
+            writeFloat<4>(data.additionalUVs[index][i].x);
 
         writeUInt(v.skinningType);
 

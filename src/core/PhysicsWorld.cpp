@@ -1,4 +1,3 @@
-#define GLM_ENABLE_EXPERIMENTAL
 #include <glm/gtx/euler_angles.hpp>
 
 #include <glmmd/core/PhysicsWorld.h>
@@ -10,12 +9,12 @@ constexpr float GRAVITY_SCALE = 12.5f;
 
 inline static btVector3 glm2btVector3(const glm::vec3 &v)
 {
-    return btVector3(v.x, v.y, v.z);
+    return {v.x, v.y, v.z};
 }
 
 inline static btQuaternion glm2btQuaternion(const glm::quat &q)
 {
-    return btQuaternion(q.x, q.y, q.z, q.w);
+    return {q.x, q.y, q.z, q.w};
 }
 
 inline static btTransform glm2btTransform(const Transform &transform)
