@@ -136,8 +136,8 @@ static Transform bt2glm(const btTransform &t)
     auto o = t.getOrigin();
     auto q = t.getRotation();
 
-    Transform transform{glm::vec3(o.x(), o.y(), o.z()),
-                        glm::quat(q.w(), q.x(), q.y(), q.z())};
+    Transform transform{.translation = glm::vec3(o.x(), o.y(), o.z()),
+                        .rotation    = glm::quat(q.w(), q.x(), q.y(), q.z())};
     return transform;
 }
 
@@ -161,8 +161,8 @@ void ModelPoseSolver::syncDynamicRigidBodyTransforms(ModelPose           &pose,
     t.translation -= m_modelData->bones[bi].position;
     pose.m_globalBoneTransforms[bi] = t.inverse() * bt2glm(transform);
 
-    for (auto k : m_boneChildren[bi])
-        solveChildGlobalBoneTransforms(pose, k);
+    // for (auto k : m_boneChildren[bi])
+    //     solveChildGlobalBoneTransforms(pose, k);
 }
 
 void ModelPoseSolver::syncMixedRigidBodyTransforms(ModelPose           &pose,
@@ -184,8 +184,8 @@ void ModelPoseSolver::syncMixedRigidBodyTransforms(ModelPose           &pose,
     transform.setOrigin(btVector3(translation.x, translation.y, translation.z));
     rb.motionState->setWorldTransform(transform);
 
-    for (auto k : m_boneChildren[bi])
-        solveChildGlobalBoneTransforms(pose, k);
+    // for (auto k : m_boneChildren[bi])
+    //     solveChildGlobalBoneTransforms(pose, k);
 }
 
 void ModelPoseSolver::syncWithPhysics(ModelPose    &pose,
@@ -242,7 +242,8 @@ void ModelPoseSolver::applyBoneMorphs(ModelPose &pose) const
                 const auto &boneMorph = morph.bone[j];
                 pose.m_localBoneTransforms[boneMorph.index] *=
                     pose.m_morphRatios[i] *
-                    Transform{boneMorph.translation, boneMorph.rotation};
+                    Transform{.translation = boneMorph.translation,
+                              .rotation    = boneMorph.rotation};
             }
         }
     }

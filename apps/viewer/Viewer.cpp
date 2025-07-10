@@ -89,6 +89,7 @@ void Viewer::initState()
 
     m_state.physicsEnabled      = false;
     m_state.physicsFPSSelection = 1;
+    m_state.physicsSubsteps     = 10;
 
     m_state.gravity = glm::vec3(0.f, -9.8f, 0.f);
 
@@ -993,8 +994,19 @@ void Viewer::controlPanel()
         ImGui::Combo("Physics FPS", &m_state.physicsFPSSelection,
                      "60\000120\000240\000");
 
+        if (ImGui::InputInt("Substeps", &m_state.physicsSubsteps))
+            m_state.physicsSubsteps = std::max(1, m_state.physicsSubsteps);
+
         if (ImGui::SliderFloat3("Gravity", &m_state.gravity.x, -10.f, 10.f))
             m_physicsWorld.setGravity(m_state.gravity);
+
+        if (ImGui::Button("Reset"))
+        {
+            m_state.gravity = glm::vec3(0.f, -9.8f, 0.f);
+            m_physicsWorld.setGravity(m_state.gravity);
+
+            m_state.physicsSubsteps = 10;
+        }
 
         ImGui::TreePop();
     }
@@ -1098,8 +1110,9 @@ void Viewer::run()
         {
             m_profiler.start("Physics");
             const int physicsFPS[3]{60, 120, 240};
-            m_physicsWorld.update(
-                deltaTime, 10, 1.f / physicsFPS[m_state.physicsFPSSelection]);
+            m_physicsWorld.update(deltaTime, m_state.physicsSubsteps,
+                                  1.f /
+                                      physicsFPS[m_state.physicsFPSSelection]);
             m_profiler.stop("Physics");
         }
 

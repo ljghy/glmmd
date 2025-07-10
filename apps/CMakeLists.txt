@@ -27,7 +27,7 @@ endif()
 FetchContent_Declare(
     imgui
     GIT_REPOSITORY https://github.com/ocornut/imgui.git
-    GIT_TAG v1.91.9b-docking)
+    GIT_TAG v1.92.0-docking)
 FetchContent_MakeAvailable(imgui)
 
 add_library(imgui STATIC)

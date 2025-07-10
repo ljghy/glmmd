@@ -121,6 +121,7 @@ private:
 
         bool physicsEnabled;
         int  physicsFPSSelection;
+        int  physicsSubsteps;
 
         glm::vec3 gravity;
 
