@@ -1,3 +1,5 @@
+#ifndef GLMMD_DONT_USE_BULLET
+
 #include <glm/gtx/euler_angles.hpp>
 
 #include <glmmd/core/PhysicsWorld.h>
@@ -91,15 +93,16 @@ void PhysicsWorld::setupModelRigidBodies(Model &model,
         switch (rigidBody.shape)
         {
         case RigidBodyShape::Sphere:
-            body.shape = std::make_unique<btSphereShape>(rigidBody.size.x);
+            body.shape =
+                std::make_unique<btSphereShape>(rigidBody.getSphereRadius());
             break;
         case RigidBodyShape::Capsule:
-            body.shape = std::make_unique<btCapsuleShape>(rigidBody.size.x,
-                                                          rigidBody.size.y);
+            body.shape = std::make_unique<btCapsuleShape>(
+                rigidBody.getCapsuleRadius(), rigidBody.getCapsuleHeight());
             break;
         case RigidBodyShape::Box:
-            body.shape =
-                std::make_unique<btBoxShape>(glm2btVector3(rigidBody.size));
+            body.shape = std::make_unique<btBoxShape>(
+                glm2btVector3(rigidBody.getBoxHalfExtents()));
             break;
         }
 
@@ -226,3 +229,5 @@ void PhysicsWorld::clearModelPhysics(Model &model)
 }
 
 } // namespace glmmd
+
+#endif

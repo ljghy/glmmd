@@ -1,6 +1,8 @@
 #ifndef GLMMD_CORE_PHYSICS_WORLD_H_
 #define GLMMD_CORE_PHYSICS_WORLD_H_
 
+#ifndef GLMMD_DONT_USE_BULLET
+
 #include <memory>
 
 #include <glmmd/core/Model.h>
@@ -41,5 +43,7 @@ private:
 };
 
 } // namespace glmmd
+
+#endif
 
 #endif

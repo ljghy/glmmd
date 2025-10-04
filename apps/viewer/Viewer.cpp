@@ -959,6 +959,8 @@ void Viewer::controlPanel()
         if (ImGui::SliderFloat("FOV", &fov, 1.f, 120.f))
             m_camera.fov = glm::radians(fov);
 
+        ImGui::InputFloat("Distance", &m_camera.distance);
+
         ImGui::InputFloat("Near", &m_camera.zNear);
         ImGui::InputFloat("Far", &m_camera.zFar);
 
@@ -1135,7 +1137,7 @@ void Viewer::run()
             if (ImGui::IsWindowFocused())
                 handleInput(deltaTime);
 
-            if (!m_state.paused || m_state.lockCamera)
+            if (!m_state.paused && m_state.lockCamera)
                 updateCameraMotion();
 
             m_camera.update();

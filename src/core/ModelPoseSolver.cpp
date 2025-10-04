@@ -121,6 +121,7 @@ void ModelPoseSolver::solveAfterPhysics(ModelPose &pose) const
     }
 }
 
+#ifndef GLMMD_DONT_USE_BULLET
 static btTransform glm2bt(const Transform &t)
 {
     btTransform transform;
@@ -140,35 +141,41 @@ static Transform bt2glm(const btTransform &t)
                         .rotation    = glm::quat(q.w(), q.x(), q.y(), q.z())};
     return transform;
 }
+#endif
 
 void ModelPoseSolver::syncStaticRigidBodyTransforms(const ModelPose     &pose,
                                                     const RigidBodyData &rb,
                                                     int32_t bi) const
 {
+#ifndef GLMMD_DONT_USE_BULLET
     Transform t = rb.offset;
     t.translation -= m_modelData->bones[bi].position;
     t *= pose.m_globalBoneTransforms[bi];
     rb.motionState->setWorldTransform(glm2bt(t));
+#endif
 }
 
 void ModelPoseSolver::syncDynamicRigidBodyTransforms(ModelPose           &pose,
                                                      const RigidBodyData &rb,
                                                      int32_t bi) const
 {
+#ifndef GLMMD_DONT_USE_BULLET
     btTransform transform;
     rb.motionState->getWorldTransform(transform);
     Transform t = rb.offset;
     t.translation -= m_modelData->bones[bi].position;
     pose.m_globalBoneTransforms[bi] = t.inverse() * bt2glm(transform);
 
-    // for (auto k : m_boneChildren[bi])
-    //     solveChildGlobalBoneTransforms(pose, k);
+// for (auto k : m_boneChildren[bi])
+//     solveChildGlobalBoneTransforms(pose, k);
+#endif
 }
 
 void ModelPoseSolver::syncMixedRigidBodyTransforms(ModelPose           &pose,
                                                    const RigidBodyData &rb,
                                                    int32_t bi) const
 {
+#ifndef GLMMD_DONT_USE_BULLET
     btTransform transform;
     rb.motionState->getWorldTransform(transform);
 
@@ -184,8 +191,9 @@ void ModelPoseSolver::syncMixedRigidBodyTransforms(ModelPose           &pose,
     transform.setOrigin(btVector3(translation.x, translation.y, translation.z));
     rb.motionState->setWorldTransform(transform);
 
-    // for (auto k : m_boneChildren[bi])
-    //     solveChildGlobalBoneTransforms(pose, k);
+// for (auto k : m_boneChildren[bi])
+//     solveChildGlobalBoneTransforms(pose, k);
+#endif
 }
 
 void ModelPoseSolver::syncWithPhysics(ModelPose    &pose,

@@ -372,6 +372,13 @@ struct RigidBody
     float friction;
 
     PhysicsCalcType physicsCalcType;
+
+    float getSphereRadius() const { return size.x; }
+
+    float getCapsuleRadius() const { return size.x; }
+    float getCapsuleHeight() const { return size.y; }
+
+    glm::vec3 getBoxHalfExtents() const { return size; }
 };
 
 enum class JointType : uint8_t

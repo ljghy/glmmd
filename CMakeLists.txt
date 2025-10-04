@@ -21,6 +21,7 @@ project(
 
 option(GLMMD_DONT_PARALLELIZE "Do not parallelize" OFF)
 option(GLMMD_BUILD_APPS "Build glmmd apps" ${GLMMD_IS_TOPLEVEL})
+option(GLMMD_USE_BULLET "Use Bullet physics engine" ON)
 option(GLMMD_USE_ICU "Use libicu" OFF)
 
 add_subdirectory(glm)
