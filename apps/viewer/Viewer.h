@@ -76,8 +76,6 @@ private:
     std::filesystem::path m_executableDir;
     JsonNode              m_initData;
 
-    float m_uiScale;
-
     GLFWwindow *m_window;
 
     int m_viewportWidth;

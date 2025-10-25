@@ -184,6 +184,9 @@ void Viewer::initImGui()
     io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
     io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;
 
+    io.ConfigFlags |= ImGuiConfigFlags_DpiEnableScaleFonts;
+    io.ConfigFlags |= ImGuiConfigFlags_DpiEnableScaleViewports;
+
     ImGui::StyleColorsClassic();
 
     ImGuiStyle &style = ImGui::GetStyle();
@@ -202,20 +205,6 @@ void Viewer::initImGui()
     ImGui_ImplGlfw_InitForOpenGL(m_window, true);
     ImGui_ImplOpenGL3_Init(glsl_version);
 
-    if (m_initData.contains("UIScale") &&
-        m_initData.get<float>("UIScale") > 0.f)
-    {
-        m_uiScale = m_initData.get<float>("UIScale");
-    }
-    else
-    {
-        float xScale, yScale;
-        glfwGetWindowContentScale(m_window, &xScale, &yScale);
-        m_uiScale = std::max(xScale, yScale);
-    }
-
-    style.ScaleAllSizes(m_uiScale);
-
     std::filesystem::path defaultFontPath =
         m_executableDir / "font" / "NotoSansCJK-Bold.ttc";
     std::ifstream fontFile(defaultFontPath, std::ios::binary);
@@ -228,18 +217,12 @@ void Viewer::initImGui()
         std::vector<char> fontData(std::istreambuf_iterator<char>(fontFile),
                                    std::istreambuf_iterator<char>{});
 
-        static ImFontGlyphRangesBuilder range;
-        range.AddRanges(io.Fonts->GetGlyphRangesJapanese());
-        range.AddRanges(io.Fonts->GetGlyphRangesChineseFull());
-        static ImVector<ImWchar> glyphRanges;
-        range.BuildRanges(&glyphRanges);
-
         ImFontConfig cfg;
         cfg.FontDataOwnedByAtlas = false;
 
         auto font = io.Fonts->AddFontFromMemoryTTF(
-            fontData.data(), static_cast<int>(fontData.size()),
-            18.f * m_uiScale, &cfg, glyphRanges.Data);
+            fontData.data(), static_cast<int>(fontData.size()), 18.f, &cfg);
+
         if (font == nullptr)
             std::cerr << "Failed to load default font.\n";
     }
@@ -518,6 +501,7 @@ void Viewer::updateModelPose(size_t i)
 
 void Viewer::menuBar()
 {
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(6.f, 6.f));
     if (ImGui::BeginMenuBar())
     {
         if (ImGui::BeginMenu("File"))
@@ -565,6 +549,7 @@ void Viewer::menuBar()
 
         ImGui::EndMenuBar();
     }
+    ImGui::PopStyleVar();
 }
 
 void Viewer::dockspace()
