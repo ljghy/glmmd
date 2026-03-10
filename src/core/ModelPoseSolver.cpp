@@ -104,7 +104,8 @@ void ModelPoseSolver::solveBeforePhysics(ModelPose &pose) const
     for (const auto &[first, last] : m_updateBeforePhysicsRanges)
     {
         solveGlobalBoneTransforms(pose, first, last);
-        solveIK(pose, first, last);
+        if (m_enableIK)
+            solveIK(pose, first, last);
         updateInheritedBoneTransforms(pose, first, last);
         solveGlobalBoneTransforms(pose, first, last);
     }
@@ -115,7 +116,8 @@ void ModelPoseSolver::solveAfterPhysics(ModelPose &pose) const
     for (const auto &[first, last] : m_updateAfterPhysicsRanges)
     {
         solveGlobalBoneTransforms(pose, first, last);
-        solveIK(pose, first, last);
+        if (m_enableIK)
+            solveIK(pose, first, last);
         updateInheritedBoneTransforms(pose, first, last);
         solveGlobalBoneTransforms(pose, first, last);
     }

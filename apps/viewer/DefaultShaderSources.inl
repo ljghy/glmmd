@@ -121,7 +121,7 @@ void main() {
         vec3 t = normalize(cross(vec3(0.0, 1.0, 0.0), viewDir));
         vec3 b = cross(viewDir, t);
         vec2 spUV = vec2(dot(norm, t), -dot(norm, b));
-        spUV = 0.5 + 0.5 * spUV;
+        spUV = 0.5 + 0.495 * spUV;
         vec4 spColor = texture(u_mat.sphereTexture, spUV);
         spColor = applyMul(spColor, u_mat.sphereTextureMul);
         spColor = applyAdd(spColor, u_mat.sphereTextureAdd);

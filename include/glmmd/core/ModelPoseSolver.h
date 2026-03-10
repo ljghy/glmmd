@@ -25,6 +25,9 @@ public:
     void syncWithPhysics(ModelPose &pose, ModelPhysics &physics) const;
     void solveAfterPhysics(ModelPose &pose) const;
 
+    void enableIK(bool enable) { m_enableIK = enable; }
+    bool isIKEnabled() const { return m_enableIK; }
+
 private:
     void sortBoneDeformOrder();
 
@@ -56,6 +59,8 @@ private:
 
     std::vector<std::vector<uint32_t>> m_boneChildren;
     std::vector<uint32_t>              m_boneDeformOrder;
+
+    bool m_enableIK = true;
 };
 
 } // namespace glmmd

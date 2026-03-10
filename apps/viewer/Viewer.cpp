@@ -129,12 +129,9 @@ void Viewer::initCamera()
 void Viewer::initMainLight()
 {
     m_mainDirectionalLight.direction =
-        glm::normalize(glm::vec3(-1.f, -2.f, 1.f));
+        glm::normalize(glm::vec3(-0.5f, -1.5f, 1.f));
     m_mainDirectionalLight.color        = glm::vec3(0.6f);
     m_mainDirectionalLight.ambientColor = glm::vec3(1.f);
-
-    m_mainDirectionalLight.direction =
-        glm::normalize(glm::vec3(-1.f, -2.f, 1.f));
 }
 
 void Viewer::initWindow()
@@ -214,14 +211,13 @@ void Viewer::initImGui()
     }
     else
     {
-        std::vector<char> fontData(std::istreambuf_iterator<char>(fontFile),
-                                   std::istreambuf_iterator<char>{});
-
+        m_fontData.assign(std::istreambuf_iterator<char>(fontFile),
+                          std::istreambuf_iterator<char>{});
         ImFontConfig cfg;
         cfg.FontDataOwnedByAtlas = false;
 
         auto font = io.Fonts->AddFontFromMemoryTTF(
-            fontData.data(), static_cast<int>(fontData.size()), 18.f, &cfg);
+            m_fontData.data(), static_cast<int>(m_fontData.size()), 18.f, &cfg);
 
         if (font == nullptr)
             std::cerr << "Failed to load default font.\n";
@@ -372,7 +368,7 @@ void Viewer::loadMotion(const std::filesystem::path &path, size_t modelIndex,
             return;
         }
         auto clip = std::make_shared<glmmd::FixedMotionClip>(
-            vmdData->toFixedMotionClip(m_models[modelIndex]->data(), loop));
+            vmdData->toFixedMotionClip(*m_models[modelIndex]->data, loop));
 
         std::string label(filename.begin(), filename.end());
         m_motions[modelIndex]->addMotion(label, clip);
@@ -408,7 +404,7 @@ void Viewer::loadPose(const std::filesystem::path &path, size_t modelIndex)
     if (!vpdData)
         return;
 
-    auto pose = vpdData->toModelPose(m_models[modelIndex]->dataPtr());
+    auto pose = vpdData->toModelPose(m_models[modelIndex]->data);
 
     auto        filename = path.filename().u8string();
     std::string label(filename.begin(), filename.end());
@@ -494,8 +490,8 @@ void Viewer::handleInput(float deltaTime)
 void Viewer::updateModelPose(size_t i)
 {
     auto &model = m_models[i];
-    model->resetLocalPose();
-    m_motions[i]->getLocalPose(m_state.progress, model->pose());
+    model->pose.resetLocal();
+    m_motions[i]->getLocalPose(m_state.progress, model->pose);
     model->solvePose();
 }
 
@@ -664,7 +660,7 @@ void Viewer::updateModels()
                                auto i = &model - m_models.data();
                                updateModelPose(i);
                                m_modelRenderers[i]->renderData().init();
-                               m_models[i]->pose().applyToRenderData(
+                               m_models[i]->pose.applyToRenderData(
                                    m_modelRenderers[i]->renderData());
                            });
 }
@@ -830,7 +826,7 @@ void Viewer::modelList()
         for (int i = 0; i < static_cast<int>(m_models.size()); ++i)
         {
             ImGui::PushID(i);
-            if (ImGui::Selectable(m_models[i]->data().info.modelName.c_str(),
+            if (ImGui::Selectable(m_models[i]->data->info.modelName.c_str(),
                                   m_state.selectedModelIndex == i))
                 m_state.selectedModelIndex = i;
             ImGui::PopID();
@@ -888,6 +884,14 @@ void Viewer::modelList()
             else
                 m_modelRenderers[m_state.selectedModelIndex]->renderFlag() &=
                     ~MODEL_RENDER_FLAG_HIDE;
+        }
+
+        bool isIKEnabled =
+            m_models[m_state.selectedModelIndex]->poseSolver.isIKEnabled();
+        if (ImGui::Checkbox("Enable IK", &isIKEnabled))
+        {
+            m_models[m_state.selectedModelIndex]->poseSolver.enableIK(
+                isIKEnabled);
         }
 
         const auto &motion = m_motions[m_state.selectedModelIndex];
@@ -1032,10 +1036,8 @@ void Viewer::controlPanel()
 
         ImGui::Checkbox("Wireframe", &m_state.wireframe);
 
-        if (ImGui::SliderFloat3("Light direction",
-                                &m_mainDirectionalLight.direction.x, -1.f, 1.f))
-            m_mainDirectionalLight.direction =
-                glm::normalize(m_mainDirectionalLight.direction);
+        ImGui::SliderFloat3("Light direction",
+                            &m_mainDirectionalLight.direction.x, -1.f, 1.f);
 
         ImGui::ColorEdit3("Light color", &m_mainDirectionalLight.color.x);
 

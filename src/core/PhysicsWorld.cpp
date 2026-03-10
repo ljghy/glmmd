@@ -84,11 +84,11 @@ void PhysicsWorld::setupModelPhysics(Model &model, bool applyCurrentTransforms)
 void PhysicsWorld::setupModelRigidBodies(Model &model,
                                          bool   applyCurrentTransforms)
 {
-    model.physics().rigidBodies.clear();
-    model.physics().rigidBodies.reserve(model.data().rigidBodies.size());
-    for (const auto &rigidBody : model.data().rigidBodies)
+    model.physics.rigidBodies.clear();
+    model.physics.rigidBodies.reserve(model.data->rigidBodies.size());
+    for (const auto &rigidBody : model.data->rigidBodies)
     {
-        auto &body = model.physics().rigidBodies.emplace_back();
+        auto &body = model.physics.rigidBodies.emplace_back();
 
         switch (rigidBody.shape)
         {
@@ -132,8 +132,8 @@ void PhysicsWorld::setupModelRigidBodies(Model &model,
             int32_t j = rigidBody.boneIndex;
 
             Transform t = body.offset;
-            t.translation -= model.data().bones[j].position;
-            t *= model.pose().getGlobalBoneTransform(j);
+            t.translation -= model.data->bones[j].position;
+            t *= model.pose.getGlobalBoneTransform(j);
 
             body.motionState =
                 std::make_unique<btDefaultMotionState>(glm2btTransform(t));
@@ -171,21 +171,21 @@ void PhysicsWorld::setupModelRigidBodies(Model &model,
 
 void PhysicsWorld::setupModelJoints(Model &model)
 {
-    model.physics().joints.clear();
-    model.physics().joints.reserve(model.data().joints.size());
-    for (const auto &joint : model.data().joints)
+    model.physics.joints.clear();
+    model.physics.joints.reserve(model.data->joints.size());
+    for (const auto &joint : model.data->joints)
     {
         if (joint.rigidBodyIndexA < 0 || joint.rigidBodyIndexB < 0 ||
             joint.rigidBodyIndexA == joint.rigidBodyIndexB)
             continue;
 
-        const auto &a = model.physics().rigidBodies[joint.rigidBodyIndexA];
-        const auto &b = model.physics().rigidBodies[joint.rigidBodyIndexB];
+        const auto &a = model.physics.rigidBodies[joint.rigidBodyIndexA];
+        const auto &b = model.physics.rigidBodies[joint.rigidBodyIndexB];
 
         if (a.rigidBody->getMass() == 0.f && b.rigidBody->getMass() == 0.f)
             continue;
 
-        auto &constraint = model.physics().joints.emplace_back();
+        auto &constraint = model.physics.joints.emplace_back();
 
         btTransform transform;
         transform.setOrigin(glm2btVector3(joint.position));
@@ -219,13 +219,13 @@ void PhysicsWorld::setupModelJoints(Model &model)
 
 void PhysicsWorld::clearModelPhysics(Model &model)
 {
-    for (const auto &j : model.physics().joints)
+    for (const auto &j : model.physics.joints)
         m_world->removeConstraint(j.get());
-    model.physics().joints.clear();
+    model.physics.joints.clear();
 
-    for (const auto &r : model.physics().rigidBodies)
+    for (const auto &r : model.physics.rigidBodies)
         m_world->removeRigidBody(r.rigidBody.get());
-    model.physics().rigidBodies.clear();
+    model.physics.rigidBodies.clear();
 }
 
 } // namespace glmmd

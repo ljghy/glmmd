@@ -76,6 +76,8 @@ private:
     std::filesystem::path m_executableDir;
     JsonNode              m_initData;
 
+    std::vector<char> m_fontData;
+
     GLFWwindow *m_window;
 
     int m_viewportWidth;
