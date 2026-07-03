@@ -63,12 +63,6 @@ struct Vertex
     float edgeScale;
 };
 
-struct Texture
-{
-    std::string           rawPath;
-    std::filesystem::path path;
-};
-
 struct Material
 {
     std::string name;
@@ -413,12 +407,14 @@ using AdditionalUV = std::array<glm::vec4, 4>;
 
 struct ModelData
 {
+    std::filesystem::path baseDir;
+
     ModelInfo info;
 
     std::vector<Vertex>       vertices;
     std::vector<AdditionalUV> additionalUVs;
     std::vector<uint32_t>     indices;
-    std::vector<Texture>      textures;
+    std::vector<std::string>  texturePaths;
     std::vector<Material>     materials;
     std::vector<IKData>       ikData;
     std::vector<Bone>         bones;
@@ -426,8 +422,6 @@ struct ModelData
     std::vector<DisplayFrame> displayFrames;
     std::vector<RigidBody>    rigidBodies;
     std::vector<Joint>        joints;
-
-    void validateIndexByteSizes();
 };
 
 } // namespace glmmd

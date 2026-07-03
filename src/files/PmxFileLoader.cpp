@@ -16,9 +16,9 @@ std::shared_ptr<ModelData> PmxFileLoader::load(
         throw std::runtime_error("Failed to open file \"" + path.string() +
                                  "\".");
 
-    m_modelDir = path.parent_path();
-
     auto data = std::make_shared<ModelData>();
+
+    data->baseDir = path.parent_path();
 
     loadInfo(*data);
     loadVertices(*data);
@@ -151,25 +151,16 @@ void PmxFileLoader::loadTextures(ModelData &data)
 {
     int32_t count;
     readInt(count);
-    data.textures.resize(count);
+    data.texturePaths.resize(count);
 
-    for (auto &texture : data.textures)
+    for (auto &path : data.texturePaths)
     {
-        readTextBuffer(texture.rawPath);
-
-        std::string u8path =
-            data.info.encodingMethod == EncodingMethod::UTF16_LE
-                ? codeCvt<UTF16_LE, UTF8>(texture.rawPath)
-                : texture.rawPath;
-
-        texture.rawPath = u8path;
-
+        readTextBuffer(path);
+        if (data.info.encodingMethod == EncodingMethod::UTF16_LE)
+            path = codeCvt<UTF16_LE, UTF8>(path);
 #ifndef _WIN32
-        std::replace(u8path.begin(), u8path.end(), '\\', '/');
+        std::replace(path.begin(), path.end(), '\\', '/');
 #endif
-        texture.path = std::u8string(u8path.begin(), u8path.end());
-
-        texture.path = m_modelDir / texture.path.make_preferred();
     }
 }
 

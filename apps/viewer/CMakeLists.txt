@@ -16,7 +16,7 @@ target_sources(
             ${CMAKE_CURRENT_SOURCE_DIR}/main.cpp)
 
 target_link_libraries(
-    viewer PRIVATE glmmd::glmmd imgui ImGuiFileDialog stb::stb glfw
+    viewer PRIVATE glmmd::glmmd imgui ImGuiFileDialog stbi::stbi glfw
                    opengl_framework::opengl_framework)
 
 target_compile_features(viewer PRIVATE cxx_std_20)

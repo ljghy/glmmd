@@ -27,7 +27,7 @@ endif()
 FetchContent_Declare(
     imgui
     GIT_REPOSITORY https://github.com/ocornut/imgui.git
-    GIT_TAG v1.92.6-docking)
+    GIT_TAG v1.92.8-docking)
 FetchContent_MakeAvailable(imgui)
 
 add_library(imgui STATIC)
@@ -48,6 +48,6 @@ target_include_directories(imgui PUBLIC ${imgui_SOURCE_DIR}
 target_link_libraries(imgui PUBLIC glfw)
 
 add_subdirectory(ImGuiFileDialog)
-add_subdirectory(stb)
+add_subdirectory(stbi)
 add_subdirectory(opengl_framework)
 add_subdirectory(viewer)

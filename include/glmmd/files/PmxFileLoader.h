@@ -131,8 +131,7 @@ private:
     }
 
 private:
-    std::ifstream         m_fin;
-    std::filesystem::path m_modelDir;
+    std::ifstream m_fin;
 };
 
 inline std::shared_ptr<ModelData> loadPmxFile(const std::filesystem::path &path)

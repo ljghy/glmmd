@@ -108,10 +108,8 @@ void dumpObjFile(const std::filesystem::path &path, const ModelData &modelData,
                 << '\n';
 
         if (mat.textureIndex != -1)
-        {
-            const auto &tex = modelData.textures[mat.textureIndex];
-            mtlFile << "map_Kd " << tex.rawPath << '\n';
-        }
+            mtlFile << "map_Kd " << modelData.texturePaths[mat.textureIndex]
+                    << '\n';
 
         mtlFile << '\n';
     }

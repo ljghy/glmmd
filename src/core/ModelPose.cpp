@@ -245,8 +245,8 @@ void ModelPose::applyBoneTransformsToRenderData(
 
                 auto r = 0.5f * (vert.sdefR0 - vert.sdefR1);
 
-                pos = q * (pos - c) + (dq0 * (c + w1 * r)) * w0 +
-                      (dq1 * (c - w0 * r)) * w1;
+                pos  = q * (pos - c) + (dq0 * (c + w1 * r)) * w0 +
+                       (dq1 * (c - w0 * r)) * w1;
                 norm = q * norm;
             }
             else
@@ -308,11 +308,11 @@ void ModelPose::operator+=(const ModelPose &other)
 
 void ModelPose::operator*=(float t)
 {
-    for (size_t i = 0; i < m_localBoneTransforms.size(); ++i)
-        m_localBoneTransforms[i] *= t;
+    for (auto &m_localBoneTransform : m_localBoneTransforms)
+        m_localBoneTransform *= t;
 
-    for (size_t i = 0; i < m_morphRatios.size(); ++i)
-        m_morphRatios[i] *= t;
+    for (auto &m_morphRatio : m_morphRatios)
+        m_morphRatio *= t;
 }
 
 } // namespace glmmd

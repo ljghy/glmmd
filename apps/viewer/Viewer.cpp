@@ -129,7 +129,7 @@ void Viewer::initCamera()
 void Viewer::initMainLight()
 {
     m_mainDirectionalLight.direction =
-        glm::normalize(glm::vec3(-0.5f, -1.5f, 1.f));
+        glm::normalize(glm::vec3(-0.5f, -1.f, 1.f));
     m_mainDirectionalLight.color        = glm::vec3(0.6f);
     m_mainDirectionalLight.ambientColor = glm::vec3(1.f);
 }
@@ -424,19 +424,19 @@ void Viewer::loadResources()
     if (m_initData.contains("models"))
     {
         for (const auto &modelNode : m_initData["models"].arr())
-            loadModel(modelNode.get<std::filesystem::path>("filename"));
+            loadModel(modelNode.get<std::filesystem::path>("path"));
         if (!m_models.empty())
             m_state.selectedModelIndex = 0;
     }
 
     if (m_initData.contains("motions"))
         for (const auto &motionNode : m_initData["motions"].arr())
-            loadMotion(motionNode.get<std::filesystem::path>("filename"),
+            loadMotion(motionNode.get<std::filesystem::path>("path"),
                        motionNode.get<size_t>("model"), motionNode);
 
     if (m_initData.contains("poses"))
         for (const auto &poseNode : m_initData["poses"].arr())
-            loadPose(poseNode.get<std::filesystem::path>("filename"),
+            loadPose(poseNode.get<std::filesystem::path>("path"),
                      poseNode.get<size_t>("model"));
 }
 
@@ -444,7 +444,9 @@ void Viewer::handleInput(float deltaTime)
 {
     auto &io = ImGui::GetIO();
 
-    ImVec2          mouseDelta  = io.MouseDelta;
+    ImVec2 mouseDelta = io.MouseDelta;
+    mouseDelta.x      = -mouseDelta.x;
+
     constexpr float sensitivity = glm::radians(0.1f);
 
     if (io.MouseDown[1])
@@ -1143,7 +1145,7 @@ void Viewer::run()
             ImGui::Image(m_intermediateFBO.colorTextureAttachment()->id(),
                          ImVec2(static_cast<float>(m_viewportWidth),
                                 static_cast<float>(m_viewportHeight)),
-                         ImVec2(0, 1), ImVec2(1, 0));
+                         ImVec2(1, 1), ImVec2(0, 0));
             ImGui::End();
             ImGui::PopStyleVar();
         }

@@ -6,8 +6,7 @@
 
 #include "DefaultShaderSources.inl"
 #include "ModelRenderer.h"
-#include "PathConv.h"
-#include "SharedToonTextures.inl"
+#include <glmmd/core/SharedToonTextures.h>
 
 std::mutex sharedToonTexturesInitMutex;
 
@@ -31,7 +30,7 @@ ModelRenderer::ModelRenderer(
     , m_renderData(data)
 {
     initBuffers();
-    m_textures.resize(m_modelData->textures.size());
+    m_textures.resize(m_modelData->texturePaths.size());
     initTextures();
     initSharedToonTextures();
     initShaders(shaderSources);
@@ -62,14 +61,18 @@ void ModelRenderer::initBuffers()
 
 void ModelRenderer::initTextures()
 {
-    for (size_t i = 0; i < m_modelData->textures.size(); ++i)
+    for (size_t i = 0; i < m_modelData->texturePaths.size(); ++i)
     {
-        std::ifstream fin(m_modelData->textures[i].path, std::ios::binary);
+        const auto &relPath = m_modelData->texturePaths[i];
+
+        std::filesystem::path path =
+            m_modelData->baseDir /
+            std::u8string(relPath.begin(), relPath.end());
+
+        std::ifstream fin(path, std::ios::binary);
         if (!fin)
         {
-            std::cout << "Failed to load texture: "
-                      << pathToU8string(m_modelData->textures[i].path)
-                      << std::endl;
+            std::cout << "Failed to load texture: " << relPath << std::endl;
             continue;
         }
         std::vector<stbi_uc> buffer(std::istreambuf_iterator<char>{fin},
@@ -83,9 +86,7 @@ void ModelRenderer::initTextures()
 
         if (!data)
         {
-            std::cout << "Failed to load texture: "
-                      << pathToU8string(m_modelData->textures[i].path)
-                      << std::endl;
+            std::cout << "Failed to load texture: " << relPath << std::endl;
             continue;
         }
 
@@ -118,8 +119,7 @@ void ModelRenderer::initSharedToonTextures()
             ogl::Texture2DCreateInfo info;
             info.width  = 32;
             info.height = 32;
-            info.data   = reinterpret_cast<unsigned char *>(
-                sharedToonTextureData[i].data());
+            info.data = const_cast<uint8_t *>(glmmd::sharedToonTextureData[i]);
             info.genMipmaps  = false;
             info.internalFmt = GL_SRGB;
             info.dataFmt     = GL_RGB;
