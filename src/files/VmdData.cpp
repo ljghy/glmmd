@@ -1,6 +1,7 @@
 #include <algorithm>
 #include <unordered_map>
 #include <unordered_set>
+#include <utility>
 #include <vector>
 
 #include <glm/gtx/euler_angles.hpp>
@@ -9,6 +10,32 @@
 #include <glmmd/files/VmdData.h>
 
 namespace glmmd {
+
+namespace {
+
+template <typename Frame>
+void sortAndDeduplicateFrames(std::vector<Frame> &frames) {
+  std::stable_sort(frames.begin(), frames.end(),
+                   [](const Frame &a, const Frame &b) {
+                     return a.frameNumber < b.frameNumber;
+                   });
+
+  // Preserve the old map's last-entry-wins behavior for duplicate frames.
+  size_t output = 0;
+  for (size_t first = 0; first < frames.size();) {
+    size_t last = first + 1;
+    while (last < frames.size() &&
+           frames[last].frameNumber == frames[first].frameNumber)
+      ++last;
+    if (output != last - 1)
+      frames[output] = std::move(frames[last - 1]);
+    ++output;
+    first = last;
+  }
+  frames.resize(output);
+}
+
+} // namespace
 
 MotionClip VmdData::toMotionClip(const ModelData &modelData, bool loop,
                                  float frameRate) const {
@@ -50,11 +77,7 @@ MotionClip VmdData::toMotionClip(const ModelData &modelData, bool loop,
   clip.boneFrames.reserve(boneFrames.size());
   for (size_t i = 0; i < boneBuckets.size(); ++i) {
     auto &bucket = boneBuckets[i];
-    std::stable_sort(bucket.begin(), bucket.end(),
-                     [](const MotionClip::BoneKeyFrame &a,
-                        const MotionClip::BoneKeyFrame &b) {
-                       return a.frameNumber < b.frameNumber;
-                     });
+    sortAndDeduplicateFrames(bucket);
     auto first = static_cast<uint32_t>(clip.boneFrames.size());
     clip.boneFrames.insert(clip.boneFrames.end(), bucket.begin(), bucket.end());
     auto last = static_cast<uint32_t>(clip.boneFrames.size());
@@ -83,11 +106,7 @@ MotionClip VmdData::toMotionClip(const ModelData &modelData, bool loop,
   clip.morphFrames.reserve(morphFrames.size());
   for (size_t i = 0; i < morphBuckets.size(); ++i) {
     auto &bucket = morphBuckets[i];
-    std::stable_sort(bucket.begin(), bucket.end(),
-                     [](const MotionClip::MorphKeyFrame &a,
-                        const MotionClip::MorphKeyFrame &b) {
-                       return a.frameNumber < b.frameNumber;
-                     });
+    sortAndDeduplicateFrames(bucket);
     auto first = static_cast<uint32_t>(clip.morphFrames.size());
     clip.morphFrames.insert(clip.morphFrames.end(), bucket.begin(),
                             bucket.end());

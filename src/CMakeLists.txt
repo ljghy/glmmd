@@ -3,6 +3,9 @@ add_library(glmmd_config INTERFACE)
 target_compile_features(glmmd_config INTERFACE cxx_std_20)
 
 set(glmmd_compile_definitions GLM_FORCE_RADIANS GLM_ENABLE_EXPERIMENTAL)
+set(GLMMD_USE_TBB
+    FALSE
+    CACHE INTERNAL "glmmd requires oneTBB for parallel execution")
 
 if(GLMMD_DONT_PARALLELIZE)
     list(APPEND glmmd_compile_definitions GLMMD_DONT_PARALLELIZE)
@@ -25,6 +28,9 @@ target_compile_definitions(glmmd_config INTERFACE ${glmmd_compile_definitions})
 
 add_subdirectory(core)
 add_subdirectory(files)
+
+set_target_properties(glmmd_core PROPERTIES EXPORT_NAME core)
+set_target_properties(glmmd_files PROPERTIES EXPORT_NAME files)
 
 add_library(glmmd INTERFACE)
 add_library(glmmd::glmmd ALIAS glmmd)
