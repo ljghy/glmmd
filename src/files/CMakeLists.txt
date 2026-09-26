@@ -2,7 +2,9 @@ file(GLOB GLMMD_FILES_SOURCES *.cpp)
 add_library(glmmd_files ${GLMMD_FILES_SOURCES})
 add_library(glmmd::files ALIAS glmmd_files)
 
-target_include_directories(glmmd_files PUBLIC "${PROJECT_SOURCE_DIR}/include")
+target_include_directories(
+    glmmd_files PUBLIC $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>
+                       $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>)
 
 target_link_libraries(glmmd_files PUBLIC glmmd::core)
 

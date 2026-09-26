@@ -1,47 +1,46 @@
 #ifndef GLMMD_CORE_CAMERA_MOTION_H_
 #define GLMMD_CORE_CAMERA_MOTION_H_
 
-#include <map>
-#include <vector>
-
 #include <glmmd/core/Camera.h>
 #include <glmmd/core/InterpolationCurve.h>
 
-namespace glmmd
-{
+#include <cstdint>
+#include <vector>
 
-struct CameraMotion
-{
-    struct CameraKeyFrame
-    {
-        float     distance;
-        glm::vec3 target;
-        glm::quat rotation;
+namespace glmmd {
 
-        float fov; // rad
-        bool  perspective;
+struct CameraMotion {
+  struct CameraKeyFrame {
+    uint32_t frameNumber;
 
-        InterpolationCurvePoints distanceCurve;
-        InterpolationCurvePoints targetXCurve;
-        InterpolationCurvePoints targetYCurve;
-        InterpolationCurvePoints targetZCurve;
-        InterpolationCurvePoints rotationCurve;
-        InterpolationCurvePoints fovCurve;
-    };
+    float distance;
+    glm::vec3 target;
+    glm::quat rotation;
 
-    CameraMotion(bool loop = false, float frameRate = 30.f);
+    float fov; // rad
+    bool perspective;
 
-    float duration() const { return frameCount / frameRate; }
+    InterpolationCurveNodes distanceCurve;
+    InterpolationCurveNodes targetXCurve;
+    InterpolationCurveNodes targetYCurve;
+    InterpolationCurveNodes targetZCurve;
+    InterpolationCurveNodes rotationCurve;
+    InterpolationCurveNodes fovCurve;
+  };
 
-    void updateCamera(float time, Camera &camera) const;
+  CameraMotion(bool loop = false, float frameRate = 30.f);
 
-    bool  loop;
-    float frameRate;
+  float duration() const { return frameCount / frameRate; }
 
-    uint32_t frameCount;
+  void updateCamera(float time, Camera &camera) const;
 
-    std::map<uint32_t, uint32_t> frameIndex;
-    std::vector<CameraKeyFrame>  keyFrames;
+  bool loop;
+  float frameRate;
+
+  uint32_t frameCount;
+
+  // Keyframes sorted by frame number; updateCamera binary-searches this.
+  std::vector<CameraKeyFrame> keyFrames;
 };
 
 } // namespace glmmd

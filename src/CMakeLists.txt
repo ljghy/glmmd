@@ -15,7 +15,9 @@ else()
     if(GLMMD_IS_LIBCXX)
         target_compile_options(glmmd_config INTERFACE -fexperimental-library)
     elseif(GLMMD_IS_LIBSTDCXX)
-        set(GLMMD_USE_TBB TRUE)
+        set(GLMMD_USE_TBB
+            TRUE
+            CACHE INTERNAL "glmmd requires oneTBB for parallel execution")
     endif()
 endif()
 

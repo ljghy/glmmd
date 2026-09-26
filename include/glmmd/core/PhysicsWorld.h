@@ -1,49 +1,46 @@
 #ifndef GLMMD_CORE_PHYSICS_WORLD_H_
 #define GLMMD_CORE_PHYSICS_WORLD_H_
 
-#ifndef GLMMD_DONT_USE_BULLET
+#include <glmmd/core/Model.h>
+
+#include <glm/glm.hpp>
 
 #include <memory>
 
-#include <glmmd/core/Model.h>
+namespace glmmd {
 
-namespace glmmd
-{
+class PhysicsWorldImpl;
 
-class PhysicsWorld
-{
+// A dynamics world that simulates one or more models' rigid bodies and joints.
+// The Bullet backend is hidden behind an opaque implementation pointer so this
+// header stays free of Bullet includes.
+class PhysicsWorld {
 public:
-    PhysicsWorld();
+  PhysicsWorld();
+  ~PhysicsWorld();
 
-    void setupModelPhysics(Model &model, bool applyCurrentTransforms = false);
+  PhysicsWorld(PhysicsWorld &&) noexcept;
+  PhysicsWorld &operator=(PhysicsWorld &&) noexcept;
 
-    void clearModelPhysics(Model &model);
+  PhysicsWorld(const PhysicsWorld &) = delete;
+  PhysicsWorld &operator=(const PhysicsWorld &) = delete;
 
-    void update(float deltaTime, int maxSubSteps = 10,
-                float fixedDeltaTime = 1.f / 60.f);
+  void setupModelPhysics(Model &model, bool applyCurrentTransforms = false);
 
-    void setGravity(const glm::vec3 &gravity);
+  void clearModelPhysics(Model &model);
+
+  void update(float deltaTime, int maxSubSteps = 10,
+              float fixedDeltaTime = 1.f / 60.f);
+
+  void setGravity(const glm::vec3 &gravity);
 
 private:
-    void setupModelRigidBodies(Model &model, bool applyCurrentTransforms);
-    void setupModelJoints(Model &model);
+  void setupModelRigidBodies(Model &model, bool applyCurrentTransforms);
+  void setupModelJoints(Model &model);
 
-private:
-    std::unique_ptr<btDefaultCollisionConfiguration>     m_collisionConfig;
-    std::unique_ptr<btCollisionDispatcher>               m_dispatcher;
-    std::unique_ptr<btBroadphaseInterface>               m_broadphase;
-    std::unique_ptr<btSequentialImpulseConstraintSolver> m_solver;
-    std::unique_ptr<btDiscreteDynamicsWorld>             m_world;
-
-    std::unique_ptr<btCollisionShape>     m_groundShape;
-    std::unique_ptr<btDefaultMotionState> m_groundMotionState;
-    std::unique_ptr<btRigidBody>          m_groundRigidBody;
-
-    btVector3 m_gravity;
+  std::unique_ptr<PhysicsWorldImpl> m_impl;
 };
 
 } // namespace glmmd
-
-#endif
 
 #endif

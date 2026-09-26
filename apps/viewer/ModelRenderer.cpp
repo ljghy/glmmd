@@ -27,7 +27,7 @@ ModelRenderer::ModelRenderer(
     const std::shared_ptr<const glmmd::ModelData> &data,
     const ModelRendererShaderSources              &shaderSources)
     : m_modelData(data)
-    , m_renderData(data)
+    , m_renderData(*data)
 {
     initBuffers();
     m_textures.resize(m_modelData->texturePaths.size());
@@ -280,12 +280,13 @@ void ModelRenderer::renderMesh(const glmmd::Camera           &camera,
         int32_t sphereTextureIndex =
             m_modelData->materials[i].sphereTextureIndex;
         if (sphereTextureIndex >= 0 &&
-            m_modelData->materials[i].sphereMode != 0 &&
+            m_modelData->materials[i].sphereMode != glmmd::SphereMode::None &&
             m_textures[sphereTextureIndex].id() != 0)
         {
             m_textures[sphereTextureIndex].bind(1);
-            m_shader.setUniform1i("u_mat.sphereTextureMode",
-                                  m_modelData->materials[i].sphereMode);
+            m_shader.setUniform1i(
+                "u_mat.sphereTextureMode",
+                static_cast<int>(m_modelData->materials[i].sphereMode));
             m_shader.setUniform4fv("u_mat.sphereTextureAdd",
                                    &matAdd.sphereTexture[0]);
             m_shader.setUniform4fv("u_mat.sphereTextureMul",

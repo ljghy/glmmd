@@ -1,14 +1,4 @@
 ---
 Language:      Cpp
-BasedOnStyle:  Microsoft
-AccessModifierOffset: -4
-AlignConsecutiveMacros: true
-AlignConsecutiveAssignments: true
-AlignConsecutiveBitFields: true
-AlignConsecutiveDeclarations: true
-AlwaysBreakTemplateDeclarations: true
-BreakBeforeBraces: Allman
-BreakConstructorInitializersBeforeComma: true
-AllowShortFunctionsOnASingleLine: All
-ColumnLimit:   80
+BasedOnStyle:  LLVM
 ...

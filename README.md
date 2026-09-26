@@ -8,11 +8,22 @@
 
 + OpenGL
 
++ [glm](https://github.com/g-truc/glm) (found via `find_package(glm)`)
+
 ## Build
 
-### 1. Install bullet physics
+### 1. Install dependencies
 
-#### Windows
+#### glm
+
+`glmmd` links `glm::glm` from a system-wide install (no longer vendored).
+
+Install with vcpkg (`vcpkg install glm`), your package manager
+(`sudo apt install libglm-dev` on Ubuntu), or from source.
+
+#### bullet physics
+
+##### Windows
 
 Install with vcpkg:
 
@@ -28,7 +39,7 @@ git clone https://github.com/bulletphysics/bullet3.git
 
 Then set environment variable `Bullet_ROOT` to the install directory.
 
-#### Linux (Ubuntu)
+##### Linux (Ubuntu)
 
 ```shell
 sudo apt install libbullet-dev
@@ -37,7 +48,7 @@ sudo apt install libbullet-dev
 ### 2. Build `glmmd` library and viewer
 
 ```shell
-git clone --recursive https://github.com/ljghy/glmmd.git
+git clone https://github.com/ljghy/glmmd.git
 cd glmmd
 mkdir build
 cd build

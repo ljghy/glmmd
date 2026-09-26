@@ -1,31 +1,27 @@
-#include <unordered_map>
-
 #include <glmmd/files/CodeConverter.h>
 #include <glmmd/files/VpdData.h>
 
-namespace glmmd
-{
+#include <unordered_map>
 
-ModelPose VpdData::toModelPose(
-    const std::shared_ptr<const ModelData> &modelData) const
-{
-    ModelPose pose(modelData);
+namespace glmmd {
 
-    std::unordered_map<std::string, uint32_t> boneNameToIndex;
-    for (uint32_t i = 0; i < modelData->bones.size(); ++i)
-        boneNameToIndex.emplace(modelData->bones[i].name, i);
+Pose VpdData::toPose(const ModelData &modelData) const {
+  Pose pose(modelData);
 
-    for (const auto &b : bones)
-    {
-        auto it = boneNameToIndex.find(codeCvt<ShiftJIS, UTF8>(b.name));
-        if (it == boneNameToIndex.end())
-            continue;
-        auto boneIndex = it->second;
+  std::unordered_map<std::string, uint32_t> boneNameToIndex;
+  for (uint32_t i = 0; i < modelData.bones.size(); ++i)
+    boneNameToIndex.emplace(modelData.bones[i].name, i);
 
-        pose.setLocalBoneTransform(boneIndex, {b.translation, b.rotation});
-    }
+  for (const auto &b : bones) {
+    auto it = boneNameToIndex.find(codeCvt<ShiftJIS, UTF8>(b.name));
+    if (it == boneNameToIndex.end())
+      continue;
+    auto boneIndex = it->second;
 
-    return pose;
+    pose.localBoneTransform(boneIndex) = {b.translation, b.rotation};
+  }
+
+  return pose;
 }
 
 } // namespace glmmd

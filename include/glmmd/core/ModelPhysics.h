@@ -1,45 +1,34 @@
 #ifndef GLMMD_CORE_MODEL_PHYSICS_H_
 #define GLMMD_CORE_MODEL_PHYSICS_H_
 
-#include <vector>
-
-#ifndef GLMMD_DONT_USE_BULLET
-#include <btBulletCollisionCommon.h>
-#include <btBulletDynamicsCommon.h>
 #include <memory>
-#endif
 
-#include <glmmd/core/ModelPose.h>
-#include <glmmd/core/Transform.h>
+namespace glmmd {
 
-namespace glmmd
-{
+class ModelPhysicsImpl;
 
-struct RigidBodyData
-{
-    Transform offset;
+// Opaque container for a model's physics simulation state (rigid bodies and
+// joints). The concrete representation depends on the physics backend (Bullet)
+// and is deliberately kept out of the public API so that including this header
+// does not pull in Bullet. Populated and driven by PhysicsWorld.
+class ModelPhysics {
+public:
+  ModelPhysics();
+  ~ModelPhysics();
 
-#ifndef GLMMD_DONT_USE_BULLET
-    std::unique_ptr<btCollisionShape>     shape;
-    std::unique_ptr<btDefaultMotionState> motionState;
-    std::unique_ptr<btRigidBody>          rigidBody;
-#endif
+  ModelPhysics(ModelPhysics &&) noexcept;
+  ModelPhysics &operator=(ModelPhysics &&) noexcept;
+
+  ModelPhysics(const ModelPhysics &) = delete;
+  ModelPhysics &operator=(const ModelPhysics &) = delete;
+
+private:
+  friend class PoseSolver;
+  friend class PhysicsWorld;
+
+  std::unique_ptr<ModelPhysicsImpl> m_impl;
 };
 
-#ifndef GLMMD_DONT_USE_BULLET
-using JointData = std::unique_ptr<btGeneric6DofSpringConstraint>;
-#else
-struct JointData
-{
-};
-#endif
-
-struct ModelPhysics
-{
-    std::vector<RigidBodyData> rigidBodies;
-    std::vector<JointData>     joints;
-};
-
-}; // namespace glmmd
+} // namespace glmmd
 
 #endif

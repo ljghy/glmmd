@@ -8,63 +8,56 @@
 #include <glm/glm.hpp>
 
 #include <glmmd/core/CameraMotion.h>
-#include <glmmd/core/FixedMotionClip.h>
 #include <glmmd/core/ModelData.h>
+#include <glmmd/core/MotionClip.h>
 
-namespace glmmd
-{
+namespace glmmd {
 
-struct VmdData
-{
-    FixedMotionClip toFixedMotionClip(const ModelData &modelData,
-                                      bool             loop      = false,
-                                      float            frameRate = 30.f) const;
+struct VmdData {
+  MotionClip toMotionClip(const ModelData &modelData, bool loop = false,
+                          float frameRate = 30.f) const;
 
-    CameraMotion toCameraMotion(bool  loop      = false,
-                                float frameRate = 30.f) const;
+  CameraMotion toCameraMotion(bool loop = false, float frameRate = 30.f) const;
 
-    int         version;
-    std::string modelName; // Shift-JIS
+  int version;
+  std::string modelName; // Shift-JIS
 
-    struct BoneKeyFrame
-    {
-        std::string boneName; // Shift-JIS
+  struct BoneKeyFrame {
+    std::string boneName; // Shift-JIS
 
-        uint32_t frameNumber;
+    uint32_t frameNumber;
 
-        glm::vec3 translation;
-        glm::quat rotation;
+    glm::vec3 translation;
+    glm::quat rotation;
 
-        uint8_t interpolation[64];
-    };
-    std::vector<BoneKeyFrame> boneFrames;
+    uint8_t interpolation[64];
+  };
+  std::vector<BoneKeyFrame> boneFrames;
 
-    struct MorphKeyFrame
-    {
-        std::string morphName; // Shift-JIS
+  struct MorphKeyFrame {
+    std::string morphName; // Shift-JIS
 
-        uint32_t frameNumber;
+    uint32_t frameNumber;
 
-        float ratio;
-    };
-    std::vector<MorphKeyFrame> morphFrames;
+    float weight;
+  };
+  std::vector<MorphKeyFrame> morphFrames;
 
-    struct CameraKeyFrame
-    {
-        uint32_t frameNumber;
+  struct CameraKeyFrame {
+    uint32_t frameNumber;
 
-        float     distance;
-        glm::vec3 target;
-        glm::vec3 rotation;
+    float distance;
+    glm::vec3 target;
+    glm::vec3 rotation;
 
-        uint8_t interpolation[24]; // x, y, z, rotation, distance, fov
+    uint8_t interpolation[24]; // x, y, z, rotation, distance, fov
 
-        uint32_t fov;         // deg
-        uint8_t  perspective; // 0: Perspective, 1: Orthographic
-    };
-    std::vector<CameraKeyFrame> cameraFrames;
+    uint32_t fov;        // deg
+    uint8_t perspective; // 0: Perspective, 1: Orthographic
+  };
+  std::vector<CameraKeyFrame> cameraFrames;
 
-    bool isCameraMotion() const { return !cameraFrames.empty(); }
+  bool isCameraMotion() const { return !cameraFrames.empty(); }
 };
 
 } // namespace glmmd

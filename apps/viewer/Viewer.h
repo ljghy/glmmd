@@ -13,135 +13,133 @@
 #include <glmmd/core/Model.h>
 #include <glmmd/core/PhysicsWorld.h>
 
-#include "BlendedMotion.h"
 #include "InfiniteGridRenderer.h"
 #include "JsonParser.hpp"
 #include "ModelRenderer.h"
+#include "MotionMixer.h"
 #include "Profiler.h"
 
-class Viewer
-{
-    friend void dropCallback(GLFWwindow *window, int count, const char **paths);
+class Viewer {
+  friend void dropCallback(GLFWwindow *window, int count, const char **paths);
 
 public:
-    Viewer(const std::filesystem::path &executableDir);
-    ~Viewer();
+  Viewer(const std::filesystem::path &executableDir);
+  ~Viewer();
 
-    void run();
-
-private:
-    void initWindow();
-    void initImGui();
-    void initFBO();
-    void loadResources();
-
-    bool loadModel(const std::filesystem::path &path);
-    void removeModel(size_t i);
-
-    void loadMotion(const std::filesystem::path &path, size_t modelIndex,
-                    const JsonNode &config = JsonObj_t{});
-    void loadPose(const std::filesystem::path &path, size_t modelIndex);
-
-    void updateModelPose(size_t i);
-
-    void handleInput(float deltaTime);
-
-    void initState();
-
-    void initCamera();
-    void initMainLight();
-
-    void menuBar();
-    void dockspace();
-    void loadModelDialog();
-    void loadMotionDialog();
-    void loadPoseDialog();
-    void updateModels();
-    void updateCameraMotion();
-    void updateViewportSize();
-    void render();
-    void progress();
-
-    void modelList();
-    void controlPanel();
-    void profiler();
-
-    void  play();
-    void  pause();
-    void  resetProgress();
-    float getProgress() const;
-    void  setProgress(float progress);
+  void run();
 
 private:
-    std::filesystem::path m_executableDir;
-    JsonNode              m_initData;
+  void initWindow();
+  void initImGui();
+  void initFBO();
+  void loadResources();
 
-    std::vector<char> m_fontData;
+  bool loadModel(const std::filesystem::path &path);
+  void removeModel(size_t i);
 
-    GLFWwindow *m_window;
+  void loadMotion(const std::filesystem::path &path, size_t modelIndex,
+                  const JsonNode &config = JsonObj_t{});
+  void loadPose(const std::filesystem::path &path, size_t modelIndex);
 
-    int m_viewportWidth;
-    int m_viewportHeight;
+  void updateModelPose(size_t i);
 
-    int m_shadowMapWidth;
-    int m_shadowMapHeight;
+  void handleInput(float deltaTime);
 
-    std::vector<std::unique_ptr<glmmd::Model>>  m_models;
-    std::vector<std::unique_ptr<ModelRenderer>> m_modelRenderers;
-    std::vector<std::unique_ptr<BlendedMotion>> m_motions;
+  void initState();
 
-    std::unique_ptr<glmmd::CameraMotion> m_cameraMotion;
+  void initCamera();
+  void initMainLight();
 
-    std::unique_ptr<InfiniteGridRenderer> m_gridRenderer;
+  void menuBar();
+  void dockspace();
+  void loadModelDialog();
+  void loadMotionDialog();
+  void loadPoseDialog();
+  void updateModels();
+  void updateCameraMotion();
+  void updateViewportSize();
+  void render();
+  void progress();
 
-    glmmd::Camera           m_camera;
-    glmmd::DirectionalLight m_mainDirectionalLight;
+  void modelList();
+  void controlPanel();
+  void profiler();
 
-    glmmd::PhysicsWorld m_physicsWorld;
+  void play();
+  void pause();
+  void resetProgress();
+  float getProgress() const;
+  void setProgress(float progress);
 
-    ogl::FrameBufferObject m_FBO;
-    ogl::FrameBufferObject m_intermediateFBO;
-    ogl::FrameBufferObject m_shadowMapFBO;
+private:
+  std::filesystem::path m_executableDir;
+  JsonNode m_initData;
 
-    ProfilerSet<> m_profiler;
+  std::vector<char> m_fontData;
 
-    struct State
-    {
-        bool showControlPanel;
-        bool showProfiler;
-        bool showProgress;
+  GLFWwindow *m_window;
 
-        int selectedModelIndex;
-        int selectedMotionIndex;
+  int m_viewportWidth;
+  int m_viewportHeight;
 
-        bool                                               paused;
-        std::chrono::time_point<std::chrono::steady_clock> startTime;
-        std::chrono::time_point<std::chrono::steady_clock> pauseTime;
-        float                                              progress;
+  int m_shadowMapWidth;
+  int m_shadowMapHeight;
 
-        bool physicsEnabled;
-        int  physicsFPSSelection;
-        int  physicsSubsteps;
+  std::vector<std::unique_ptr<glmmd::Model>> m_models;
+  std::vector<std::unique_ptr<ModelRenderer>> m_modelRenderers;
+  std::vector<std::unique_ptr<MotionMixer>> m_motions;
 
-        glm::vec3 gravity;
+  std::unique_ptr<glmmd::CameraMotion> m_cameraMotion;
 
-        glm::vec4 clearColor;
+  std::unique_ptr<InfiniteGridRenderer> m_gridRenderer;
 
-        bool ortho;
-        bool renderEdge;
-        bool renderShadow;
-        bool renderGroundShadow;
-        bool renderAxes;
-        bool renderGrid;
-        bool wireframe;
-        bool lockCamera;
+  glmmd::Camera m_camera;
+  glmmd::DirectionalLight m_mainDirectionalLight;
 
-        float shadowDistance;
+  glmmd::PhysicsWorld m_physicsWorld;
 
-        std::string lastModelPath;
-        std::string lastMotionPath;
-        std::string lastPosePath;
-    } m_state;
+  ogl::FrameBufferObject m_FBO;
+  ogl::FrameBufferObject m_intermediateFBO;
+  ogl::FrameBufferObject m_shadowMapFBO;
+
+  ProfilerSet<> m_profiler;
+
+  struct State {
+    bool showControlPanel;
+    bool showProfiler;
+    bool showProgress;
+
+    int selectedModelIndex;
+    int selectedMotionIndex;
+
+    bool paused;
+    std::chrono::time_point<std::chrono::steady_clock> startTime;
+    std::chrono::time_point<std::chrono::steady_clock> pauseTime;
+    float progress;
+
+    bool physicsEnabled;
+    int physicsFPSSelection;
+    int physicsSubsteps;
+
+    glm::vec3 gravity;
+
+    glm::vec4 clearColor;
+
+    bool ortho;
+    bool renderEdge;
+    bool renderShadow;
+    bool renderGroundShadow;
+    bool renderAxes;
+    bool renderGrid;
+    bool wireframe;
+    bool lockCamera;
+
+    float shadowDistance;
+
+    std::string lastModelPath;
+    std::string lastMotionPath;
+    std::string lastPosePath;
+  } m_state;
 };
 
 #endif
