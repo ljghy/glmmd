@@ -10,7 +10,7 @@ if(NOT GLMMD_APPS_USE_SYSTEM_GLFW OR NOT glfw3_FOUND)
     FetchContent_Declare(
         glfw
         GIT_REPOSITORY https://github.com/glfw/glfw.git
-        GIT_TAG 3.4
+        GIT_TAG 3.5.1
         GIT_SHALLOW TRUE)
 
     set(GLFW_BUILD_DOCS
@@ -28,7 +28,7 @@ endif()
 FetchContent_Declare(
     imgui
     GIT_REPOSITORY https://github.com/ocornut/imgui.git
-    GIT_TAG v1.92.8-docking
+    GIT_TAG v1.92.9b-docking
     GIT_SHALLOW TRUE)
 FetchContent_MakeAvailable(imgui)
 
