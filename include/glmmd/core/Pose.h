@@ -6,7 +6,6 @@
 #include <glmmd/core/Transform.h>
 
 #include <glm/glm.hpp>
-#include <glm/gtx/dual_quaternion.hpp>
 #include <glm/gtx/quaternion.hpp>
 
 #include <vector>
@@ -65,7 +64,7 @@ public:
   // Global bone state. Computed by PoseSolver; read-only.
   [[nodiscard]] const Transform &globalBoneTransform(uint32_t boneIndex) const;
   [[nodiscard]] glm::vec3 globalBonePosition(uint32_t boneIndex) const;
-  [[nodiscard]] glm::dualquat finalBoneTransform(uint32_t boneIndex) const;
+  [[nodiscard]] Transform finalBoneTransform(uint32_t boneIndex) const;
 
 private:
   const ModelData *m_modelData = nullptr;
@@ -75,9 +74,35 @@ private:
 
   std::vector<Transform> m_globalBoneTransforms;
 
-  // Scratch buffer reused across applyBoneTransformsToRenderData calls to avoid
-  // a per-frame allocation. Sized to the bone count in create().
-  mutable std::vector<glm::dualquat> m_finalBoneTransforms;
+  // Animation+morph and sampled inheritance must remain separate: later IK
+  // updates may change a donor without resampling grants already consumed.
+  struct BoneState {
+    Transform animated = Transform::identity;
+    Transform inherited = Transform::identity;
+    glm::quat ikRotation = glm::identity<glm::quat>();
+
+    uint64_t globalVersion = 0;
+    uint64_t parentVersion = 0;
+    bool dirty = true;
+
+    // Authoritative channels in m_globalBoneTransforms: rotation=1, position=2.
+    uint8_t physicsChannels = 0;
+  };
+
+  struct IKState {
+    glm::vec3 previousAngles{0.f};
+    glm::quat bestRotation = glm::identity<glm::quat>();
+  };
+
+  std::vector<BoneState> m_boneStates;
+  std::vector<IKState> m_ikStates;
+
+  void evaluateMorphWeights() const;
+  mutable std::vector<float> m_effectiveMorphWeights;
+
+  // Bind-relative rotation/translation reused across skinning calls. QDEF alone
+  // converts its influences to dual quaternions when blending them.
+  mutable std::vector<Transform> m_finalBoneTransforms;
 };
 
 } // namespace glmmd

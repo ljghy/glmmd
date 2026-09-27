@@ -33,10 +33,8 @@ void dropCallback(GLFWwindow *window, int count, const char **paths) {
       if (viewer->loadModel(path))
         viewer->m_state.selectedModelIndex =
             static_cast<int>(viewer->m_models.size()) - 1;
-    } else if (path.extension() == ".vmd")
+    } else if (path.extension() == ".vmd" || path.extension() == ".vpd")
       viewer->loadMotion(path, viewer->m_state.selectedModelIndex);
-    else if (path.extension() == ".vpd")
-      viewer->loadPose(path, viewer->m_state.selectedModelIndex);
     else
       std::cout << "Unsupported file type: " << pathToU8string(path)
                 << std::endl;
@@ -97,7 +95,6 @@ void Viewer::initState() {
 
   m_state.lastModelPath = ".";
   m_state.lastMotionPath = ".";
-  m_state.lastPosePath = ".";
 }
 
 void Viewer::initCamera() {
@@ -269,75 +266,61 @@ void Viewer::removeModel(size_t i) {
 
 void Viewer::loadMotion(const std::filesystem::path &path, size_t modelIndex,
                         const JsonNode &config) {
-  std::optional<glmmd::VmdData> vmdData;
-  try {
-    vmdData = glmmd::loadVmdFile(path);
-  } catch (const std::exception &e) {
-    std::cerr << e.what() << '\n';
-  }
-  if (!vmdData)
+  const bool isPose = path.extension() == ".vpd";
+  if (!isPose && path.extension() != ".vmd") {
+    std::cerr << "Unsupported motion or pose file type: "
+              << pathToU8string(path) << '\n';
     return;
+  }
 
-  bool loop = config.get<bool>("loop", false);
+  try {
+    const bool loop = config.get<bool>("loop", false);
+    std::optional<glmmd::VmdData> vmdData;
+    if (!isPose) {
+      vmdData = glmmd::loadVmdFile(path);
+      if (vmdData->isCameraMotion()) {
+        m_cameraMotion = std::make_unique<glmmd::CameraMotion>(
+            vmdData->toCameraMotion(loop));
 
-  auto filename = path.filename().u8string();
+        std::cout << "Camera motion data loaded from: " << pathToU8string(path)
+                  << '\n';
+        std::cout << "Duration: " << m_cameraMotion->duration() << " s\n";
+        std::cout << std::endl;
+        return;
+      }
+    }
 
-  if (vmdData->isCameraMotion()) {
-    m_cameraMotion =
-        std::make_unique<glmmd::CameraMotion>(vmdData->toCameraMotion(loop));
-
-    std::cout << "Camera motion data loaded from: " << pathToU8string(path)
-              << '\n';
-    std::cout << "Duration: " << m_cameraMotion->duration() << " s\n";
-    std::cout << std::endl;
-  } else {
     if (modelIndex >= m_models.size()) {
-      std::cerr << "Invalid model index.\n";
+      std::cerr << "Select a model before loading a model motion or pose.\n";
       return;
     }
-    auto clip = std::make_shared<glmmd::MotionClip>(
-        vmdData->toMotionClip(*m_models[modelIndex]->data, loop));
 
-    std::string label(filename.begin(), filename.end());
-    m_motions[modelIndex]->addMotion(label, clip);
+    const auto &modelData = *m_models[modelIndex]->data;
+    std::shared_ptr<glmmd::Motion> motion;
+    std::string modelName;
+    if (isPose) {
+      const auto vpdData = glmmd::loadVpdFile(path);
+      motion = std::make_shared<glmmd::PoseMotion>(vpdData.toPose(modelData));
+      modelName = vpdData.modelName;
+    } else {
+      motion = std::make_shared<glmmd::MotionClip>(
+          vmdData->toMotionClip(modelData, loop));
+      modelName = vmdData->modelName;
+    }
 
-    std::cout << "Motion data loaded from: " << pathToU8string(path) << '\n';
+    m_motions[modelIndex]->addMotion(pathToU8string(path.filename()), motion);
+
+    std::cout << (isPose ? "Pose" : "Motion")
+              << " data loaded from: " << pathToU8string(path) << '\n';
     std::cout << "Created on: "
-              << glmmd::codeCvt<glmmd::ShiftJIS, glmmd::UTF8>(
-                     vmdData->modelName)
+              << glmmd::codeCvt<glmmd::ShiftJIS, glmmd::UTF8>(modelName)
               << '\n';
-    std::cout << "Duration: " << clip->duration() << " s\n";
+    if (!isPose)
+      std::cout << "Duration: " << motion->duration() << " s\n";
     std::cout << std::endl;
-  }
-}
-
-void Viewer::loadPose(const std::filesystem::path &path, size_t modelIndex) {
-  if (modelIndex >= m_models.size()) {
-    std::cerr << "Invalid model index.\n";
-    return;
-  }
-
-  std::optional<glmmd::VpdData> vpdData;
-  try {
-    vpdData = glmmd::loadVpdFile(path);
   } catch (const std::exception &e) {
     std::cerr << e.what() << '\n';
   }
-  if (!vpdData)
-    return;
-
-  auto pose = vpdData->toPose(*m_models[modelIndex]->data);
-
-  auto filename = path.filename().u8string();
-  std::string label(filename.begin(), filename.end());
-  m_motions[modelIndex]->addMotion(
-      label, std::make_shared<glmmd::PoseMotion>(std::move(pose)));
-
-  std::cout << "Pose data loaded from: " << pathToU8string(path) << '\n';
-  std::cout << "Created on: "
-            << glmmd::codeCvt<glmmd::ShiftJIS, glmmd::UTF8>(vpdData->modelName)
-            << '\n';
-  std::cout << std::endl;
 }
 
 void Viewer::loadResources() {
@@ -351,13 +334,7 @@ void Viewer::loadResources() {
   if (m_initData.contains("motions"))
     for (const auto &motionNode : m_initData["motions"].arr()) {
       const auto path = motionNode.get<std::filesystem::path>("path");
-      if (path.extension() == ".vmd")
-        loadMotion(path, motionNode.get<size_t>("model"), motionNode);
-      else if (path.extension() == ".vpd")
-        loadPose(path, motionNode.get<size_t>("model"));
-      else
-        std::cerr << "Unsupported motion file type: " << pathToU8string(path)
-                  << std::endl;
+      loadMotion(path, motionNode.get<size_t>("model"), motionNode);
     }
 }
 
@@ -403,13 +380,6 @@ void Viewer::handleInput(float deltaTime) {
   m_camera.target += translation;
 }
 
-void Viewer::updateModelPose(size_t i) {
-  auto &model = m_models[i];
-  model->pose.resetLocal();
-  m_motions[i]->eval(m_state.progress, model->pose);
-  model->solvePose();
-}
-
 void Viewer::menuBar() {
   ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(6.f, 6.f));
   if (ImGui::BeginMenuBar()) {
@@ -421,18 +391,12 @@ void Viewer::menuBar() {
                                                 ".pmx", config);
       }
 
-      if (ImGui::MenuItem("Load motion")) {
+      if (ImGui::MenuItem("Load motion / pose")) {
         IGFD::FileDialogConfig config;
         config.path = m_state.lastMotionPath;
-        ImGuiFileDialog::Instance()->OpenDialog("LoadMotionDlg", "Load motion",
-                                                ".vmd", config);
-      }
-
-      if (m_state.selectedModelIndex != -1 && ImGui::MenuItem("Load pose")) {
-        IGFD::FileDialogConfig config;
-        config.path = m_state.lastPosePath;
-        ImGuiFileDialog::Instance()->OpenDialog("LoadPoseDlg", "Load pose",
-                                                ".vpd", config);
+        ImGuiFileDialog::Instance()->OpenDialog(
+            "LoadMotionDlg", "Load motion / pose", "Motion or pose{.vmd,.vpd}",
+            config);
       }
 
       ImGui::Separator();
@@ -521,22 +485,9 @@ void Viewer::loadMotionDialog() {
                                            ImGuiWindowFlags_NoCollapse |
                                                ImGuiWindowFlags_NoDocking)) {
     if (ImGuiFileDialog::Instance()->IsOk()) {
-      loadMotion(ImGuiFileDialog::Instance()->GetFilePathName(),
+      loadMotion(u8stringToPath(ImGuiFileDialog::Instance()->GetFilePathName()),
                  m_state.selectedModelIndex);
       m_state.lastMotionPath = ImGuiFileDialog::Instance()->GetCurrentPath();
-    }
-    ImGuiFileDialog::Instance()->Close();
-  }
-}
-
-void Viewer::loadPoseDialog() {
-  if (ImGuiFileDialog::Instance()->Display("LoadPoseDlg",
-                                           ImGuiWindowFlags_NoCollapse |
-                                               ImGuiWindowFlags_NoDocking)) {
-    if (ImGuiFileDialog::Instance()->IsOk()) {
-      loadPose(ImGuiFileDialog::Instance()->GetFilePathName(),
-               m_state.selectedModelIndex);
-      m_state.lastPosePath = ImGuiFileDialog::Instance()->GetCurrentPath();
     }
     ImGuiFileDialog::Instance()->Close();
   }
@@ -546,7 +497,11 @@ void Viewer::updateModels() {
   glmmd::parallelForEach(
       m_models.begin(), m_models.end(), [&](const auto &model) {
         auto i = &model - m_models.data();
-        updateModelPose(i);
+
+        model->pose.resetLocal();
+        m_motions[i]->eval(m_state.progress, model->pose);
+        model->solvePose();
+
         m_modelRenderers[i]->renderData().init();
         m_models[i]->pose.applyToRenderData(m_modelRenderers[i]->renderData());
       });
@@ -918,7 +873,6 @@ void Viewer::run() {
     dockspace();
     loadModelDialog();
     loadMotionDialog();
-    loadPoseDialog();
 
     float deltaTime = io.DeltaTime;
 

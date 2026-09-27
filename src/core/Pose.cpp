@@ -3,6 +3,7 @@
 #include <glmmd/core/ParallelForEach.h>
 
 #include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtx/dual_quaternion.hpp>
 
 #include <algorithm>
 
@@ -12,10 +13,19 @@ Pose::Pose(const ModelData &modelData) { create(modelData); }
 
 void Pose::create(const ModelData &modelData) {
   m_modelData = &modelData;
-  m_localBoneTransforms.resize(modelData.bones.size(), Transform::identity);
-  m_morphWeights.resize(modelData.morphs.size(), 0.f);
-  m_globalBoneTransforms.resize(modelData.bones.size(), Transform::identity);
+
+  m_localBoneTransforms.assign(modelData.bones.size(), Transform::identity);
+  m_morphWeights.assign(modelData.morphs.size(), 0.f);
+  m_globalBoneTransforms.assign(modelData.bones.size(), Transform::identity);
   m_finalBoneTransforms.resize(modelData.bones.size());
+
+  m_boneStates.resize(modelData.bones.size());
+  m_effectiveMorphWeights.resize(modelData.morphs.size());
+
+  size_t linkCount = 0;
+  for (const auto &ik : modelData.ikData)
+    linkCount += ik.links.size();
+  m_ikStates.resize(linkCount);
 }
 
 const Transform &Pose::globalBoneTransform(uint32_t boneIndex) const {
@@ -34,10 +44,12 @@ Transform &Pose::localBoneTransform(uint32_t boneIndex) {
   return m_localBoneTransforms[boneIndex];
 }
 
-glm::dualquat Pose::finalBoneTransform(uint32_t boneIndex) const {
-  auto &r = m_globalBoneTransforms[boneIndex].rotation;
-  auto &t = m_globalBoneTransforms[boneIndex].translation;
-  return glm::dualquat(r, t - r * m_modelData->bones[boneIndex].position);
+Transform Pose::finalBoneTransform(uint32_t boneIndex) const {
+  auto transform = m_globalBoneTransforms[boneIndex];
+  transform.translation -=
+      transform.rotation * m_modelData->bones[boneIndex].position;
+
+  return transform;
 }
 
 const glm::vec3 &Pose::localBoneTranslation(uint32_t boneIndex) const {
@@ -70,15 +82,33 @@ void Pose::resetLocal() {
   std::fill(m_morphWeights.begin(), m_morphWeights.end(), 0.f);
 }
 
+void Pose::evaluateMorphWeights() const {
+  m_effectiveMorphWeights = m_morphWeights;
+
+  for (uint32_t i = 0; i < m_morphWeights.size(); ++i) {
+    const auto &morph = m_modelData->morphs[i];
+    if (morph.type != MorphType::Group || m_morphWeights[i] == 0.f)
+      continue;
+
+    for (const auto &child : morph.group())
+      if (m_modelData->morphs[child.index].type != MorphType::Group)
+        m_effectiveMorphWeights[child.index] +=
+            m_morphWeights[i] * child.weight;
+  }
+}
+
 void Pose::applyToRenderData(ModelRenderData &renderData) const {
   applyMorphsToRenderData(renderData);
   applyBoneTransformsToRenderData(renderData);
 }
 
 void Pose::applyMorphsToRenderData(ModelRenderData &renderData) const {
-  for (size_t i = 0; i < m_morphWeights.size(); ++i) {
+  evaluateMorphWeights();
+  const auto &weights = m_effectiveMorphWeights;
+
+  for (size_t i = 0; i < weights.size(); ++i) {
     const auto &morph = m_modelData->morphs[i];
-    float weight = m_morphWeights[i];
+    float weight = weights[i];
     if (weight == 0.f)
       continue;
 
@@ -171,10 +201,10 @@ void Pose::applyBoneTransformsToRenderData(ModelRenderData &renderData) const {
         auto norm = renderData.getVertexNormal(i);
 
         if (vert.skinningType == SkinningType::SDEF) {
-          const auto &dq0 = finalBoneTransforms[vert.boneIndices[0]];
-          const auto &dq1 = finalBoneTransforms[vert.boneIndices[1]];
-          const auto &q0 = dq0.real;
-          const auto &q1 = dq1.real;
+          const auto &t0 = finalBoneTransforms[vert.boneIndices[0]];
+          const auto &t1 = finalBoneTransforms[vert.boneIndices[1]];
+          const auto &q0 = t0.rotation;
+          const auto &q1 = t1.rotation;
 
           float w0 = vert.boneWeights[0];
           float w1 = 1.f - w0;
@@ -185,20 +215,24 @@ void Pose::applyBoneTransformsToRenderData(ModelRenderData &renderData) const {
 
           auto r = 0.5f * (vert.sdefR0 - vert.sdefR1);
 
-          pos = q * (pos - c) + (dq0 * (c + w1 * r)) * w0 +
-                (dq1 * (c - w0 * r)) * w1;
+          pos = q * (pos - c) + (t0 * (c + w1 * r)) * w0 +
+                (t1 * (c - w0 * r)) * w1;
           norm = q * norm;
         } else if (vert.skinningType == SkinningType::QDEF) {
-          glm::dualquat dq = finalBoneTransforms[vert.boneIndices[0]];
+          const auto &t0 = finalBoneTransforms[vert.boneIndices[0]];
+          glm::dualquat dq(t0.rotation, t0.translation);
           auto q0 = dq.real;
           dq *= vert.boneWeights[0];
+
           for (int bi = 1; bi < 4; ++bi) {
+            const auto &transform = finalBoneTransforms[vert.boneIndices[bi]];
             float w = vert.boneWeights[bi];
-            if (glm::dot(q0, finalBoneTransforms[vert.boneIndices[bi]].real) <
-                0)
+            if (glm::dot(q0, transform.rotation) < 0)
               w = -w;
-            dq = dq + w * finalBoneTransforms[vert.boneIndices[bi]];
+            dq = dq +
+                 w * glm::dualquat(transform.rotation, transform.translation);
           }
+
           dq = glm::normalize(dq);
 
           pos = dq * pos;
@@ -212,9 +246,9 @@ void Pose::applyBoneTransformsToRenderData(ModelRenderData &renderData) const {
           glm::vec3 skinnedNorm(0.f);
           for (int bi = 0; bi < nb; ++bi) {
             const float weight = nb == 1 ? 1.f : vert.boneWeights[bi];
-            const auto &dq = finalBoneTransforms[vert.boneIndices[bi]];
-            skinnedPos += weight * (dq * pos);
-            skinnedNorm += weight * (dq.real * norm);
+            const auto &transform = finalBoneTransforms[vert.boneIndices[bi]];
+            skinnedPos += weight * (transform * pos);
+            skinnedNorm += weight * (transform.rotation * norm);
           }
           pos = skinnedPos;
           norm = skinnedNorm;

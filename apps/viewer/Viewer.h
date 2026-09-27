@@ -41,9 +41,6 @@ private:
 
   void loadMotion(const std::filesystem::path &path, size_t modelIndex,
                   const JsonNode &config = JsonObj_t{});
-  void loadPose(const std::filesystem::path &path, size_t modelIndex);
-
-  void updateModelPose(size_t i);
 
   void handleInput(float deltaTime);
 
@@ -56,7 +53,6 @@ private:
   void dockspace();
   void loadModelDialog();
   void loadMotionDialog();
-  void loadPoseDialog();
   void updateModels();
   void updateCameraMotion();
   void updateViewportSize();
@@ -134,7 +130,6 @@ private:
 
     std::string lastModelPath;
     std::string lastMotionPath;
-    std::string lastPosePath;
   } m_state;
 };
 
