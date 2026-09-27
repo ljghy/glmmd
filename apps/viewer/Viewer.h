@@ -18,6 +18,8 @@
 #include "ModelRenderer.h"
 #include "MotionMixer.h"
 #include "Profiler.h"
+#include "SceneRenderer.h"
+#include "ShadowMap.h"
 
 class Viewer {
   friend void dropCallback(GLFWwindow *window, int count, const char **paths);
@@ -82,9 +84,6 @@ private:
   int m_viewportWidth;
   int m_viewportHeight;
 
-  int m_shadowMapWidth;
-  int m_shadowMapHeight;
-
   std::vector<std::unique_ptr<glmmd::Model>> m_models;
   std::vector<std::unique_ptr<ModelRenderer>> m_modelRenderers;
   std::vector<std::unique_ptr<MotionMixer>> m_motions;
@@ -98,9 +97,8 @@ private:
 
   glmmd::PhysicsWorld m_physicsWorld;
 
-  ogl::FrameBufferObject m_FBO;
-  ogl::FrameBufferObject m_intermediateFBO;
-  ogl::FrameBufferObject m_shadowMapFBO;
+  std::unique_ptr<SceneRenderer> m_sceneRenderer;
+  std::unique_ptr<ShadowMap> m_shadowMap;
 
   ProfilerSet<> m_profiler;
 
@@ -133,8 +131,6 @@ private:
     bool renderGrid;
     bool wireframe;
     bool lockCamera;
-
-    float shadowDistance;
 
     std::string lastModelPath;
     std::string lastMotionPath;

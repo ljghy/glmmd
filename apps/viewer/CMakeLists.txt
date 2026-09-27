@@ -11,7 +11,10 @@ add_executable(viewer)
 target_sources(
     viewer
     PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/InfiniteGridRenderer.cpp
+            ${CMAKE_CURRENT_SOURCE_DIR}/MaterialExtension.cpp
             ${CMAKE_CURRENT_SOURCE_DIR}/ModelRenderer.cpp
+            ${CMAKE_CURRENT_SOURCE_DIR}/SceneRenderer.cpp
+            ${CMAKE_CURRENT_SOURCE_DIR}/ShadowMap.cpp
             ${CMAKE_CURRENT_SOURCE_DIR}/Viewer.cpp
             ${CMAKE_CURRENT_SOURCE_DIR}/main.cpp)
 

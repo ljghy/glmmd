@@ -95,8 +95,6 @@ void Viewer::initState() {
   m_state.wireframe = false;
   m_state.lockCamera = true;
 
-  m_state.shadowDistance = 50.f;
-
   m_state.lastModelPath = ".";
   m_state.lastMotionPath = ".";
   m_state.lastPosePath = ".";
@@ -124,13 +122,17 @@ void Viewer::initMainLight() {
 }
 
 void Viewer::initWindow() {
+  glfwSetErrorCallback([](int code, const char *description) {
+    std::cerr << "GLFW error " << code << ": " << description << '\n';
+  });
   if (!glfwInit()) {
     throw std::runtime_error("Failed to initialize GLFW.");
   }
 
-  glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
-  glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
+  glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
+  glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 1);
   glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+  glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GLFW_TRUE);
 
   glfwWindowHint(GLFW_TRANSPARENT_FRAMEBUFFER, GLFW_TRUE);
 
@@ -139,7 +141,8 @@ void Viewer::initWindow() {
 
   m_window = glfwCreateWindow(initWidth, initHeight, "Viewer", NULL, NULL);
   if (m_window == nullptr) {
-    throw std::runtime_error("Failed to create window.");
+    throw std::runtime_error(
+        "Failed to create viewer window (OpenGL 4.1 core required).");
   }
   glfwSetFramebufferSizeCallback(m_window, framebufferSizeCallback);
   glfwSetDropCallback(m_window, dropCallback);
@@ -151,6 +154,11 @@ void Viewer::initWindow() {
   if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress)) {
     throw std::runtime_error("Failed to initialize GLAD.");
   }
+  if (!GLAD_GL_VERSION_4_1) {
+    throw std::runtime_error("The viewer requires OpenGL 4.1 core or newer.");
+  }
+  std::cout << "OpenGL " << glGetString(GL_VERSION)
+            << "\nRenderer: " << glGetString(GL_RENDERER) << std::endl;
 }
 
 void Viewer::initImGui() {
@@ -207,58 +215,12 @@ void Viewer::initImGui() {
 void Viewer::initFBO() {
   glfwGetWindowSize(m_window, &m_viewportWidth, &m_viewportHeight);
 
-  int samples = m_initData.get<int>("MSAA", 4);
+  m_sceneRenderer = std::make_unique<SceneRenderer>(
+      m_viewportWidth, m_viewportHeight, m_initData.get<int>("MSAA", 4));
 
-  m_FBO.create();
-  ogl::Texture2DCreateInfo texInfo;
-  texInfo.width = m_viewportWidth;
-  texInfo.height = m_viewportHeight;
-  texInfo.samples = samples;
-  texInfo.internalFmt = GL_RGBA;
-  texInfo.dataFmt = GL_RGBA;
-  m_FBO.attachColorTexture(std::make_unique<ogl::Texture2D>(texInfo));
-
-  ogl::RenderBufferObjectCreateInfo rboInfo;
-  rboInfo.width = m_viewportWidth;
-  rboInfo.height = m_viewportHeight;
-  rboInfo.samples = samples;
-  rboInfo.internalFmt = GL_DEPTH_COMPONENT24;
-  m_FBO.attachDepthRenderBuffer(
-      std::make_unique<ogl::RenderBufferObject>(rboInfo));
-
-  if (!m_FBO.isComplete())
-    throw std::runtime_error("Failed to create FBO.");
-
-  m_intermediateFBO.create();
-  texInfo.samples = 1;
-  m_intermediateFBO.attachColorTexture(
-      std::make_unique<ogl::Texture2D>(texInfo));
-
-  if (!m_intermediateFBO.isComplete())
-    throw std::runtime_error("Failed to create intermediate FBO.");
-
-  m_shadowMapFBO.create();
-  ogl::Texture2DCreateInfo shadowMapTexInfo;
-  m_shadowMapWidth = m_initData.get<int>("ShadowMapWidth", 2048);
-  m_shadowMapHeight = m_initData.get<int>("ShadowMapHeight", 2048);
-  shadowMapTexInfo.width = m_shadowMapWidth;
-  shadowMapTexInfo.height = m_shadowMapHeight;
-  shadowMapTexInfo.internalFmt = GL_DEPTH_COMPONENT;
-  shadowMapTexInfo.dataFmt = GL_DEPTH_COMPONENT;
-  shadowMapTexInfo.dataType = GL_FLOAT;
-  shadowMapTexInfo.wrapModeS = GL_CLAMP_TO_BORDER;
-  shadowMapTexInfo.wrapModeT = GL_CLAMP_TO_BORDER;
-  shadowMapTexInfo.minFilterMode = GL_NEAREST;
-  shadowMapTexInfo.magFilterMode = GL_NEAREST;
-  std::unique_ptr<ogl::Texture2D> shadowMapTex =
-      std::make_unique<ogl::Texture2D>(shadowMapTexInfo);
-  shadowMapTex->bind();
-  float borderColor[] = {1.f, 1.f, 1.f, 1.f};
-  glTexParameterfv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, borderColor);
-  m_shadowMapFBO.attachDepthTexture(std::move(shadowMapTex));
-
-  if (!m_shadowMapFBO.isComplete())
-    throw std::runtime_error("Failed to create shadow map FBO.");
+  m_shadowMap =
+      std::make_unique<ShadowMap>(m_initData.get<int>("ShadowMapWidth", 4096),
+                                  m_initData.get<int>("ShadowMapHeight", 4096));
 }
 
 bool Viewer::loadModel(const std::filesystem::path &path) {
@@ -607,8 +569,7 @@ void Viewer::updateViewportSize() {
        m_viewportHeight != currentViewportHeight)) {
     m_viewportWidth = currentViewportWidth;
     m_viewportHeight = currentViewportHeight;
-    m_FBO.resize(m_viewportWidth, m_viewportHeight);
-    m_intermediateFBO.resize(m_viewportWidth, m_viewportHeight);
+    m_sceneRenderer->resize(m_viewportWidth, m_viewportHeight);
 
     m_camera.resize(m_viewportWidth, m_viewportHeight);
   }
@@ -619,51 +580,15 @@ void Viewer::render() {
   for (const auto &renderer : m_modelRenderers)
     renderer->fillBuffers();
 
-  // Render shadow map
+  m_shadowMap->update(m_camera, m_mainDirectionalLight, m_modelRenderers);
+  if (m_state.renderShadow)
+    m_shadowMap->render(m_mainDirectionalLight, m_modelRenderers);
 
-  if (m_state.renderShadow) {
-    m_shadowMapFBO.bind();
-    glViewport(0, 0, m_shadowMapWidth, m_shadowMapHeight);
-    glClear(GL_DEPTH_BUFFER_BIT);
-    glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-    for (const auto &renderer : m_modelRenderers)
-      renderer->renderShadowMap(m_mainDirectionalLight);
-    m_shadowMapFBO.unbind();
-  }
-
-  // Render models
-
-  m_FBO.bind();
-
-  glClearColor(m_state.clearColor.x * m_state.clearColor.w,
-               m_state.clearColor.y * m_state.clearColor.w,
-               m_state.clearColor.z * m_state.clearColor.w,
-               m_state.clearColor.w);
-  glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-  glViewport(0, 0, m_viewportWidth, m_viewportHeight);
-
-  if (m_state.wireframe)
-    glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-  else
-    glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-
-  for (const auto &renderer : m_modelRenderers)
-    renderer->render(m_camera, m_mainDirectionalLight,
-                     m_state.renderShadow
-                         ? m_shadowMapFBO.depthTextureAttachment()
-                         : nullptr);
-
-  if (m_state.renderGrid)
-    m_gridRenderer->render(m_camera);
-
-  m_FBO.unbind();
-
-  m_FBO.bindRead();
-  m_intermediateFBO.bindDraw();
-  glBlitFramebuffer(0, 0, m_viewportWidth, m_viewportHeight, 0, 0,
-                    m_viewportWidth, m_viewportHeight, GL_COLOR_BUFFER_BIT,
-                    GL_NEAREST);
-  m_intermediateFBO.unbind();
+  m_sceneRenderer->render(m_modelRenderers,
+                          m_state.renderGrid ? m_gridRenderer.get() : nullptr,
+                          m_camera, m_mainDirectionalLight,
+                          m_state.renderShadow ? m_shadowMap.get() : nullptr,
+                          m_state.clearColor, m_state.wireframe);
 }
 
 void Viewer::play() {
@@ -924,7 +849,36 @@ void Viewer::controlPanel() {
 
     ImGui::ColorEdit3("Ambient color", &m_mainDirectionalLight.ambientColor.x);
 
-    ImGui::InputFloat("Shadow distance", &m_state.shadowDistance);
+    if (ImGui::TreeNode("Shadow quality")) {
+      auto &shadow = m_shadowMap->settings;
+      ImGui::SliderFloat("Distance", &shadow.distance, 1.f, 500.f, "%.1f");
+      const std::string resolution = std::to_string(m_shadowMap->width()) +
+                                     " x " +
+                                     std::to_string(m_shadowMap->height());
+      if (ImGui::BeginCombo("Resolution", resolution.c_str())) {
+        for (int size : {1024, 2048, 4096, 8192}) {
+          if (ImGui::Selectable(std::to_string(size).c_str(),
+                                m_shadowMap->width() == size &&
+                                    m_shadowMap->height() == size))
+            m_shadowMap->resize(size, size);
+        }
+        ImGui::EndCombo();
+      }
+      int filter = shadow.filterRadius - 2;
+      if (ImGui::Combo("PCF filter", &filter,
+                       "5 x 5\0"
+                       "7 x 7\0"))
+        shadow.filterRadius = filter + 2;
+      ImGui::SliderFloat("Depth bias (texels)", &shadow.constantBias, 0.f, 2.f,
+                         "%.2f");
+      ImGui::SliderFloat("Slope bias (texels)", &shadow.slopeBias, 0.f, 3.f,
+                         "%.2f");
+      ImGui::SliderFloat("Normal offset (texels)", &shadow.normalBias, 0.f, 2.f,
+                         "%.2f");
+      ImGui::SliderFloat("Shadow alpha cutoff", &shadow.alphaCutoff, 0.f, 1.f,
+                         "%.2f");
+      ImGui::TreePop();
+    }
 
     ImGui::TreePop();
   }
@@ -1003,18 +957,11 @@ void Viewer::run() {
 
       m_camera.update();
 
-      glm::vec3 cameraFrustumCorners[8];
-      m_camera.getFrustumCorners(cameraFrustumCorners, m_camera.zNear,
-                                 m_camera.zNear + m_state.shadowDistance);
-
-      m_mainDirectionalLight.updateFrustum(8, cameraFrustumCorners);
-      m_mainDirectionalLight.update();
-
       m_profiler.start("Render");
       render();
       m_profiler.stop("Render");
 
-      ImGui::Image(m_intermediateFBO.colorTextureAttachment()->id(),
+      ImGui::Image(m_sceneRenderer->colorTexture().id(),
                    ImVec2(static_cast<float>(m_viewportWidth),
                           static_cast<float>(m_viewportHeight)),
                    ImVec2(1, 1), ImVec2(0, 0));
@@ -1052,9 +999,8 @@ Viewer::~Viewer() {
   ModelRenderer::releaseSharedToonTextures();
 
   m_modelRenderers.clear();
-  m_FBO.destroy();
-  m_intermediateFBO.destroy();
-  m_shadowMapFBO.destroy();
+  m_sceneRenderer.reset();
+  m_shadowMap.reset();
 
   ImGui::GetIO().Fonts->Clear();
 

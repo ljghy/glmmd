@@ -1,27 +1,27 @@
 #ifndef VIEWER_GRID_RENDERER_H_
 #define VIEWER_GRID_RENDERER_H_
 
+#include "SurfaceShader.h"
 #include <opengl_framework/Common.h>
 
 #include <glmmd/core/Camera.h>
 
-class InfiniteGridRenderer
-{
+class InfiniteGridRenderer {
 public:
-    InfiniteGridRenderer();
+  InfiniteGridRenderer();
 
-    void render(const glmmd::Camera &camera);
+  void render(SurfacePass pass, const glmmd::Camera &camera);
 
 public:
-    float     gridSize     = 5.f;
-    float     lineWidth    = 1.f;
-    float     falloffDepth = 200.f;
-    glm::vec3 color        = glm::vec3(0.6f, 0.6f, 0.6f);
-    int       showAxes     = 1;
+  float gridSize = 5.f;
+  float lineWidth = 1.f;
+  float falloffDepth = 200.f;
+  glm::vec3 color = glm::vec3(0.6f, 0.6f, 0.6f);
+  int showAxes = 1;
 
 private:
-    ogl::VertexArrayObject m_dummyVAO;
-    ogl::Shader            m_shader;
+  ogl::VertexArrayObject m_dummyVAO;
+  ogl::Shader m_shader;
 };
 
 #endif

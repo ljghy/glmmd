@@ -3,12 +3,18 @@
 
 #include <memory>
 
+#include "MaterialExtension.h"
+#include "SurfaceShader.h"
+#include "TextureSampler.h"
+
 #include <opengl_framework/Common.h>
 
 #include <glmmd/core/Camera.h>
 #include <glmmd/core/DirectionalLight.h>
 #include <glmmd/core/ModelData.h>
 #include <glmmd/core/ModelRenderData.h>
+
+class ShadowMap;
 
 extern const char *defaultVertShaderSrc;
 extern const char *defaultFragShaderSrc;
@@ -19,81 +25,88 @@ extern const char *defaultShadowMapFragShaderSrc;
 extern const char *defaultGroundShadowVertShaderSrc;
 extern const char *defaultGroundShadowFragShaderSrc;
 
-struct ModelRendererShaderSources
-{
-    const char *vertShaderSrc             = defaultVertShaderSrc;
-    const char *fragShaderSrc             = defaultFragShaderSrc;
-    const char *edgeVertShaderSrc         = defaultEdgeVertShaderSrc;
-    const char *edgeFragShaderSrc         = defaultEdgeFragShaderSrc;
-    const char *shadowMapVertShaderSrc    = defaultShadowMapVertShaderSrc;
-    const char *shadowMapFragShaderSrc    = defaultShadowMapFragShaderSrc;
-    const char *groundShadowVertShaderSrc = defaultGroundShadowVertShaderSrc;
-    const char *groundShadowFragShaderSrc = defaultGroundShadowFragShaderSrc;
+// Mesh and edge fragment sources use the SurfaceShader.h writeSurface contract.
+struct ModelRendererShaderSources {
+  const char *vertShaderSrc = defaultVertShaderSrc;
+  const char *fragShaderSrc = defaultFragShaderSrc;
+  const char *edgeVertShaderSrc = defaultEdgeVertShaderSrc;
+  const char *edgeFragShaderSrc = defaultEdgeFragShaderSrc;
+  const char *shadowMapVertShaderSrc = defaultShadowMapVertShaderSrc;
+  const char *shadowMapFragShaderSrc = defaultShadowMapFragShaderSrc;
+  const char *groundShadowVertShaderSrc = defaultGroundShadowVertShaderSrc;
+  const char *groundShadowFragShaderSrc = defaultGroundShadowFragShaderSrc;
 };
 
-enum ModelRenderFlag : uint32_t
-{
-    MODEL_RENDER_FLAG_EMPTY         = 0,
-    MODEL_RENDER_FLAG_HIDE          = 1 << 0,
-    MODEL_RENDER_FLAG_MESH          = 1 << 1,
-    MODEL_RENDER_FLAG_EDGE          = 1 << 2,
-    MODEL_RENDER_FLAG_GROUND_SHADOW = 1 << 3,
+enum ModelRenderFlag : uint32_t {
+  MODEL_RENDER_FLAG_EMPTY = 0,
+  MODEL_RENDER_FLAG_HIDE = 1 << 0,
+  MODEL_RENDER_FLAG_MESH = 1 << 1,
+  MODEL_RENDER_FLAG_EDGE = 1 << 2,
+  MODEL_RENDER_FLAG_GROUND_SHADOW = 1 << 3,
 };
 
-class ModelRenderer
-{
+class ModelRenderer {
 public:
-    ModelRenderer(const std::shared_ptr<const glmmd::ModelData> &data,
-                  const ModelRendererShaderSources &shaderSources = {});
+  ModelRenderer(const std::shared_ptr<const glmmd::ModelData> &data,
+                const ModelRendererShaderSources &shaderSources = {});
 
-    void fillBuffers() const;
+  void fillBuffers() const;
 
-    void renderShadowMap(const glmmd::DirectionalLight &light) const;
-    void render(const glmmd::Camera           &camera,
-                const glmmd::DirectionalLight &light,
-                const ogl::Texture2D          *shadowMap = nullptr) const;
+  void renderShadowMap(const glmmd::DirectionalLight &light,
+                       float alphaCutoff) const;
+  bool shadowBounds(const glm::mat4 &lightOrientation, glm::vec3 &lower,
+                    glm::vec3 &upper) const;
+  void render(SurfacePass pass, const glmmd::Camera &camera,
+              const glmmd::DirectionalLight &light,
+              const ShadowMap *shadowMap = nullptr) const;
 
-    glmmd::ModelRenderData       &renderData() { return m_renderData; }
-    const glmmd::ModelRenderData &renderData() const { return m_renderData; }
+  glmmd::ModelRenderData &renderData() { return m_renderData; }
+  const glmmd::ModelRenderData &renderData() const { return m_renderData; }
 
-    static void releaseSharedToonTextures();
+  static void releaseSharedToonTextures();
 
-    uint32_t &renderFlag() { return m_renderFlag; }
-
-private:
-    void initBuffers();
-    void initTextures();
-    void initSharedToonTextures();
-    void initShaders(const ModelRendererShaderSources &shaderSources);
-
-    void renderMesh(const glmmd::Camera           &camera,
-                    const glmmd::DirectionalLight &light,
-                    const ogl::Texture2D          *shadowMap) const;
-    void renderEdge(const glmmd::Camera &camera) const;
-    void renderGroundShadow(const glmmd::Camera           &camera,
-                            const glmmd::DirectionalLight &light) const;
+  uint32_t &renderFlag() { return m_renderFlag; }
 
 private:
-    std::shared_ptr<const glmmd::ModelData> m_modelData;
+  void initBuffers();
+  void initTextures();
+  void initSharedToonTextures();
+  void initShaders(const ModelRendererShaderSources &shaderSources);
 
-    glmmd::ModelRenderData m_renderData;
+  void renderMesh(SurfacePass pass, const glmmd::Camera &camera,
+                  const glmmd::DirectionalLight &light,
+                  const ShadowMap *shadowMap) const;
+  void renderEdge(SurfacePass pass, const glmmd::Camera &camera) const;
+  void renderGroundShadow(const glmmd::Camera &camera,
+                          const glmmd::DirectionalLight &light) const;
 
-    ogl::VertexBufferObject m_VBO;
-    ogl::VertexArrayObject  m_VAO;
-    ogl::IndexBufferObject  m_IBO;
+private:
+  std::shared_ptr<const glmmd::ModelData> m_modelData;
 
-    ogl::Shader m_shader;
-    ogl::Shader m_edgeShader;
-    ogl::Shader m_shadowMapShader;
-    ogl::Shader m_groundShadowShader;
+  glmmd::ModelRenderData m_renderData;
+  MaterialExtensions m_extensions;
 
-    std::vector<ogl::Texture2D> m_textures;
+  ogl::VertexBufferObject m_VBO;
+  ogl::VertexArrayObject m_VAO;
+  ogl::IndexBufferObject m_IBO;
 
-    static bool                           sharedToonTexturesLoaded;
-    static std::array<ogl::Texture2D, 10> sharedToonTextures;
+  ogl::Shader m_shader;
+  ogl::Shader m_edgeShader;
+  ogl::Shader m_shadowMapShader;
+  ogl::Shader m_groundShadowShader;
 
-    uint32_t m_renderFlag = MODEL_RENDER_FLAG_MESH | MODEL_RENDER_FLAG_EDGE |
-                            MODEL_RENDER_FLAG_GROUND_SHADOW;
+  std::vector<ogl::Texture2D> m_textures;
+  // Data maps need a separate linear view when an image is also a color map.
+  std::vector<ogl::Texture2D> m_dataTextures;
+
+  TextureSampler m_clampSampler{GL_CLAMP_TO_EDGE, GL_LINEAR_MIPMAP_LINEAR};
+  TextureSampler m_toonSampler{GL_CLAMP_TO_EDGE, GL_LINEAR};
+
+  static bool sharedToonTexturesLoaded;
+  static std::array<ogl::Texture2D, 10> sharedToonTextures;
+
+  uint32_t m_renderFlag = MODEL_RENDER_FLAG_MESH | MODEL_RENDER_FLAG_EDGE |
+                          MODEL_RENDER_FLAG_GROUND_SHADOW;
 };
 
 #endif
